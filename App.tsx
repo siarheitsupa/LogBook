@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Shift, AppState } from './types';
+import { Shift, AppState, CloudConfig } from './types';
 import { storage } from './services/storageService';
-import { formatMinsToHHMM, getStats, calculateLogSummary, calculateShiftDurationMins, pad } from './utils/timeUtils';
+import { formatMinsToHHMM, getStats, calculateLogSummary, pad } from './utils/timeUtils';
 import { analyzeLogs } from './services/geminiService';
 import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
 import TimelineItem from './components/TimelineItem';
+import CloudSettingsModal from './components/CloudSettingsModal';
 
 const App: React.FC = () => {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [appState, setAppState] = useState<AppState>({ isActive: false, startTime: null });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -25,6 +27,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
+      storage.initCloud(); // Auto-init on start
       const data = await storage.getShifts();
       setShifts(data);
       setAppState(storage.getState());
@@ -58,7 +61,20 @@ const App: React.FC = () => {
     setEditingShift(null);
     
     if (!success && storage.isCloudEnabled()) {
-      alert('Ошибка синхронизации с облаком. Данные сохранены локально.');
+      alert('Ошибка синхронизации. Проверьте настройки облака.');
+    }
+  };
+
+  const handleCloudSave = async (config: CloudConfig) => {
+    if (storage.initCloud(config)) {
+      setIsLoading(true);
+      const data = await storage.getShifts();
+      setShifts(data);
+      setIsLoading(false);
+      setIsCloudModalOpen(false);
+      alert('Облако успешно подключено!');
+    } else {
+      alert('Не удалось подключиться. Проверьте URL и Ключ.');
     }
   };
 
@@ -85,13 +101,6 @@ const App: React.FC = () => {
     setIsAnalyzing(false);
   };
 
-  const copyAnalysis = () => {
-    if (aiAnalysis) {
-      navigator.clipboard.writeText(aiAnalysis);
-      alert('Скопировано в буфер обмена');
-    }
-  };
-
   const { shifts: enrichedShifts, totalDebt } = calculateLogSummary(shifts);
   const { weekMins, biWeekMins, dailyDutyMins, extDrivingCount, extDutyCount } = getStats(shifts);
 
@@ -113,29 +122,31 @@ const App: React.FC = () => {
   return (
     <div className="max-w-xl mx-auto min-h-screen pb-12 px-4 pt-6">
       <header className="flex flex-col items-center mb-6 relative">
-        <div className="flex items-center gap-3 bg-white p-2 pr-6 rounded-full shadow-sm border border-slate-100 relative">
+        <div className="flex items-center gap-3 bg-white p-2 pr-4 pl-3 rounded-full shadow-sm border border-slate-100 relative">
           <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-inner">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
               <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/>
             </svg>
           </div>
-          <span className="text-xl font-extrabold tracking-tight text-slate-800">DriverLog Pro</span>
+          <span className="text-lg font-black tracking-tight text-slate-800">DriverLog Pro</span>
           
-          <div className={`absolute -right-2 -top-1 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center text-[10px] shadow-sm ${storage.isCloudEnabled() ? 'bg-emerald-500 text-white' : 'bg-slate-300 text-slate-600'}`}>
-            {storage.isCloudEnabled() ? '☁️' : '🏠'}
+          <div className="flex items-center gap-1 ml-2 pl-3 border-l border-slate-100">
+            <div className={`w-3 h-3 rounded-full transition-colors ${storage.isCloudEnabled() ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
+            <button 
+              onClick={() => setIsCloudModalOpen(true)}
+              className="p-1 hover:bg-slate-50 rounded-lg transition-colors text-slate-400"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
+                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+              </svg>
+            </button>
           </div>
         </div>
         
-        {!storage.isCloudEnabled() && (
-          <div className="mt-2 text-[10px] font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
-            Облако не настроено (данные только на телефоне)
-          </div>
-        )}
-
         {isLoading && (
-          <div className="absolute -bottom-4 text-[10px] font-bold text-blue-500 flex items-center gap-1 animate-pulse">
-            <span className="w-1 h-1 bg-blue-500 rounded-full"></span>
-            Загрузка данных...
+          <div className="absolute -bottom-4 text-[10px] font-bold text-blue-500 animate-pulse">
+            Синхронизация...
           </div>
         )}
       </header>
@@ -208,29 +219,18 @@ const App: React.FC = () => {
                 <span className="bg-white/20 p-1.5 rounded-xl text-lg">✨</span>
                 AI Анализ Норм
               </h3>
-              <div className="flex gap-2">
-                {aiAnalysis && (
-                  <button onClick={copyAnalysis} className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
-                )}
-                <button 
-                  onClick={runAiAnalysis} 
-                  disabled={isAnalyzing} 
-                  className={`text-[10px] bg-white text-indigo-900 px-3 py-1.5 rounded-full font-bold transition-all shadow-sm ${isAnalyzing ? 'opacity-50' : 'hover:scale-105 active:scale-95'}`}
-                >
-                  {isAnalyzing ? 'АНАЛИЗ...' : 'ОБНОВИТЬ'}
-                </button>
-              </div>
+              <button 
+                onClick={runAiAnalysis} 
+                disabled={isAnalyzing} 
+                className={`text-[10px] bg-white text-indigo-900 px-3 py-1.5 rounded-full font-bold transition-all shadow-sm ${isAnalyzing ? 'opacity-50' : 'hover:scale-105 active:scale-95'}`}
+              >
+                {isAnalyzing ? 'АНАЛИЗ...' : 'ОБНОВИТЬ'}
+              </button>
             </div>
             <div className={`text-sm leading-relaxed opacity-95 transition-all ${isAnalyzing ? 'animate-pulse' : ''}`}>
-              {aiAnalysis || "Нажмите 'Обновить' для проверки ваших логов на соответствие регламентам ЕС 561/2006."}
+              {aiAnalysis || "Проверьте свои логи на соответствие регламентам ЕС."}
             </div>
           </div>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-400/20 rounded-full translate-y-12 -translate-x-12 blur-xl"></div>
         </div>
       )}
 
@@ -240,27 +240,16 @@ const App: React.FC = () => {
           <span className="w-1.5 h-6 bg-blue-600 rounded-full"></span>
           Хронология
         </h3>
-        
         <div className="space-y-2">
-          {isLoading && shifts.length === 0 ? (
-             <div className="flex justify-center p-12">
-               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-             </div>
-          ) : enrichedShifts.length === 0 ? (
-            <div className="bg-white p-12 rounded-3xl text-center text-slate-400 font-medium border border-slate-100 italic">
-              Здесь будут ваши записи смен.
-            </div>
-          ) : (
-            enrichedShifts.map((shift, idx) => (
-              <TimelineItem 
-                key={shift.id} 
-                shift={shift} 
-                onEdit={editShift} 
-                onDelete={deleteShift}
-                isInitiallyExpanded={idx === 0}
-              />
-            ))
-          )}
+          {enrichedShifts.map((shift, idx) => (
+            <TimelineItem 
+              key={shift.id} 
+              shift={shift} 
+              onEdit={editShift} 
+              onDelete={deleteShift}
+              isInitiallyExpanded={idx === 0}
+            />
+          ))}
         </div>
       </div>
 
@@ -270,6 +259,13 @@ const App: React.FC = () => {
         onSave={handleSaveShift}
         initialData={editingShift}
         defaultStartTime={defaultStartTimeStr}
+      />
+
+      <CloudSettingsModal 
+        isOpen={isCloudModalOpen}
+        onClose={() => setIsCloudModalOpen(false)}
+        onSave={handleCloudSave}
+        onReset={() => { storage.resetCloud(); setShifts([]); }}
       />
     </div>
   );

@@ -1,90 +1,86 @@
-import { createClient } from '@supabase/supabase-js';
-import { Shift, AppState } from '../types';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Shift, AppState, CloudConfig } from '../types';
 
 const SHIFTS_KEY = 'driverlog_shifts_v1';
 const STATE_KEY = 'driverlog_state_v1';
+const CLOUD_CONFIG_KEY = 'driverlog_cloud_config_v1';
 
-// Пытаемся получить переменные окружения из разных возможных мест (process.env или window.process.env)
+let supabase: SupabaseClient | null = null;
+
 const getEnv = (key: string): string => {
-  const value = process.env[key] || (window as any).process?.env?.[key];
-  return value || '';
+  // Try various prefixes common in different build environments
+  return (
+    (process.env as any)[key] || 
+    (process.env as any)[`VITE_${key}`] || 
+    (process.env as any)[`NEXT_PUBLIC_${key}`] ||
+    (window as any).process?.env?.[key] ||
+    ''
+  );
 };
 
-const supabaseUrl = getEnv('SUPABASE_URL');
-const supabaseKey = getEnv('SUPABASE_ANON_KEY');
-
-let supabase: any = null;
-
-if (supabaseUrl && supabaseKey) {
-  try {
-    supabase = createClient(supabaseUrl, supabaseKey);
-    console.log('✅ Supabase: Инициализирован успешно.');
-  } catch (e) {
-    console.error('❌ Supabase: Ошибка при создании клиента:', e);
-  }
-} else {
-  console.warn('⚠️ Supabase: Ключи не найдены. Работает только локальное хранилище.');
-  console.log('Доступные ключи:', Object.keys(process.env));
-}
-
 export const storage = {
+  initCloud: (manualConfig?: CloudConfig) => {
+    const url = manualConfig?.url || getEnv('SUPABASE_URL') || localStorage.getItem(`${CLOUD_CONFIG_KEY}_url`);
+    const key = manualConfig?.key || getEnv('SUPABASE_ANON_KEY') || localStorage.getItem(`${CLOUD_CONFIG_KEY}_key`);
+
+    if (url && key) {
+      try {
+        supabase = createClient(url, key);
+        if (manualConfig) {
+          localStorage.setItem(`${CLOUD_CONFIG_KEY}_url`, manualConfig.url);
+          localStorage.setItem(`${CLOUD_CONFIG_KEY}_key`, manualConfig.key);
+        }
+        console.log('✅ Supabase: Подключено');
+        return true;
+      } catch (e) {
+        console.error('❌ Supabase: Ошибка инициализации', e);
+        return false;
+      }
+    }
+    return false;
+  },
+
   getShifts: async (): Promise<Shift[]> => {
-    try {
-      if (supabase) {
+    if (supabase) {
+      try {
         const { data, error } = await supabase
           .from('shifts')
           .select('*')
           .order('timestamp', { ascending: false });
         
-        if (error) {
-          console.error('❌ Supabase Fetch Error:', error.message);
-        } else if (data) {
-          return data;
-        }
+        if (!error && data) return data;
+        if (error) console.error('Supabase Fetch Error:', error.message);
+      } catch (e) {
+        console.error('Supabase Connection Failed:', e);
       }
-    } catch (e) {
-      console.error('❌ Supabase Connection Failed:', e);
     }
     
-    // Резервное копирование в localStorage
     const data = localStorage.getItem(SHIFTS_KEY);
     return data ? JSON.parse(data) : [];
   },
 
   saveShift: async (shift: Shift): Promise<boolean> => {
-    // 1. Сначала сохраняем локально
+    // Local first
     const localShifts = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const index = localShifts.findIndex((s: Shift) => s.id === shift.id);
-    if (index > -1) {
-      localShifts[index] = shift;
-    } else {
-      localShifts.push(shift);
-    }
+    if (index > -1) localShifts[index] = shift;
+    else localShifts.push(shift);
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(localShifts));
 
-    // 2. Если облако включено, синхронизируем
+    // Cloud sync
     if (supabase) {
       try {
-        const { error } = await supabase
-          .from('shifts')
-          .upsert({
-            id: shift.id,
-            date: shift.date,
-            startTime: shift.startTime,
-            endTime: shift.endTime,
-            driveHours: shift.driveHours,
-            driveMinutes: shift.driveMinutes,
-            timestamp: shift.timestamp
-          });
-
-        if (error) {
-          console.error('❌ Supabase Upsert Error:', error.message, error.details);
-          return false;
-        }
-        console.log('☁️ Данные успешно синхронизированы с облаком');
-        return true;
+        const { error } = await supabase.from('shifts').upsert({
+          id: shift.id,
+          date: shift.date,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          driveHours: shift.driveHours,
+          driveMinutes: shift.driveMinutes,
+          timestamp: shift.timestamp
+        });
+        return !error;
       } catch (e) {
-        console.error('❌ Supabase Sync Exception:', e);
         return false;
       }
     }
@@ -93,22 +89,13 @@ export const storage = {
 
   deleteShift: async (id: string): Promise<boolean> => {
     const localShifts = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
-    const filtered = localShifts.filter((s: Shift) => s.id !== id);
-    localStorage.setItem(SHIFTS_KEY, JSON.stringify(filtered));
+    localStorage.setItem(SHIFTS_KEY, JSON.stringify(localShifts.filter((s: Shift) => s.id !== id)));
 
     if (supabase) {
       try {
-        const { error } = await supabase
-          .from('shifts')
-          .delete()
-          .eq('id', id);
-        
-        if (error) {
-          console.error('❌ Supabase Delete Error:', error.message);
-          return false;
-        }
+        const { error } = await supabase.from('shifts').delete().eq('id', id);
+        return !error;
       } catch (e) {
-        console.error('❌ Supabase Delete Exception:', e);
         return false;
       }
     }
@@ -116,19 +103,15 @@ export const storage = {
   },
 
   getState: (): AppState => {
-    try {
-      const data = localStorage.getItem(STATE_KEY);
-      return data ? JSON.parse(data) : { isActive: false, startTime: null };
-    } catch {
-      return { isActive: false, startTime: null };
-    }
+    const data = localStorage.getItem(STATE_KEY);
+    return data ? JSON.parse(data) : { isActive: false, startTime: null };
   },
-  saveState: (state: AppState) => {
-    localStorage.setItem(STATE_KEY, JSON.stringify(state));
-  },
-  clearState: () => {
-    localStorage.removeItem(STATE_KEY);
-  },
-  
-  isCloudEnabled: () => !!supabase
+  saveState: (state: AppState) => localStorage.setItem(STATE_KEY, JSON.stringify(state)),
+  clearState: () => localStorage.removeItem(STATE_KEY),
+  isCloudEnabled: () => !!supabase,
+  resetCloud: () => {
+    supabase = null;
+    localStorage.removeItem(`${CLOUD_CONFIG_KEY}_url`);
+    localStorage.removeItem(`${CLOUD_CONFIG_KEY}_key`);
+  }
 };

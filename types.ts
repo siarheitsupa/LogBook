@@ -1,4 +1,3 @@
-
 export interface Shift {
   id: string;
   date: string; // YYYY-MM-DD
@@ -23,4 +22,9 @@ export interface RestEvent {
 
 export interface ShiftWithRest extends Shift {
   restBefore?: RestEvent;
+}
+
+export interface CloudConfig {
+  url: string;
+  key: string;
 }
