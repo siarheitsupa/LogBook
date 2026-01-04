@@ -2,20 +2,11 @@ import { GoogleGenAI } from "@google/genai";
 import { Shift } from "../types";
 
 export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
-  // Пытаемся получить ключ максимально безопасно
-  let apiKey = '';
-  try {
-    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-      apiKey = process.env.API_KEY;
-    } else if ((window as any).process?.env?.API_KEY) {
-      apiKey = (window as any).process.env.API_KEY;
-    }
-  } catch (e) {
-    apiKey = '';
-  }
+  // Use process.env.API_KEY as requested
+  const apiKey = process.env.API_KEY;
   
   if (!apiKey) {
-    return "ИИ не настроен (отсутствует API_KEY в переменных окружения).";
+    return "ИИ не настроен. Пожалуйста, добавьте API_KEY в переменные окружения Vercel.";
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -29,13 +20,13 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
     Focus on:
     1. Weekly driving limit (56h).
     2. Bi-weekly driving limit (90h).
-    3. Daily driving limits and extensions.
+    3. Daily driving limits (9h/10h).
     4. Weekly rest periods (24h/45h).
     
     Log History (latest 10 shifts):
     ${history}
 
-    Provide a very brief summary (2-3 sentences) in Russian. Be encouraging but professional.
+    Provide a very brief summary (2-3 sentences) in Russian. Be professional and mention if anything looks critical or if the driver is doing great.
   `;
 
   try {
@@ -43,12 +34,12 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
-        systemInstruction: "You are a professional fleet compliance officer specialized in EU driving and rest time regulations. Response must be in Russian."
+        systemInstruction: "You are a professional fleet compliance officer specialized in EU driving and rest time regulations. Your goal is to help the driver stay legal. Response must be in Russian."
       }
     });
-    return response.text || "Не удалось проанализировать данные.";
+    return response.text || "Не удалось получить ответ от ИИ.";
   } catch (error) {
     console.error("Gemini Analysis Error:", error);
-    return "Ошибка при анализе логов ИИ. Проверьте настройки ключа.";
+    return "Произошла ошибка при обращении к ИИ. Проверьте лимиты или ключ.";
   }
 };
