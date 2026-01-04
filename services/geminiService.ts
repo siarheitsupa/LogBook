@@ -3,10 +3,16 @@ import { GoogleGenAI } from "@google/genai";
 import { Shift } from "../types";
 
 export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
-  const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) || '';
+  // Safe access to process.env.API_KEY as per requirements
+  let apiKey = '';
+  try {
+    apiKey = (window as any).process?.env?.API_KEY || (typeof process !== 'undefined' ? process.env.API_KEY : '') || '';
+  } catch (e) {
+    apiKey = '';
+  }
   
   if (!apiKey) {
-    return "ИИ не настроен (отсутствует API_KEY).";
+    return "ИИ не настроен (отсутствует API_KEY в переменных окружения).";
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -40,6 +46,6 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
     return response.text || "Не удалось проанализировать данные.";
   } catch (error) {
     console.error("Gemini Analysis Error:", error);
-    return "Ошибка при подключении к ИИ для анализа.";
+    return "Ошибка при анализе логов ИИ. Проверьте настройки ключа.";
   }
 };

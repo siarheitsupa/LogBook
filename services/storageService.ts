@@ -1,14 +1,16 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
+import { createClient } from '@supabase/supabase-js';
 import { Shift, AppState } from '../types';
 
 const SHIFTS_KEY = 'driverlog_shifts_v1';
 const STATE_KEY = 'driverlog_state_v1';
 
-// Helper to safely get env variables in browser
+// Helper to safely get env variables in browser without crashing
 const getEnv = (key: string): string => {
   try {
-    return (typeof process !== 'undefined' && process.env && (process.env as any)[key]) || '';
+    // Adhere to process.env requirement but check for existence safely
+    const env = (window as any).process?.env || (typeof process !== 'undefined' ? process.env : {});
+    return env[key] || '';
   } catch {
     return '';
   }
@@ -17,7 +19,8 @@ const getEnv = (key: string): string => {
 const supabaseUrl = getEnv('SUPABASE_URL');
 const supabaseKey = getEnv('SUPABASE_ANON_KEY');
 
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+// Only initialize if we have both keys
+const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
 
 export const storage = {
   getShifts: async (): Promise<Shift[]> => {
@@ -29,7 +32,7 @@ export const storage = {
           .order('timestamp', { ascending: false });
         
         if (!error && data) return data;
-        console.warn('Supabase fetch warning, falling back to local:', error);
+        if (error) console.warn('Supabase fetch warning:', error.message);
       }
     } catch (e) {
       console.error('Supabase connection failed:', e);
@@ -41,7 +44,7 @@ export const storage = {
   },
 
   saveShift: async (shift: Shift): Promise<boolean> => {
-    // Save locally first for reliability
+    // Save locally first for immediate UI feedback
     const localShifts = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const index = localShifts.findIndex((s: Shift) => s.id === shift.id);
     if (index > -1) {
