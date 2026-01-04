@@ -1,0 +1,5 @@
+{
+  "name": "DriverLog Pro - Trucker's Companion",
+  "description": "A professional logbook for truck drivers to track driving hours, shift durations, and weekly rest periods (24/45 rules) with automated compensation debt calculation and AI-powered log analysis.",
+  "requestFramePermissions": []
+}
