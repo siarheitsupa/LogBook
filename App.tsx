@@ -15,17 +15,24 @@ const App: React.FC = () => {
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
 
   // Update "now" for live timers
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000); // Update every second for smooth timer
+    const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    setShifts(storage.getShifts());
-    setAppState(storage.getState());
+    const loadData = async () => {
+      setIsLoading(true);
+      const data = await storage.getShifts();
+      setShifts(data);
+      setAppState(storage.getState());
+      setIsLoading(false);
+    };
+    loadData();
   }, []);
 
   const handleMainAction = () => {
@@ -39,28 +46,31 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSaveShift = (newShift: Shift) => {
-    let updatedShifts;
-    if (editingShift) {
-      updatedShifts = shifts.map(s => s.id === newShift.id ? newShift : s);
-    } else {
-      updatedShifts = [...shifts, newShift];
+  const handleSaveShift = async (newShift: Shift) => {
+    setIsLoading(true);
+    await storage.saveShift(newShift);
+    
+    // Refresh data
+    const updatedData = await storage.getShifts();
+    setShifts(updatedData);
+    
+    if (!editingShift) {
       setAppState({ isActive: false, startTime: null });
       storage.clearState();
     }
     
-    updatedShifts.sort((a, b) => b.timestamp - a.timestamp);
-    setShifts(updatedShifts);
-    storage.saveShifts(updatedShifts);
+    setIsLoading(false);
     setIsModalOpen(false);
     setEditingShift(null);
   };
 
-  const deleteShift = (id: string) => {
+  const deleteShift = async (id: string) => {
     if (window.confirm('Удалить эту смену?')) {
-      const updated = shifts.filter(s => s.id !== id);
-      setShifts(updated);
-      storage.saveShifts(updated);
+      setIsLoading(true);
+      await storage.deleteShift(id);
+      const updatedData = await storage.getShifts();
+      setShifts(updatedData);
+      setIsLoading(false);
     }
   };
 
@@ -80,10 +90,9 @@ const App: React.FC = () => {
   const { shifts: enrichedShifts, totalDebt } = calculateLogSummary(shifts);
   const { weekMins, biWeekMins, dailyDutyMins, extDrivingCount, extDutyCount } = getStats(shifts);
 
-  const lastShift = shifts[0]; // shifts are sorted newest first
+  const lastShift = shifts[0];
   const lastShiftEndTime = lastShift ? new Date(`${lastShift.date}T${lastShift.endTime}`).getTime() : null;
   
-  // Calculate rest time elapsed
   const restElapsedMins = (!appState.isActive && lastShiftEndTime) 
     ? Math.max(0, (now - lastShiftEndTime) / (1000 * 60))
     : 0;
@@ -92,7 +101,6 @@ const App: React.FC = () => {
     ? `${pad(new Date(appState.startTime).getHours())}:${pad(new Date(appState.startTime).getMinutes())}`
     : '08:00';
 
-  // Calculate current active shift duration
   const activeDurationMins = appState.isActive && appState.startTime 
     ? (now - appState.startTime) / (1000 * 60)
     : 0;
@@ -100,15 +108,27 @@ const App: React.FC = () => {
   return (
     <div className="max-w-xl mx-auto min-h-screen pb-12 px-4 pt-6">
       <header className="flex flex-col items-center mb-6">
-        <div className="flex items-center gap-3 bg-white p-2 pr-6 rounded-full shadow-sm border border-slate-100">
+        <div className="flex items-center gap-3 bg-white p-2 pr-6 rounded-full shadow-sm border border-slate-100 relative">
           <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
               <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/>
             </svg>
           </div>
           <span className="text-xl font-extrabold tracking-tight text-slate-800">DriverLog Pro</span>
+          
+          {/* Cloud Sync Status Icon */}
+          <div className={`absolute -right-2 -top-1 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center text-[10px] ${storage.isCloudEnabled() ? 'bg-emerald-500 text-white' : 'bg-slate-300 text-slate-600'}`} title={storage.isCloudEnabled() ? 'Облако подключено' : 'Локальный режим'}>
+            {storage.isCloudEnabled() ? '☁️' : '🏠'}
+          </div>
         </div>
       </header>
+
+      {/* Loading Overlay */}
+      {isLoading && !isModalOpen && (
+        <div className="fixed top-4 right-4 z-50 animate-pulse bg-white/80 backdrop-blur-md px-4 py-2 rounded-full border border-slate-100 shadow-sm text-xs font-bold text-slate-500">
+          Синхронизация...
+        </div>
+      )}
 
       {/* Main Control Card */}
       <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6">
@@ -198,7 +218,11 @@ const App: React.FC = () => {
         </h3>
         
         <div className="space-y-2">
-          {enrichedShifts.length === 0 ? (
+          {isLoading && shifts.length === 0 ? (
+             <div className="flex justify-center p-12">
+               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+             </div>
+          ) : enrichedShifts.length === 0 ? (
             <div className="bg-white p-12 rounded-3xl text-center text-slate-400 font-medium border border-slate-100">
               Пока нет записей.
             </div>
