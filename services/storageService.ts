@@ -1,14 +1,13 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { Shift, AppState } from '../types';
 
 const SHIFTS_KEY = 'driverlog_shifts_v1';
 const STATE_KEY = 'driverlog_state_v1';
 
-// Helper to safely get env variables in browser without crashing
+// Функция для безопасного получения переменных окружения в браузере
 const getEnv = (key: string): string => {
   try {
-    // Adhere to process.env requirement but check for existence safely
+    // Сначала проверяем наш shim в window, затем нативный process (если он есть)
     const env = (window as any).process?.env || (typeof process !== 'undefined' ? process.env : {});
     return env[key] || '';
   } catch {
@@ -19,7 +18,7 @@ const getEnv = (key: string): string => {
 const supabaseUrl = getEnv('SUPABASE_URL');
 const supabaseKey = getEnv('SUPABASE_ANON_KEY');
 
-// Only initialize if we have both keys
+// Инициализируем только при наличии ключей, чтобы избежать ошибок внутри библиотеки
 const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
 
 export const storage = {
@@ -38,13 +37,13 @@ export const storage = {
       console.error('Supabase connection failed:', e);
     }
     
-    // Fallback to localStorage
+    // Резервное копирование в localStorage
     const data = localStorage.getItem(SHIFTS_KEY);
     return data ? JSON.parse(data) : [];
   },
 
   saveShift: async (shift: Shift): Promise<boolean> => {
-    // Save locally first for immediate UI feedback
+    // Сохраняем локально сразу для мгновенного отклика UI
     const localShifts = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const index = localShifts.findIndex((s: Shift) => s.id === shift.id);
     if (index > -1) {
@@ -54,7 +53,7 @@ export const storage = {
     }
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(localShifts));
 
-    // Sync with Supabase
+    // Синхронизация с Supabase
     if (supabase) {
       try {
         const { error } = await supabase
@@ -78,12 +77,12 @@ export const storage = {
   },
 
   deleteShift: async (id: string): Promise<boolean> => {
-    // Delete locally
+    // Удаляем локально
     const localShifts = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const filtered = localShifts.filter((s: Shift) => s.id !== id);
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(filtered));
 
-    // Sync with Supabase
+    // Удаляем в Supabase
     if (supabase) {
       try {
         const { error } = await supabase
@@ -100,8 +99,12 @@ export const storage = {
   },
 
   getState: (): AppState => {
-    const data = localStorage.getItem(STATE_KEY);
-    return data ? JSON.parse(data) : { isActive: false, startTime: null };
+    try {
+      const data = localStorage.getItem(STATE_KEY);
+      return data ? JSON.parse(data) : { isActive: false, startTime: null };
+    } catch {
+      return { isActive: false, startTime: null };
+    }
   },
   saveState: (state: AppState) => {
     localStorage.setItem(STATE_KEY, JSON.stringify(state));

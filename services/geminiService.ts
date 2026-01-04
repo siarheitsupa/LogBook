@@ -1,12 +1,15 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { Shift } from "../types";
 
 export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
-  // Safe access to process.env.API_KEY as per requirements
+  // Пытаемся получить ключ максимально безопасно
   let apiKey = '';
   try {
-    apiKey = (window as any).process?.env?.API_KEY || (typeof process !== 'undefined' ? process.env.API_KEY : '') || '';
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+      apiKey = process.env.API_KEY;
+    } else if ((window as any).process?.env?.API_KEY) {
+      apiKey = (window as any).process.env.API_KEY;
+    }
   } catch (e) {
     apiKey = '';
   }
