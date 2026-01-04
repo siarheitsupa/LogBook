@@ -3,7 +3,13 @@ import { GoogleGenAI } from "@google/genai";
 import { Shift } from "../types";
 
 export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) || '';
+  
+  if (!apiKey) {
+    return "ИИ не настроен (отсутствует API_KEY).";
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
   
   const history = shifts.slice(0, 10).map(s => (
     `Date: ${s.date}, Shift: ${s.startTime}-${s.endTime}, Driving: ${s.driveHours}h ${s.driveMinutes}m`

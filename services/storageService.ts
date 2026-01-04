@@ -5,22 +5,34 @@ import { Shift, AppState } from '../types';
 const SHIFTS_KEY = 'driverlog_shifts_v1';
 const STATE_KEY = 'driverlog_state_v1';
 
-// Initialize Supabase only if environment variables are present
-const supabaseUrl = (process.env as any).SUPABASE_URL || '';
-const supabaseKey = (process.env as any).SUPABASE_ANON_KEY || '';
+// Helper to safely get env variables in browser
+const getEnv = (key: string): string => {
+  try {
+    return (typeof process !== 'undefined' && process.env && (process.env as any)[key]) || '';
+  } catch {
+    return '';
+  }
+};
+
+const supabaseUrl = getEnv('SUPABASE_URL');
+const supabaseKey = getEnv('SUPABASE_ANON_KEY');
 
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 export const storage = {
   getShifts: async (): Promise<Shift[]> => {
-    if (supabase) {
-      const { data, error } = await supabase
-        .from('shifts')
-        .select('*')
-        .order('timestamp', { ascending: false });
-      
-      if (!error && data) return data;
-      console.error('Supabase fetch error:', error);
+    try {
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('shifts')
+          .select('*')
+          .order('timestamp', { ascending: false });
+        
+        if (!error && data) return data;
+        console.warn('Supabase fetch warning, falling back to local:', error);
+      }
+    } catch (e) {
+      console.error('Supabase connection failed:', e);
     }
     
     // Fallback to localStorage
@@ -29,7 +41,7 @@ export const storage = {
   },
 
   saveShift: async (shift: Shift): Promise<boolean> => {
-    // Save locally first
+    // Save locally first for reliability
     const localShifts = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const index = localShifts.findIndex((s: Shift) => s.id === shift.id);
     if (index > -1) {
@@ -41,10 +53,23 @@ export const storage = {
 
     // Sync with Supabase
     if (supabase) {
-      const { error } = await supabase
-        .from('shifts')
-        .upsert(shift);
-      return !error;
+      try {
+        const { error } = await supabase
+          .from('shifts')
+          .upsert({
+            id: shift.id,
+            date: shift.date,
+            startTime: shift.startTime,
+            endTime: shift.endTime,
+            driveHours: shift.driveHours,
+            driveMinutes: shift.driveMinutes,
+            timestamp: shift.timestamp
+          });
+        return !error;
+      } catch (e) {
+        console.error('Supabase sync error:', e);
+        return false;
+      }
     }
     return true;
   },
@@ -57,16 +82,20 @@ export const storage = {
 
     // Sync with Supabase
     if (supabase) {
-      const { error } = await supabase
-        .from('shifts')
-        .delete()
-        .eq('id', id);
-      return !error;
+      try {
+        const { error } = await supabase
+          .from('shifts')
+          .delete()
+          .eq('id', id);
+        return !error;
+      } catch (e) {
+        console.error('Supabase delete error:', e);
+        return false;
+      }
     }
     return true;
   },
 
-  // State is still kept locally as it's volatile/session-based
   getState: (): AppState => {
     const data = localStorage.getItem(STATE_KEY);
     return data ? JSON.parse(data) : { isActive: false, startTime: null };
