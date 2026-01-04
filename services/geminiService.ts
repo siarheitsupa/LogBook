@@ -1,12 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
 import { Shift } from "../types";
 
-export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
-  // Use process.env.API_KEY as requested
-  const apiKey = process.env.API_KEY;
+export const analyzeLogs = async (shifts: Shift[], manualApiKey?: string): Promise<string> => {
+  const apiKey = manualApiKey || process.env.API_KEY;
   
   if (!apiKey) {
-    return "ИИ не настроен. Пожалуйста, добавьте API_KEY в переменные окружения Vercel.";
+    return "ИИ не настроен. Пожалуйста, добавьте Gemini API Key в настройках облака (иконка шестеренки).";
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -38,8 +37,9 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
       }
     });
     return response.text || "Не удалось получить ответ от ИИ.";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini Analysis Error:", error);
-    return "Произошла ошибка при обращении к ИИ. Проверьте лимиты или ключ.";
+    if (error?.message?.includes('API_KEY_INVALID')) return "Ошибка: Неверный API ключ Gemini.";
+    return "Произошла ошибка при обращении к ИИ. Проверьте ключ или лимиты.";
   }
 };

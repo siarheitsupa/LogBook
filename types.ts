@@ -1,3 +1,4 @@
+
 export interface Shift {
   id: string;
   date: string; // YYYY-MM-DD
@@ -27,4 +28,5 @@ export interface ShiftWithRest extends Shift {
 export interface CloudConfig {
   url: string;
   key: string;
+  geminiKey?: string;
 }

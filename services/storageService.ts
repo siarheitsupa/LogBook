@@ -4,6 +4,7 @@ import { Shift, AppState, CloudConfig } from '../types';
 const SHIFTS_KEY = 'driverlog_shifts_v1';
 const STATE_KEY = 'driverlog_state_v1';
 const CLOUD_CONFIG_KEY = 'driverlog_cloud_config_v1';
+const GEMINI_KEY = 'driverlog_gemini_key_v1';
 
 let supabase: SupabaseClient | null = null;
 
@@ -21,6 +22,10 @@ export const storage = {
   initCloud: (manualConfig?: CloudConfig) => {
     const url = manualConfig?.url || getEnv('SUPABASE_URL') || localStorage.getItem(`${CLOUD_CONFIG_KEY}_url`);
     const key = manualConfig?.key || getEnv('SUPABASE_ANON_KEY') || localStorage.getItem(`${CLOUD_CONFIG_KEY}_key`);
+    
+    if (manualConfig?.geminiKey) {
+      localStorage.setItem(GEMINI_KEY, manualConfig.geminiKey);
+    }
 
     if (url && key) {
       try {
@@ -39,6 +44,10 @@ export const storage = {
     return false;
   },
 
+  getGeminiKey: (): string => {
+    return localStorage.getItem(GEMINI_KEY) || getEnv('API_KEY') || '';
+  },
+
   getShifts: async (): Promise<Shift[]> => {
     if (supabase) {
       try {
@@ -48,7 +57,6 @@ export const storage = {
           .order('timestamp', { ascending: false });
         
         if (!error && data) {
-          // Маппинг из snake_case (БД) обратно в camelCase (Приложение)
           return data.map((item: any) => ({
             id: item.id,
             date: item.date,
@@ -70,14 +78,12 @@ export const storage = {
   },
 
   saveShift: async (shift: Shift): Promise<boolean> => {
-    // Сначала локально
     const localShifts = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const index = localShifts.findIndex((s: Shift) => s.id === shift.id);
     if (index > -1) localShifts[index] = shift;
     else localShifts.push(shift);
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(localShifts));
 
-    // Синхронизация: Маппинг в snake_case для БД
     if (supabase) {
       try {
         const { error } = await supabase.from('shifts').upsert({
@@ -129,5 +135,6 @@ export const storage = {
     supabase = null;
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_url`);
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_key`);
+    localStorage.removeItem(GEMINI_KEY);
   }
 };

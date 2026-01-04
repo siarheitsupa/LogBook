@@ -27,7 +27,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      storage.initCloud(); // Auto-init on start
+      storage.initCloud();
       const data = await storage.getShifts();
       setShifts(data);
       setAppState(storage.getState());
@@ -72,9 +72,9 @@ const App: React.FC = () => {
       setShifts(data);
       setIsLoading(false);
       setIsCloudModalOpen(false);
-      alert('Облако успешно подключено!');
+      alert('Настройки успешно сохранены!');
     } else {
-      alert('Не удалось подключиться. Проверьте URL и Ключ.');
+      alert('Не удалось подключиться к БД. Проверьте URL и Ключ.');
     }
   };
 
@@ -94,9 +94,14 @@ const App: React.FC = () => {
   };
 
   const runAiAnalysis = async () => {
+    const gKey = storage.getGeminiKey();
+    if (!gKey) {
+      setIsCloudModalOpen(true);
+      return;
+    }
     if (shifts.length === 0) return;
     setIsAnalyzing(true);
-    const result = await analyzeLogs(shifts);
+    const result = await analyzeLogs(shifts, gKey);
     setAiAnalysis(result);
     setIsAnalyzing(false);
   };
@@ -119,11 +124,13 @@ const App: React.FC = () => {
     ? (now - appState.startTime) / (1000 * 60)
     : 0;
 
+  const geminiConfigured = !!storage.getGeminiKey();
+
   return (
     <div className="max-w-xl mx-auto min-h-screen pb-12 px-4 pt-6">
       <header className="flex flex-col items-center mb-6 relative">
         <div className="flex items-center gap-3 bg-white p-2 pr-4 pl-3 rounded-full shadow-sm border border-slate-100 relative">
-          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-inner">
+          <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-inner">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
               <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/>
             </svg>
@@ -136,7 +143,7 @@ const App: React.FC = () => {
               onClick={() => setIsCloudModalOpen(true)}
               className="p-1 hover:bg-slate-50 rounded-lg transition-colors text-slate-400"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
                 <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
               </svg>
@@ -224,11 +231,11 @@ const App: React.FC = () => {
                 disabled={isAnalyzing} 
                 className={`text-[10px] bg-white text-indigo-900 px-3 py-1.5 rounded-full font-bold transition-all shadow-sm ${isAnalyzing ? 'opacity-50' : 'hover:scale-105 active:scale-95'}`}
               >
-                {isAnalyzing ? 'АНАЛИЗ...' : 'ОБНОВИТЬ'}
+                {!geminiConfigured ? 'НАСТРОИТЬ' : isAnalyzing ? 'АНАЛИЗ...' : 'ОБНОВИТЬ'}
               </button>
             </div>
             <div className={`text-sm leading-relaxed opacity-95 transition-all ${isAnalyzing ? 'animate-pulse' : ''}`}>
-              {aiAnalysis || "Проверьте свои логи на соответствие регламентам ЕС."}
+              {aiAnalysis || (geminiConfigured ? "Нажмите «Обновить» для проверки логов на соответствие регламентам ЕС." : "ИИ не настроен. Нажмите «Настроить», чтобы ввести API Key.")}
             </div>
           </div>
         </div>
@@ -237,7 +244,7 @@ const App: React.FC = () => {
       {/* Timeline */}
       <div className="space-y-4">
         <h3 className="text-lg font-extrabold text-slate-800 flex items-center gap-2 px-2">
-          <span className="w-1.5 h-6 bg-blue-600 rounded-full"></span>
+          <span className="w-1.5 h-6 bg-slate-900 rounded-full"></span>
           Хронология
         </h3>
         <div className="space-y-2">
