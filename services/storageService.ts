@@ -29,7 +29,7 @@ export const storage = {
           localStorage.setItem(`${CLOUD_CONFIG_KEY}_url`, manualConfig.url);
           localStorage.setItem(`${CLOUD_CONFIG_KEY}_key`, manualConfig.key);
         }
-        console.log('✅ Supabase: Клиент инициализирован');
+        console.log('✅ Supabase: Инициализирован');
         return true;
       } catch (e) {
         console.error('❌ Supabase: Ошибка инициализации', e);
@@ -47,8 +47,19 @@ export const storage = {
           .select('*')
           .order('timestamp', { ascending: false });
         
-        if (!error && data) return data;
-        if (error) console.error('🔴 Ошибка загрузки из облака:', error.message, error.details);
+        if (!error && data) {
+          // Маппинг из snake_case (БД) обратно в camelCase (Приложение)
+          return data.map((item: any) => ({
+            id: item.id,
+            date: item.date,
+            startTime: item.start_time,
+            endTime: item.end_time,
+            driveHours: item.drive_hours,
+            driveMinutes: item.drive_minutes,
+            timestamp: typeof item.timestamp === 'string' ? parseInt(item.timestamp) : item.timestamp
+          }));
+        }
+        if (error) console.error('🔴 Ошибка загрузки:', error.message);
       } catch (e) {
         console.error('🔴 Исключение при загрузке:', e);
       }
@@ -59,42 +70,37 @@ export const storage = {
   },
 
   saveShift: async (shift: Shift): Promise<boolean> => {
-    // Сначала сохраняем локально, чтобы данные не пропали
+    // Сначала локально
     const localShifts = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const index = localShifts.findIndex((s: Shift) => s.id === shift.id);
     if (index > -1) localShifts[index] = shift;
     else localShifts.push(shift);
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(localShifts));
 
-    // Попытка синхронизации с облаком
+    // Синхронизация: Маппинг в snake_case для БД
     if (supabase) {
       try {
-        console.log('☁️ Синхронизация смены:', shift.id);
         const { error } = await supabase.from('shifts').upsert({
           id: shift.id,
           date: shift.date,
-          startTime: shift.startTime,
-          endTime: shift.endTime,
-          driveHours: shift.driveHours,
-          driveMinutes: shift.driveMinutes,
+          start_time: shift.startTime,
+          end_time: shift.endTime,
+          drive_hours: shift.driveHours,
+          drive_minutes: shift.driveMinutes,
           timestamp: shift.timestamp
         });
 
         if (error) {
           console.error('🔴 ОШИБКА SUPABASE:', error.message);
-          console.error('Детали:', error.details);
-          console.error('Подсказка:', error.hint);
           return false;
         }
-        
-        console.log('✅ Успешно сохранено в облако');
         return true;
       } catch (e) {
-        console.error('🔴 Критическая ошибка сети/базы:', e);
+        console.error('🔴 Критическая ошибка:', e);
         return false;
       }
     }
-    return true; // Если облако не настроено, считаем "успехом" (сохранено локально)
+    return true;
   },
 
   deleteShift: async (id: string): Promise<boolean> => {
@@ -104,7 +110,6 @@ export const storage = {
     if (supabase) {
       try {
         const { error } = await supabase.from('shifts').delete().eq('id', id);
-        if (error) console.error('🔴 Ошибка удаления в облаке:', error.message);
         return !error;
       } catch (e) {
         return false;
@@ -124,6 +129,5 @@ export const storage = {
     supabase = null;
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_url`);
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_key`);
-    console.log('☁️ Настройки облака сброшены');
   }
 };

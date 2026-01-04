@@ -51,22 +51,26 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
             onClick={() => setShowSql(!showSql)}
             className="text-[10px] font-bold text-amber-700 uppercase flex items-center justify-between w-full"
           >
-            Нужно создать таблицу? {showSql ? '↑' : '↓'}
+            Инструкция SQL (Нажми) {showSql ? '↑' : '↓'}
           </button>
           {showSql && (
-            <pre className="mt-2 p-2 bg-white rounded-lg text-[8px] overflow-x-auto text-slate-600 font-mono leading-tight">
-              {`CREATE TABLE shifts (
+            <div className="mt-2 space-y-2">
+              <p className="text-[10px] text-amber-800 font-medium">Запустите в SQL Editor для исправления:</p>
+              <pre className="p-2 bg-white rounded-lg text-[9px] overflow-x-auto text-slate-600 font-mono leading-tight border border-amber-200">
+                {`DROP TABLE IF EXISTS shifts;
+CREATE TABLE shifts (
   id TEXT PRIMARY KEY,
   date DATE,
-  "startTime" TEXT,
-  "endTime" TEXT,
-  "driveHours" INT,
-  "driveMinutes" INT,
+  start_time TEXT,
+  end_time TEXT,
+  drive_hours INT,
+  drive_minutes INT,
   timestamp BIGINT
 );
 ALTER TABLE shifts ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "p" ON shifts FOR ALL USING (true) WITH CHECK (true);`}
-            </pre>
+              </pre>
+            </div>
           )}
         </div>
 
