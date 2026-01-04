@@ -4,22 +4,28 @@ import { Shift, AppState } from '../types';
 const SHIFTS_KEY = 'driverlog_shifts_v1';
 const STATE_KEY = 'driverlog_state_v1';
 
-// Функция для безопасного получения переменных окружения в браузере
+// Пытаемся получить переменные окружения из разных возможных мест (process.env или window.process.env)
 const getEnv = (key: string): string => {
-  try {
-    // Сначала проверяем наш shim в window, затем нативный process (если он есть)
-    const env = (window as any).process?.env || (typeof process !== 'undefined' ? process.env : {});
-    return env[key] || '';
-  } catch {
-    return '';
-  }
+  const value = process.env[key] || (window as any).process?.env?.[key];
+  return value || '';
 };
 
 const supabaseUrl = getEnv('SUPABASE_URL');
 const supabaseKey = getEnv('SUPABASE_ANON_KEY');
 
-// Инициализируем только при наличии ключей, чтобы избежать ошибок внутри библиотеки
-const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
+let supabase: any = null;
+
+if (supabaseUrl && supabaseKey) {
+  try {
+    supabase = createClient(supabaseUrl, supabaseKey);
+    console.log('✅ Supabase: Инициализирован успешно.');
+  } catch (e) {
+    console.error('❌ Supabase: Ошибка при создании клиента:', e);
+  }
+} else {
+  console.warn('⚠️ Supabase: Ключи не найдены. Работает только локальное хранилище.');
+  console.log('Доступные ключи:', Object.keys(process.env));
+}
 
 export const storage = {
   getShifts: async (): Promise<Shift[]> => {
@@ -30,11 +36,14 @@ export const storage = {
           .select('*')
           .order('timestamp', { ascending: false });
         
-        if (!error && data) return data;
-        if (error) console.warn('Supabase fetch warning:', error.message);
+        if (error) {
+          console.error('❌ Supabase Fetch Error:', error.message);
+        } else if (data) {
+          return data;
+        }
       }
     } catch (e) {
-      console.error('Supabase connection failed:', e);
+      console.error('❌ Supabase Connection Failed:', e);
     }
     
     // Резервное копирование в localStorage
@@ -43,7 +52,7 @@ export const storage = {
   },
 
   saveShift: async (shift: Shift): Promise<boolean> => {
-    // Сохраняем локально сразу для мгновенного отклика UI
+    // 1. Сначала сохраняем локально
     const localShifts = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const index = localShifts.findIndex((s: Shift) => s.id === shift.id);
     if (index > -1) {
@@ -53,7 +62,7 @@ export const storage = {
     }
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(localShifts));
 
-    // Синхронизация с Supabase
+    // 2. Если облако включено, синхронизируем
     if (supabase) {
       try {
         const { error } = await supabase
@@ -67,9 +76,15 @@ export const storage = {
             driveMinutes: shift.driveMinutes,
             timestamp: shift.timestamp
           });
-        return !error;
+
+        if (error) {
+          console.error('❌ Supabase Upsert Error:', error.message, error.details);
+          return false;
+        }
+        console.log('☁️ Данные успешно синхронизированы с облаком');
+        return true;
       } catch (e) {
-        console.error('Supabase sync error:', e);
+        console.error('❌ Supabase Sync Exception:', e);
         return false;
       }
     }
@@ -77,21 +92,23 @@ export const storage = {
   },
 
   deleteShift: async (id: string): Promise<boolean> => {
-    // Удаляем локально
     const localShifts = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const filtered = localShifts.filter((s: Shift) => s.id !== id);
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(filtered));
 
-    // Удаляем в Supabase
     if (supabase) {
       try {
         const { error } = await supabase
           .from('shifts')
           .delete()
           .eq('id', id);
-        return !error;
+        
+        if (error) {
+          console.error('❌ Supabase Delete Error:', error.message);
+          return false;
+        }
       } catch (e) {
-        console.error('Supabase delete error:', e);
+        console.error('❌ Supabase Delete Exception:', e);
         return false;
       }
     }

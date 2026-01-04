@@ -46,7 +46,7 @@ const App: React.FC = () => {
 
   const handleSaveShift = async (newShift: Shift) => {
     setIsLoading(true);
-    await storage.saveShift(newShift);
+    const success = await storage.saveShift(newShift);
     const updatedData = await storage.getShifts();
     setShifts(updatedData);
     if (!editingShift) {
@@ -56,6 +56,10 @@ const App: React.FC = () => {
     setIsLoading(false);
     setIsModalOpen(false);
     setEditingShift(null);
+    
+    if (!success && storage.isCloudEnabled()) {
+      alert('Ошибка синхронизации с облаком. Данные сохранены локально.');
+    }
   };
 
   const deleteShift = async (id: string) => {
@@ -122,10 +126,16 @@ const App: React.FC = () => {
           </div>
         </div>
         
+        {!storage.isCloudEnabled() && (
+          <div className="mt-2 text-[10px] font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+            Облако не настроено (данные только на телефоне)
+          </div>
+        )}
+
         {isLoading && (
           <div className="absolute -bottom-4 text-[10px] font-bold text-blue-500 flex items-center gap-1 animate-pulse">
             <span className="w-1 h-1 bg-blue-500 rounded-full"></span>
-            Синхронизация данных...
+            Загрузка данных...
           </div>
         )}
       </header>
