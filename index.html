@@ -23,7 +23,12 @@
           0%, 100% { opacity: 1; }
           50% { opacity: 0.7; }
         }
+        @keyframes blink-soft {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
         .animate-subtle { animation: subtle-pulse 2s infinite ease-in-out; }
+        .animate-blink { animation: blink-soft 1.5s infinite ease-in-out; }
     </style>
 <script type="importmap">
 {
