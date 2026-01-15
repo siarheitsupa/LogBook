@@ -22,6 +22,7 @@ const App: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
+  const [configUpdateTrigger, setConfigUpdateTrigger] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -32,7 +33,6 @@ const App: React.FC = () => {
     const loadInit = async () => {
       setIsLoading(true);
       
-      // Инициализируем облако
       const isConfigured = storage.initCloud();
       
       if (isConfigured) {
@@ -63,7 +63,7 @@ const App: React.FC = () => {
       return unsubscribe;
     };
     loadInit();
-  }, []);
+  }, [configUpdateTrigger]);
 
   useEffect(() => {
     if (session) {
@@ -96,25 +96,16 @@ const App: React.FC = () => {
     setIsLoading(false);
     setIsModalOpen(false);
     setEditingShift(null);
-    
-    if (!success && storage.isCloudEnabled()) {
-      alert('Ошибка сохранения. Убедитесь, что соединение стабильно.');
-    }
   };
 
   const handleCloudSave = async (config: CloudConfig) => {
     if (storage.initCloud(config)) {
       setIsLoading(true);
-      const sess = await storage.getSession();
-      setSession(sess);
-      if (sess) {
-        const data = await storage.getShifts();
-        setShifts(data);
-      }
-      setIsLoading(false);
+      // Увеличиваем триггер, чтобы запустить повторную инициализацию в useEffect
+      setConfigUpdateTrigger(prev => prev + 1);
       setIsCloudModalOpen(false);
     } else {
-      alert('Ошибка конфигурации. Проверьте URL и Ключ.');
+      alert('Ошибка конфигурации. Проверьте данные.');
     }
   };
 
@@ -140,35 +131,35 @@ const App: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
         <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin mb-4"></div>
-        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Загрузка данных...</p>
+        <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Синхронизация...</p>
       </div>
     );
   }
 
-  // Если облако НЕ настроено — показываем экран настройки/входа с просьбой настроить
+  // Если конфигурации нет - показываем экран настройки
   if (!storage.isConfigured()) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-slate-50 text-center">
+      <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-slate-50 text-center animate-in fade-in duration-500">
         <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-6 shadow-sm">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
             <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
           </svg>
         </div>
-        <h2 className="text-2xl font-black text-slate-900 mb-2">Настройка облака</h2>
-        <p className="text-slate-500 text-sm mb-8 max-w-xs">Для работы приложения необходимо настроить подключение к базе данных Supabase.</p>
+        <h2 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Настройка облака</h2>
+        <p className="text-slate-500 text-sm mb-8 max-w-xs font-medium">Для работы приложения необходимо настроить подключение к базе данных Supabase.</p>
         <button 
           onClick={() => setIsCloudModalOpen(true)}
           className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-xl active:scale-95 transition-all"
         >
           Ввести ключи настройки
         </button>
-        <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setSession(null); }} />
+        <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t + 1); }} />
       </div>
     );
   }
 
-  // Если облако настроено, но нет сессии — показываем экран авторизации
+  // Если конфигурация есть, но нет сессии — показываем экран авторизации
   if (!session) {
     return <AuthScreen />;
   }
@@ -181,7 +172,7 @@ const App: React.FC = () => {
   const activeDurationMins = appState.isActive && appState.startTime ? (now - appState.startTime) / (1000 * 60) : 0;
 
   return (
-    <div className="max-w-xl mx-auto min-h-screen pb-12 px-4 pt-6">
+    <div className="max-w-xl mx-auto min-h-screen pb-12 px-4 pt-6 animate-in fade-in duration-500">
       <header className="flex flex-col items-center mb-6 relative">
         <div className="flex items-center gap-3 bg-white p-2 pr-4 pl-3 rounded-full shadow-sm border border-slate-100 relative">
           <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-inner">
@@ -291,7 +282,7 @@ const App: React.FC = () => {
       </div>
 
       <ShiftModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveShift} initialData={editingShift} />
-      <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setSession(null); }} />
+      <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t + 1); }} />
     </div>
   );
 };

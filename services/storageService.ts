@@ -12,16 +12,19 @@ const getEnv = (key: string): string => {
   const env = (window as any).process?.env || (process as any)?.env || {};
   const metaEnv = (import.meta as any)?.env || {};
   
-  // Приводим ключ к нижнему регистру для соответствия формату сохранения
-  const storageSuffix = key.toLowerCase().replace('supabase_', '');
-  
+  // Маппинг для localStorage
+  const storageKeys: Record<string, string> = {
+    'SUPABASE_URL': `${CLOUD_CONFIG_KEY}_url`,
+    'SUPABASE_ANON_KEY': `${CLOUD_CONFIG_KEY}_key`
+  };
+
   return (
     env[key] || 
     env[`VITE_${key}`] || 
     env[`NEXT_PUBLIC_${key}`] ||
     metaEnv[key] ||
     metaEnv[`VITE_${key}`] ||
-    localStorage.getItem(`${CLOUD_CONFIG_KEY}_${storageSuffix}`) ||
+    localStorage.getItem(storageKeys[key] || '') ||
     ''
   );
 };
@@ -30,7 +33,7 @@ export const storage = {
   isConfigured: () => {
     const url = getEnv('SUPABASE_URL');
     const key = getEnv('SUPABASE_ANON_KEY');
-    return !!(url && key && url.startsWith('http'));
+    return !!(url && key && url.length > 10 && url.startsWith('http'));
   },
 
   initCloud: (manualConfig?: CloudConfig) => {
@@ -40,11 +43,12 @@ export const storage = {
     if (url && key && url.startsWith('http')) {
       try {
         supabase = createClient(url, key);
-        // Сохраняем в localStorage только если это ручной ввод или если в localStorage еще нет данных
-        if (manualConfig || !localStorage.getItem(`${CLOUD_CONFIG_KEY}_url`)) {
-          localStorage.setItem(`${CLOUD_CONFIG_KEY}_url`, url);
-          localStorage.setItem(`${CLOUD_CONFIG_KEY}_key`, key);
-        }
+        
+        // Всегда сохраняем в localStorage, чтобы не терять после перезагрузки
+        localStorage.setItem(`${CLOUD_CONFIG_KEY}_url`, url);
+        localStorage.setItem(`${CLOUD_CONFIG_KEY}_key`, key);
+        
+        console.log('✅ Supabase initialized');
         return true;
       } catch (e) {
         console.error('❌ Supabase: Init Error', e);
@@ -56,14 +60,14 @@ export const storage = {
 
   signUp: async (email: string, pass: string): Promise<AuthResponse> => {
     if (!supabase && !storage.initCloud()) {
-      return { data: { user: null, session: null }, error: { message: 'Настройте подключение к облаку в настройках (иконка шестеренки).' } as any };
+      throw new Error('Cloud connection failed');
     }
     return await supabase!.auth.signUp({ email, password: pass });
   },
 
   signIn: async (email: string, pass: string): Promise<AuthResponse> => {
     if (!supabase && !storage.initCloud()) {
-      return { data: { user: null, session: null }, error: { message: 'Настройте подключение к облаку в настройках (иконка шестеренки).' } as any };
+      throw new Error('Cloud connection failed');
     }
     return await supabase!.auth.signInWithPassword({ email, password: pass });
   },
@@ -77,10 +81,10 @@ export const storage = {
       }
     }
     
-    // Очистка сессии (не трогаем ключи конфигурации, чтобы не вводить их заново)
+    // Очистка только токенов сессии
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (key.toLowerCase().includes('supabase.auth.token') || key.toLowerCase().includes('sb-'))) {
+      if (key && (key.includes('supabase.auth.token') || key.includes('sb-'))) {
         localStorage.removeItem(key);
       }
     }
@@ -114,9 +118,6 @@ export const storage = {
   getShifts: async (): Promise<Shift[]> => {
     if (supabase) {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return [];
-
         const { data, error } = await supabase
           .from('shifts')
           .select('*')
