@@ -6,41 +6,43 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
   try {
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
-      return "⚠️ API_KEY не найден в переменных окружения Vercel.";
+      return "⚠️ API_KEY не найден. Убедитесь, что переменная окружения задана в Vercel.";
     }
 
     const ai = new GoogleGenAI({ apiKey });
     
     const history = shifts.slice(0, 12).map(s => (
-      `- ${s.date}: руль ${s.driveHours}ч ${s.driveMinutes}м (${s.startTime}-${s.endTime})`
+      `- ${s.date}: вождение ${s.driveHours}ч ${s.driveMinutes}м (смена ${s.startTime}-${s.endTime})`
     )).join('\n');
 
     const promptText = `
-      Анализ логов тахографа (Регламент ЕС 561/2006).
-      История:
+      Проанализируй логи тахографа водителя (Регламент ЕС 561/2006).
+      История последних смен:
       ${history}
 
-      Дай краткое резюме на русском: есть ли нарушения режима вождения или отдыха? Что исправить? (макс 3 предложения).
+      Дай краткое резюме на русском языке:
+      1. Есть ли явные нарушения?
+      2. Нужна ли компенсация отдыха?
+      Ответь максимально кратко (до 3 предложений).
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-latest',
+      model: 'gemini-3-flash-preview',
       contents: promptText,
       config: {
-        systemInstruction: "Ты — эксперт по европейским правилам труда и отдыха водителей (EC 561/2006). Отвечай четко, профессионально и только на русском.",
-        temperature: 0.4,
+        systemInstruction: "Ты — ассистент водителя-международника. Твоя задача — анализировать соблюдение режима труда и отдыха (561/2006) и давать краткие советы на русском.",
+        temperature: 0.3,
       }
     });
     
-    return response.text || "Анализ завершен, но ИИ не прислал текст.";
+    return response.text || "Анализ завершен успешно.";
   } catch (error: any) {
     console.error("Gemini Error:", error);
     
-    const errorStr = (error.message || "").toLowerCase();
-    if (errorStr.includes('location is not supported')) {
-      return "⚠️ Регион не поддерживается Google AI. Используйте VPN (США, Турция).";
+    if (error.message?.toLowerCase().includes('location is not supported')) {
+      return "⚠️ Сервис недоступен в вашем регионе. Попробуйте сменить IP.";
     }
     
-    return `Ошибка ИИ: ${error.message || "проверьте настройки ключа"}`;
+    return `Ошибка анализа: ${error.message || "проверьте конфигурацию"}`;
   }
 };
