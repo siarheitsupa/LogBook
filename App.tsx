@@ -31,24 +31,26 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadInit = async () => {
       setIsLoading(true);
-      storage.initCloud();
       
-      const currentSession = await storage.getSession();
+      // Инициализируем облако
+      const isConfigured = storage.initCloud();
       
-      if (currentSession) {
-        try {
-          const { data: { user }, error } = await storage.getUser(); 
-          if (error || !user) {
-            // Если пользователя нет в БД, принудительно выходим
-            await storage.signOut();
-            setSession(null);
-          } else {
-            setSession(currentSession);
-            const data = await storage.getShifts();
-            setShifts(data);
+      if (isConfigured) {
+        const currentSession = await storage.getSession();
+        if (currentSession) {
+          try {
+            const { data: { user }, error } = await storage.getUser(); 
+            if (error || !user) {
+              await storage.signOut();
+              setSession(null);
+            } else {
+              setSession(currentSession);
+              const data = await storage.getShifts();
+              setShifts(data);
+            }
+          } catch (e) {
+            console.error("Session recovery failed", e);
           }
-        } catch (e) {
-          await storage.signOut();
         }
       }
 
@@ -63,7 +65,6 @@ const App: React.FC = () => {
     loadInit();
   }, []);
 
-  // Reload shifts when session changes
   useEffect(() => {
     if (session) {
       storage.getShifts().then(setShifts);
@@ -97,7 +98,7 @@ const App: React.FC = () => {
     setEditingShift(null);
     
     if (!success && storage.isCloudEnabled()) {
-      alert('Ошибка сохранения. Убедитесь, что вы вошли в систему.');
+      alert('Ошибка сохранения. Убедитесь, что соединение стабильно.');
     }
   };
 
@@ -113,7 +114,7 @@ const App: React.FC = () => {
       setIsLoading(false);
       setIsCloudModalOpen(false);
     } else {
-      alert('Ошибка конфигурации.');
+      alert('Ошибка конфигурации. Проверьте URL и Ключ.');
     }
   };
 
@@ -135,11 +136,40 @@ const App: React.FC = () => {
     setIsAnalyzing(false);
   };
 
-  const handleLogout = async () => {
-    await storage.signOut();
-  };
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin mb-4"></div>
+        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Загрузка данных...</p>
+      </div>
+    );
+  }
 
-  if (storage.isCloudEnabled() && !session && !isLoading) {
+  // Если облако НЕ настроено — показываем экран настройки/входа с просьбой настроить
+  if (!storage.isConfigured()) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-slate-50 text-center">
+        <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-6 shadow-sm">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-black text-slate-900 mb-2">Настройка облака</h2>
+        <p className="text-slate-500 text-sm mb-8 max-w-xs">Для работы приложения необходимо настроить подключение к базе данных Supabase.</p>
+        <button 
+          onClick={() => setIsCloudModalOpen(true)}
+          className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-xl active:scale-95 transition-all"
+        >
+          Ввести ключи настройки
+        </button>
+        <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setSession(null); }} />
+      </div>
+    );
+  }
+
+  // Если облако настроено, но нет сессии — показываем экран авторизации
+  if (!session) {
     return <AuthScreen />;
   }
 
@@ -169,12 +199,12 @@ const App: React.FC = () => {
               <div className={`w-2.5 h-2.5 rounded-full ${session ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
-                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33-1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
               </svg>
             </button>
             {session && (
               <button 
-                onClick={handleLogout} 
+                onClick={() => storage.signOut()} 
                 className="text-[9px] font-black uppercase text-rose-500 ml-2 hover:bg-rose-50 px-2 py-1 rounded-md"
               >
                 Выйти
@@ -261,7 +291,7 @@ const App: React.FC = () => {
       </div>
 
       <ShiftModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveShift} initialData={editingShift} />
-      <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setShifts([]); setSession(null); }} />
+      <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setSession(null); }} />
     </div>
   );
 };

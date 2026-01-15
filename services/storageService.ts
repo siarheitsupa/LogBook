@@ -9,9 +9,11 @@ const CLOUD_CONFIG_KEY = 'driverlog_cloud_config_v1';
 let supabase: SupabaseClient | null = null;
 
 const getEnv = (key: string): string => {
-  // Расширенный поиск по всем возможным префиксам и глобальным объектам
   const env = (window as any).process?.env || (process as any)?.env || {};
   const metaEnv = (import.meta as any)?.env || {};
+  
+  // Приводим ключ к нижнему регистру для соответствия формату сохранения
+  const storageSuffix = key.toLowerCase().replace('supabase_', '');
   
   return (
     env[key] || 
@@ -19,25 +21,30 @@ const getEnv = (key: string): string => {
     env[`NEXT_PUBLIC_${key}`] ||
     metaEnv[key] ||
     metaEnv[`VITE_${key}`] ||
-    localStorage.getItem(`${CLOUD_CONFIG_KEY}_${key.toLowerCase()}`) ||
+    localStorage.getItem(`${CLOUD_CONFIG_KEY}_${storageSuffix}`) ||
     ''
   );
 };
 
 export const storage = {
+  isConfigured: () => {
+    const url = getEnv('SUPABASE_URL');
+    const key = getEnv('SUPABASE_ANON_KEY');
+    return !!(url && key && url.startsWith('http'));
+  },
+
   initCloud: (manualConfig?: CloudConfig) => {
-    // Приоритет: 1. Ручной ввод, 2. Переменные окружения, 3. LocalStorage
-    const url = manualConfig?.url || getEnv('SUPABASE_URL') || getEnv('VITE_SUPABASE_URL');
-    const key = manualConfig?.key || getEnv('SUPABASE_ANON_KEY') || getEnv('VITE_SUPABASE_ANON_KEY');
+    const url = manualConfig?.url || getEnv('SUPABASE_URL');
+    const key = manualConfig?.key || getEnv('SUPABASE_ANON_KEY');
     
     if (url && key && url.startsWith('http')) {
       try {
         supabase = createClient(url, key);
-        if (manualConfig) {
-          localStorage.setItem(`${CLOUD_CONFIG_KEY}_url`, manualConfig.url);
-          localStorage.setItem(`${CLOUD_CONFIG_KEY}_key`, manualConfig.key);
+        // Сохраняем в localStorage только если это ручной ввод или если в localStorage еще нет данных
+        if (manualConfig || !localStorage.getItem(`${CLOUD_CONFIG_KEY}_url`)) {
+          localStorage.setItem(`${CLOUD_CONFIG_KEY}_url`, url);
+          localStorage.setItem(`${CLOUD_CONFIG_KEY}_key`, key);
         }
-        console.log('✅ Supabase initialized successfully');
         return true;
       } catch (e) {
         console.error('❌ Supabase: Init Error', e);
@@ -48,16 +55,15 @@ export const storage = {
   },
 
   signUp: async (email: string, pass: string): Promise<AuthResponse> => {
-    if (!supabase) {
-      // Пытаемся инициализироваться перед действием, если ключи появились позже
-      if (!storage.initCloud()) return { data: { user: null, session: null }, error: { message: 'Облачное хранилище не настроено. Проверьте переменные окружения.' } as any };
+    if (!supabase && !storage.initCloud()) {
+      return { data: { user: null, session: null }, error: { message: 'Настройте подключение к облаку в настройках (иконка шестеренки).' } as any };
     }
     return await supabase!.auth.signUp({ email, password: pass });
   },
 
   signIn: async (email: string, pass: string): Promise<AuthResponse> => {
-    if (!supabase) {
-      if (!storage.initCloud()) return { data: { user: null, session: null }, error: { message: 'Облачное хранилище не настроено. Проверьте переменные окружения.' } as any };
+    if (!supabase && !storage.initCloud()) {
+      return { data: { user: null, session: null }, error: { message: 'Настройте подключение к облаку в настройках (иконка шестеренки).' } as any };
     }
     return await supabase!.auth.signInWithPassword({ email, password: pass });
   },
@@ -71,10 +77,10 @@ export const storage = {
       }
     }
     
-    // Очистка сессии
+    // Очистка сессии (не трогаем ключи конфигурации, чтобы не вводить их заново)
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (key.toLowerCase().includes('supabase') || key.toLowerCase().includes('auth'))) {
+      if (key && (key.toLowerCase().includes('supabase.auth.token') || key.toLowerCase().includes('sb-'))) {
         localStorage.removeItem(key);
       }
     }
@@ -83,24 +89,22 @@ export const storage = {
   },
 
   getSession: async (): Promise<Session | null> => {
-    if (!supabase) {
-      if (!storage.initCloud()) return null;
+    if (!supabase && !storage.initCloud()) return null;
+    try {
+      const { data } = await supabase!.auth.getSession();
+      return data.session;
+    } catch (e) {
+      return null;
     }
-    const { data } = await supabase!.auth.getSession();
-    return data.session;
   },
 
   getUser: async (): Promise<UserResponse> => {
-    if (!supabase) {
-      if (!storage.initCloud()) return { data: { user: null }, error: new Error('No client') as any };
-    }
+    if (!supabase && !storage.initCloud()) return { data: { user: null }, error: new Error('No client') as any };
     return await supabase!.auth.getUser();
   },
 
   onAuthChange: (callback: (session: Session | null) => void) => {
-    if (!supabase) {
-      if (!storage.initCloud()) return () => {};
-    }
+    if (!supabase && !storage.initCloud()) return () => {};
     const { data: { subscription } } = supabase!.auth.onAuthStateChange((_event, session) => {
       callback(session);
     });
@@ -184,8 +188,8 @@ export const storage = {
   saveState: (state: AppState) => localStorage.setItem(STATE_KEY, JSON.stringify(state)),
   clearState: () => localStorage.removeItem(STATE_KEY),
   isCloudEnabled: () => {
-    if (!supabase) storage.initCloud();
-    return !!supabase;
+    if (!supabase) return storage.initCloud();
+    return true;
   },
   resetCloud: () => {
     supabase = null;
@@ -199,5 +203,4 @@ export const storage = {
   })
 };
 
-// Пробуем инициализироваться сразу при импорте
 storage.initCloud();
