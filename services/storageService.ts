@@ -1,5 +1,5 @@
 
-import { createClient, SupabaseClient, Session, UserResponse, AuthResponse } from '@supabase/supabase-js';
+import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
 import { Shift, AppState, CloudConfig } from '../types';
 
 const SHIFTS_KEY = 'driverlog_shifts_v1';
@@ -8,50 +8,37 @@ const CLOUD_CONFIG_KEY = 'driverlog_cloud_config_v1';
 
 let supabaseInstance: SupabaseClient | null = null;
 
-const getEnvValue = (key: string): string => {
-  // 1. Проверяем глобальный объект process (инжектится платформой)
-  const processEnv = (window as any).process?.env || (typeof process !== 'undefined' ? process.env : {});
-  // 2. Проверяем ESM окружение
-  const metaEnv = (import.meta as any)?.env || {};
+const getEnv = (key: string): string => {
+  // Приоритет: системное окружение -> localStorage (для ручной настройки)
+  const val = process.env[key] || (window as any).process?.env?.[key];
+  if (val) return val;
   
-  // Маппинг для LocalStorage
-  const storageMap: Record<string, string> = {
-    'SUPABASE_URL': `${CLOUD_CONFIG_KEY}_url`,
-    'SUPABASE_ANON_KEY': `${CLOUD_CONFIG_KEY}_key`
+  const map: Record<string, string> = {
+    'SUPABASE_URL': 'driverlog_cloud_config_v1_url',
+    'SUPABASE_ANON_KEY': 'driverlog_cloud_config_v1_key'
   };
-
-  return (
-    processEnv[key] || 
-    processEnv[`VITE_${key}`] || 
-    metaEnv[key] ||
-    metaEnv[`VITE_${key}`] ||
-    localStorage.getItem(storageMap[key] || '') ||
-    ''
-  );
+  return localStorage.getItem(map[key] || '') || '';
 };
 
 export const storage = {
   isConfigured: () => {
     if (supabaseInstance) return true;
-    const url = getEnvValue('SUPABASE_URL');
-    const key = getEnvValue('SUPABASE_ANON_KEY');
-    return !!(url && key && url.startsWith('http') && key.length > 10);
+    const url = getEnv('SUPABASE_URL');
+    const key = getEnv('SUPABASE_ANON_KEY');
+    return !!(url && key && url.startsWith('http'));
   },
 
   initCloud: (manualConfig?: CloudConfig): boolean => {
-    const url = manualConfig?.url || getEnvValue('SUPABASE_URL');
-    const key = manualConfig?.key || getEnvValue('SUPABASE_ANON_KEY');
+    const url = manualConfig?.url || getEnv('SUPABASE_URL');
+    const key = manualConfig?.key || getEnv('SUPABASE_ANON_KEY');
     
     if (url && key && url.startsWith('http')) {
       try {
         supabaseInstance = createClient(url, key);
-        
-        // Сохраняем только ручные настройки
         if (manualConfig) {
           localStorage.setItem(`${CLOUD_CONFIG_KEY}_url`, url);
           localStorage.setItem(`${CLOUD_CONFIG_KEY}_key`, key);
         }
-        
         return true;
       } catch (e) {
         console.error('Supabase init error:', e);
@@ -61,12 +48,12 @@ export const storage = {
     return false;
   },
 
-  signUp: async (email: string, pass: string): Promise<AuthResponse> => {
+  signUp: async (email: string, pass: string) => {
     if (!supabaseInstance && !storage.initCloud()) throw new Error('Not initialized');
     return await supabaseInstance!.auth.signUp({ email, password: pass });
   },
 
-  signIn: async (email: string, pass: string): Promise<AuthResponse> => {
+  signIn: async (email: string, pass: string) => {
     if (!supabaseInstance && !storage.initCloud()) throw new Error('Not initialized');
     return await supabaseInstance!.auth.signInWithPassword({ email, password: pass });
   },
@@ -87,8 +74,8 @@ export const storage = {
     return data.session;
   },
 
-  getUser: async (): Promise<UserResponse> => {
-    if (!supabaseInstance && !storage.initCloud()) return { data: { user: null }, error: new Error('Offline') as any };
+  getUser: async () => {
+    if (!supabaseInstance && !storage.initCloud()) return { data: { user: null }, error: new Error('Offline') };
     return await supabaseInstance!.auth.getUser();
   },
 
@@ -163,18 +150,17 @@ export const storage = {
   },
   saveState: (s: AppState) => localStorage.setItem(STATE_KEY, JSON.stringify(s)),
   clearState: () => localStorage.removeItem(STATE_KEY),
-  isCloudEnabled: () => !!supabaseInstance,
+  getEnvStatus: () => ({
+    url: !!getEnv('SUPABASE_URL'),
+    key: !!getEnv('SUPABASE_ANON_KEY'),
+    gemini: !!process.env.API_KEY
+  }),
+  // Fix: Added missing resetCloud method to clear manual cloud configuration and reset Supabase client instance.
   resetCloud: () => {
-    supabaseInstance = null;
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_url`);
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_key`);
-  },
-  getEnvStatus: () => ({
-    url: !!getEnvValue('SUPABASE_URL'),
-    key: !!getEnvValue('SUPABASE_ANON_KEY'),
-    gemini: !!(window as any).process?.env?.API_KEY
-  })
+    supabaseInstance = null;
+  }
 };
 
-// Авто-инициализация
 storage.initCloud();
