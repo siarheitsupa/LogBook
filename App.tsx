@@ -34,17 +34,25 @@ const App: React.FC = () => {
       storage.initCloud();
       
       const currentSession = await storage.getSession();
-      setSession(currentSession);
+      
+      // Дополнительная проверка: существует ли пользователь на самом деле
+      // Если вы удалили пользователя в Supabase, getUser() вернет ошибку
+      if (currentSession) {
+        const { data: { user }, error } = await (storage as any).getUser(); 
+        if (error || !user) {
+          await storage.signOut();
+          setSession(null);
+        } else {
+          setSession(currentSession);
+          const data = await storage.getShifts();
+          setShifts(data);
+        }
+      }
 
       const unsubscribe = storage.onAuthChange((newSession) => {
         setSession(newSession);
       });
 
-      if (currentSession) {
-        const data = await storage.getShifts();
-        setShifts(data);
-      }
-      
       setAppState(storage.getState());
       setIsLoading(false);
       return unsubscribe;
@@ -117,12 +125,17 @@ const App: React.FC = () => {
   };
 
   const runAiAnalysis = async () => {
-    // API key for Gemini is handled via environment variable
     if (shifts.length === 0) return;
     setIsAnalyzing(true);
     const result = await analyzeLogs(shifts);
     setAiAnalysis(result);
     setIsAnalyzing(false);
+  };
+
+  const handleLogout = async () => {
+    await storage.signOut();
+    setSession(null);
+    setShifts([]);
   };
 
   // If cloud is enabled but no session, show Auth Screen
@@ -161,7 +174,7 @@ const App: React.FC = () => {
             </button>
             {session && (
               <button 
-                onClick={() => storage.signOut()} 
+                onClick={handleLogout} 
                 className="text-[9px] font-black uppercase text-rose-500 ml-2 hover:bg-rose-50 px-2 py-1 rounded-md"
               >
                 Выйти

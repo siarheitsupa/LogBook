@@ -40,24 +40,40 @@ export const storage = {
   },
 
   // Auth Methods
+  // Fixed return type to be consistent with Supabase AuthResponse to avoid destructuring errors in components
   signUp: async (email: string, pass: string) => {
-    if (!supabase) return { error: 'Cloud not configured' };
+    if (!supabase) return { data: { user: null, session: null }, error: { message: 'Cloud not configured' } as any };
     return await supabase.auth.signUp({ email, password: pass });
   },
 
+  // Fixed return type to be consistent with Supabase AuthResponse to avoid destructuring errors in components
   signIn: async (email: string, pass: string) => {
-    if (!supabase) return { error: 'Cloud not configured' };
+    if (!supabase) return { data: { user: null, session: null }, error: { message: 'Cloud not configured' } as any };
     return await supabase.auth.signInWithPassword({ email, password: pass });
   },
 
   signOut: async () => {
-    if (supabase) await supabase.auth.signOut();
+    if (supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        console.error("Sign out error", e);
+      }
+    }
+    // Очищаем сессионные куки и локальные ключи принудительно
+    localStorage.removeItem('supabase.auth.token'); 
   },
 
   getSession: async (): Promise<Session | null> => {
     if (!supabase) return null;
     const { data } = await supabase.auth.getSession();
     return data.session;
+  },
+
+  // Fixed return type to be consistent with Supabase UserResponse
+  getUser: async () => {
+    if (!supabase) return { data: { user: null }, error: { message: 'No client' } as any };
+    return await supabase.auth.getUser();
   },
 
   onAuthChange: (callback: (session: Session | null) => void) => {

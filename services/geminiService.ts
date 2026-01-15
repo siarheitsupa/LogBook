@@ -32,9 +32,9 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
   `;
 
   try {
-    // Generate content using model and prompt as specified in guidelines
+    // Generate content using gemini-3-pro-preview for complex reasoning tasks
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: prompt,
       config: {
         systemInstruction: "You are a professional fleet compliance officer specialized in EU driving and rest time regulations. Your goal is to help the driver stay legal. Response must be in Russian."
