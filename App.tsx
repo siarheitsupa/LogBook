@@ -35,17 +35,20 @@ const App: React.FC = () => {
       
       const currentSession = await storage.getSession();
       
-      // Дополнительная проверка: существует ли пользователь на самом деле
-      // Если вы удалили пользователя в Supabase, getUser() вернет ошибку
       if (currentSession) {
-        const { data: { user }, error } = await (storage as any).getUser(); 
-        if (error || !user) {
+        try {
+          const { data: { user }, error } = await storage.getUser(); 
+          if (error || !user) {
+            // Если пользователя нет в БД, принудительно выходим
+            await storage.signOut();
+            setSession(null);
+          } else {
+            setSession(currentSession);
+            const data = await storage.getShifts();
+            setShifts(data);
+          }
+        } catch (e) {
           await storage.signOut();
-          setSession(null);
-        } else {
-          setSession(currentSession);
-          const data = await storage.getShifts();
-          setShifts(data);
         }
       }
 
@@ -134,11 +137,8 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     await storage.signOut();
-    setSession(null);
-    setShifts([]);
   };
 
-  // If cloud is enabled but no session, show Auth Screen
   if (storage.isCloudEnabled() && !session && !isLoading) {
     return <AuthScreen />;
   }

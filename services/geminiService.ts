@@ -2,15 +2,23 @@
 import { GoogleGenAI } from "@google/genai";
 import { Shift } from "../types";
 
-// Always use process.env.API_KEY as per GenAI guidelines
+// Хелпер для получения ключа из разных возможных источников окружения
+const getApiKey = (): string => {
+  return (
+    (process.env as any).API_KEY || 
+    (process.env as any).VITE_API_KEY || 
+    (window as any).process?.env?.API_KEY ||
+    ''
+  );
+};
+
 export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
-  const apiKey = process.env.API_KEY;
+  const apiKey = getApiKey();
   
   if (!apiKey) {
-    return "ИИ не настроен. Пожалуйста, убедитесь, что API_KEY доступен в окружении.";
+    return "ИИ не настроен. Пожалуйста, убедитесь, что API_KEY доступен в окружении вашей платформы.";
   }
 
-  // Use named parameter for initialization
   const ai = new GoogleGenAI({ apiKey });
   
   const history = shifts.slice(0, 10).map(s => (
@@ -32,7 +40,6 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
   `;
 
   try {
-    // Generate content using gemini-3-pro-preview for complex reasoning tasks
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: prompt,
@@ -40,11 +47,10 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
         systemInstruction: "You are a professional fleet compliance officer specialized in EU driving and rest time regulations. Your goal is to help the driver stay legal. Response must be in Russian."
       }
     });
-    // Use .text property to extract output string
     return response.text || "Не удалось получить ответ от ИИ.";
   } catch (error: any) {
     console.error("Gemini Analysis Error:", error);
-    if (error?.message?.includes('API_KEY_INVALID')) return "Ошибка: Неверный API ключ Gemini.";
-    return "Произошла ошибка при обращении к ИИ. Проверьте ключ или лимиты.";
+    if (error?.message?.includes('API_KEY_INVALID')) return "Ошибка: Неверный API ключ Gemini в окружении.";
+    return "Произошла ошибка при обращении к ИИ. Проверьте лимиты или настройки платформы.";
   }
 };

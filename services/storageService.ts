@@ -1,5 +1,5 @@
 
-import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
+import { createClient, SupabaseClient, Session, UserResponse, AuthResponse } from '@supabase/supabase-js';
 import { Shift, AppState, CloudConfig } from '../types';
 
 const SHIFTS_KEY = 'driverlog_shifts_v1';
@@ -39,16 +39,13 @@ export const storage = {
     return false;
   },
 
-  // Auth Methods
-  // Fixed return type to be consistent with Supabase AuthResponse to avoid destructuring errors in components
-  signUp: async (email: string, pass: string) => {
-    if (!supabase) return { data: { user: null, session: null }, error: { message: 'Cloud not configured' } as any };
+  signUp: async (email: string, pass: string): Promise<AuthResponse> => {
+    if (!supabase) throw new Error('Cloud not configured');
     return await supabase.auth.signUp({ email, password: pass });
   },
 
-  // Fixed return type to be consistent with Supabase AuthResponse to avoid destructuring errors in components
-  signIn: async (email: string, pass: string) => {
-    if (!supabase) return { data: { user: null, session: null }, error: { message: 'Cloud not configured' } as any };
+  signIn: async (email: string, pass: string): Promise<AuthResponse> => {
+    if (!supabase) throw new Error('Cloud not configured');
     return await supabase.auth.signInWithPassword({ email, password: pass });
   },
 
@@ -60,8 +57,17 @@ export const storage = {
         console.error("Sign out error", e);
       }
     }
-    // Очищаем сессионные куки и локальные ключи принудительно
-    localStorage.removeItem('supabase.auth.token'); 
+    
+    // Агрессивная очистка всех ключей авторизации
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.toLowerCase().includes('supabase') || key.toLowerCase().includes('auth'))) {
+        localStorage.removeItem(key);
+      }
+    }
+    
+    // Перезагрузка страницы для сброса всех состояний React
+    window.location.reload();
   },
 
   getSession: async (): Promise<Session | null> => {
@@ -70,9 +76,8 @@ export const storage = {
     return data.session;
   },
 
-  // Fixed return type to be consistent with Supabase UserResponse
-  getUser: async () => {
-    if (!supabase) return { data: { user: null }, error: { message: 'No client' } as any };
+  getUser: async (): Promise<UserResponse> => {
+    if (!supabase) return { data: { user: null }, error: new Error('No client') as any };
     return await supabase.auth.getUser();
   },
 
@@ -115,7 +120,6 @@ export const storage = {
   },
 
   saveShift: async (shift: Shift): Promise<boolean> => {
-    // Local backup
     const localShifts = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const index = localShifts.findIndex((s: Shift) => s.id === shift.id);
     if (index > -1) localShifts[index] = shift;
@@ -135,7 +139,7 @@ export const storage = {
           drive_hours: shift.driveHours,
           drive_minutes: shift.driveMinutes,
           timestamp: shift.timestamp,
-          user_id: user.id // Explicit user_id though RLS handles it
+          user_id: user.id
         });
         return !error;
       } catch (e) {
