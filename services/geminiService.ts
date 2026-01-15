@@ -15,29 +15,35 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
 
   const ai = new GoogleGenAI({ apiKey });
   
-  const history = shifts.slice(0, 10).map(s => (
-    `Date: ${s.date}, Shift: ${s.startTime}-${s.endTime}, Driving: ${s.driveHours}h ${s.driveMinutes}m`
+  const history = shifts.slice(0, 15).map(s => (
+    `Дата: ${s.date}, Время: ${s.startTime}-${s.endTime}, Вождение: ${s.driveHours}ч ${s.driveMinutes}м`
   )).join('\n');
 
   const prompt = `
-    Analyze these truck driver logs for compliance with EU driving rules (Regulation 561/2006).
-    History:
+    Проанализируй эти логи водителя грузовика на соответствие правилам ЕС (Регламент 561/2006).
+    История последних смен:
     ${history}
 
-    Provide a summary (2-3 sentences) in Russian.
+    Дай краткое резюме (2-3 предложения): есть ли нарушения (превышение вождения, нехватка отдыха) и общую рекомендацию. Ответ должен быть на русском языке.
   `;
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
-        systemInstruction: "Fleet compliance officer. Response in Russian."
+        systemInstruction: "Вы — эксперт по соблюдению режима труда и отдыха водителей (Регламент ЕС 561/2006). Ваша задача — лаконично выявлять нарушения и давать четкие советы. Отвечайте на русском.",
+        temperature: 0.7,
+        topP: 0.8,
+        topK: 40
       }
     });
-    return response.text || "Не удалось получить ответ.";
+    
+    return response.text || "Не удалось получить текстовый ответ от ИИ.";
   } catch (error: any) {
-    console.error("Gemini Error:", error);
-    return "Ошибка анализа. Проверьте соединение.";
+    console.error("Gemini API Error details:", error);
+    if (error.message?.includes('403')) return "Ошибка: API ключ не имеет доступа к модели или регион заблокирован.";
+    if (error.message?.includes('429')) return "Ошибка: Слишком много запросов. Подождите минуту.";
+    return `Ошибка анализа: ${error.message || "проверьте интернет-соединение"}`;
   }
 };
