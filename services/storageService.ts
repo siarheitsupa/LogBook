@@ -9,27 +9,35 @@ const CLOUD_CONFIG_KEY = 'driverlog_cloud_config_v1';
 let supabase: SupabaseClient | null = null;
 
 const getEnv = (key: string): string => {
+  // Расширенный поиск по всем возможным префиксам и глобальным объектам
+  const env = (window as any).process?.env || (process as any)?.env || {};
+  const metaEnv = (import.meta as any)?.env || {};
+  
   return (
-    (process.env as any)[key] || 
-    (process.env as any)[`VITE_${key}`] || 
-    (process.env as any)[`NEXT_PUBLIC_${key}`] ||
-    (window as any).process?.env?.[key] ||
+    env[key] || 
+    env[`VITE_${key}`] || 
+    env[`NEXT_PUBLIC_${key}`] ||
+    metaEnv[key] ||
+    metaEnv[`VITE_${key}`] ||
+    localStorage.getItem(`${CLOUD_CONFIG_KEY}_${key.toLowerCase()}`) ||
     ''
   );
 };
 
 export const storage = {
   initCloud: (manualConfig?: CloudConfig) => {
-    const url = manualConfig?.url || getEnv('SUPABASE_URL') || localStorage.getItem(`${CLOUD_CONFIG_KEY}_url`);
-    const key = manualConfig?.key || getEnv('SUPABASE_ANON_KEY') || localStorage.getItem(`${CLOUD_CONFIG_KEY}_key`);
+    // Приоритет: 1. Ручной ввод, 2. Переменные окружения, 3. LocalStorage
+    const url = manualConfig?.url || getEnv('SUPABASE_URL') || getEnv('VITE_SUPABASE_URL');
+    const key = manualConfig?.key || getEnv('SUPABASE_ANON_KEY') || getEnv('VITE_SUPABASE_ANON_KEY');
     
-    if (url && key) {
+    if (url && key && url.startsWith('http')) {
       try {
         supabase = createClient(url, key);
         if (manualConfig) {
           localStorage.setItem(`${CLOUD_CONFIG_KEY}_url`, manualConfig.url);
           localStorage.setItem(`${CLOUD_CONFIG_KEY}_key`, manualConfig.key);
         }
+        console.log('✅ Supabase initialized successfully');
         return true;
       } catch (e) {
         console.error('❌ Supabase: Init Error', e);
@@ -40,13 +48,18 @@ export const storage = {
   },
 
   signUp: async (email: string, pass: string): Promise<AuthResponse> => {
-    if (!supabase) throw new Error('Cloud not configured');
-    return await supabase.auth.signUp({ email, password: pass });
+    if (!supabase) {
+      // Пытаемся инициализироваться перед действием, если ключи появились позже
+      if (!storage.initCloud()) return { data: { user: null, session: null }, error: { message: 'Облачное хранилище не настроено. Проверьте переменные окружения.' } as any };
+    }
+    return await supabase!.auth.signUp({ email, password: pass });
   },
 
   signIn: async (email: string, pass: string): Promise<AuthResponse> => {
-    if (!supabase) throw new Error('Cloud not configured');
-    return await supabase.auth.signInWithPassword({ email, password: pass });
+    if (!supabase) {
+      if (!storage.initCloud()) return { data: { user: null, session: null }, error: { message: 'Облачное хранилище не настроено. Проверьте переменные окружения.' } as any };
+    }
+    return await supabase!.auth.signInWithPassword({ email, password: pass });
   },
 
   signOut: async () => {
@@ -58,7 +71,7 @@ export const storage = {
       }
     }
     
-    // Агрессивная очистка всех ключей авторизации
+    // Очистка сессии
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && (key.toLowerCase().includes('supabase') || key.toLowerCase().includes('auth'))) {
@@ -66,24 +79,29 @@ export const storage = {
       }
     }
     
-    // Перезагрузка страницы для сброса всех состояний React
     window.location.reload();
   },
 
   getSession: async (): Promise<Session | null> => {
-    if (!supabase) return null;
-    const { data } = await supabase.auth.getSession();
+    if (!supabase) {
+      if (!storage.initCloud()) return null;
+    }
+    const { data } = await supabase!.auth.getSession();
     return data.session;
   },
 
   getUser: async (): Promise<UserResponse> => {
-    if (!supabase) return { data: { user: null }, error: new Error('No client') as any };
-    return await supabase.auth.getUser();
+    if (!supabase) {
+      if (!storage.initCloud()) return { data: { user: null }, error: new Error('No client') as any };
+    }
+    return await supabase!.auth.getUser();
   },
 
   onAuthChange: (callback: (session: Session | null) => void) => {
-    if (!supabase) return () => {};
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (!supabase) {
+      if (!storage.initCloud()) return () => {};
+    }
+    const { data: { subscription } } = supabase!.auth.onAuthStateChange((_event, session) => {
       callback(session);
     });
     return () => subscription.unsubscribe();
@@ -165,10 +183,21 @@ export const storage = {
   },
   saveState: (state: AppState) => localStorage.setItem(STATE_KEY, JSON.stringify(state)),
   clearState: () => localStorage.removeItem(STATE_KEY),
-  isCloudEnabled: () => !!supabase,
+  isCloudEnabled: () => {
+    if (!supabase) storage.initCloud();
+    return !!supabase;
+  },
   resetCloud: () => {
     supabase = null;
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_url`);
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_key`);
-  }
+  },
+  getEnvStatus: () => ({
+    url: !!getEnv('SUPABASE_URL'),
+    key: !!getEnv('SUPABASE_ANON_KEY'),
+    gemini: !!process.env.API_KEY || !!(window as any).process?.env?.API_KEY
+  })
 };
+
+// Пробуем инициализироваться сразу при импорте
+storage.initCloud();

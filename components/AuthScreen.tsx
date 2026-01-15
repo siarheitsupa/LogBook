@@ -17,23 +17,28 @@ const AuthScreen: React.FC = () => {
 
     try {
       if (isLogin) {
-        const { error: authError } = await storage.signIn(email, password);
-        if (authError) {
-          const errorMessage = typeof authError === 'string' ? authError : authError.message;
-          setError(errorMessage || 'Неверный логин или пароль');
+        const result = await storage.signIn(email, password);
+        if (result.error) {
+          const errorMessage = result.error.message;
+          // Понятный перевод для частых ошибок Supabase
+          if (errorMessage.includes('Invalid login credentials')) {
+            setError('Неверный email или пароль');
+          } else if (errorMessage.includes('Email not confirmed')) {
+            setError('Email не подтвержден. Проверьте почту.');
+          } else {
+            setError(errorMessage);
+          }
         }
       } else {
-        const { data, error: authError } = await storage.signUp(email, password);
-        if (authError) {
-          const errorMessage = typeof authError === 'string' ? authError : authError.message;
-          setError(errorMessage || 'Ошибка при регистрации');
-        } else if (data?.user && data?.session === null) {
-          // Если сессия null, значит включено подтверждение по почте
+        const result = await storage.signUp(email, password);
+        if (result.error) {
+          setError(result.error.message);
+        } else if (result.data?.user && result.data?.session === null) {
           setIsVerificationSent(true);
         }
       }
-    } catch (e) {
-      setError('Критическая ошибка сети');
+    } catch (e: any) {
+      setError(e.message || 'Ошибка подключения к серверу');
     } finally {
       setLoading(false);
     }
