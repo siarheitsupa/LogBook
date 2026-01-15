@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shift, AppState, CloudConfig } from './types';
 import { storage } from './services/storageService';
-import { formatMinsToHHMM, getStats, calculateLogSummary, pad } from './utils/timeUtils';
+import { formatMinsToHHMM, getStats, calculateLogSummary } from './utils/timeUtils';
 import { analyzeLogs } from './services/geminiService';
 import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
@@ -32,7 +32,6 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadInit = async () => {
       setIsLoading(true);
-      
       const isConfigured = storage.initCloud();
       
       if (isConfigured) {
@@ -86,7 +85,7 @@ const App: React.FC = () => {
 
   const handleSaveShift = async (newShift: Shift) => {
     setIsLoading(true);
-    const success = await storage.saveShift(newShift);
+    await storage.saveShift(newShift);
     const updatedData = await storage.getShifts();
     setShifts(updatedData);
     if (!editingShift) {
@@ -101,7 +100,6 @@ const App: React.FC = () => {
   const handleCloudSave = async (config: CloudConfig) => {
     if (storage.initCloud(config)) {
       setIsLoading(true);
-      // Увеличиваем триггер, чтобы запустить повторную инициализацию в useEffect
       setConfigUpdateTrigger(prev => prev + 1);
       setIsCloudModalOpen(false);
     } else {
@@ -136,14 +134,13 @@ const App: React.FC = () => {
     );
   }
 
-  // Если конфигурации нет - показываем экран настройки
   if (!storage.isConfigured()) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-slate-50 text-center animate-in fade-in duration-500">
         <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-6 shadow-sm">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
-            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33-1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
           </svg>
         </div>
         <h2 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Настройка облака</h2>
@@ -159,7 +156,6 @@ const App: React.FC = () => {
     );
   }
 
-  // Если конфигурация есть, но нет сессии — показываем экран авторизации
   if (!session) {
     return <AuthScreen />;
   }
@@ -167,21 +163,20 @@ const App: React.FC = () => {
   const { shifts: enrichedShifts, totalDebt } = calculateLogSummary(shifts);
   const { weekMins, biWeekMins, dailyDutyMins, extDrivingCount, extDutyCount } = getStats(shifts);
   const lastShift = shifts[0];
-  const lastShiftEndTime = lastShift ? new Date(`${lastShift.date}T${lastShift.endTime}`).getTime() : null;
+  const lastShiftEndTime = (lastShift && lastShift.date && lastShift.endTime) ? new Date(`${lastShift.date}T${lastShift.endTime}`).getTime() : null;
   const restElapsedMins = (!appState.isActive && lastShiftEndTime) ? Math.max(0, (now - lastShiftEndTime) / (1000 * 60)) : 0;
-  const activeDurationMins = appState.isActive && appState.startTime ? (now - appState.startTime) / (1000 * 60) : 0;
+  const activeDurationMins = (appState.isActive && appState.startTime) ? Math.max(0, (now - appState.startTime) / (1000 * 60)) : 0;
 
   return (
     <div className="max-w-xl mx-auto min-h-screen pb-12 px-4 pt-6 animate-in fade-in duration-500">
-      <header className="flex flex-col items-center mb-6 relative">
-        <div className="flex items-center gap-3 bg-white p-2 pr-4 pl-3 rounded-full shadow-sm border border-slate-100 relative">
+      <header className="flex flex-col items-center mb-6 relative text-center">
+        <div className="flex items-center gap-3 bg-white p-2 pr-4 pl-3 rounded-full shadow-sm border border-slate-100">
           <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-inner">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
               <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/>
             </svg>
           </div>
           <span className="text-lg font-black tracking-tight text-slate-800">DriverLog Pro</span>
-          
           <div className="flex items-center gap-1 ml-2 pl-3 border-l border-slate-100">
             <button 
               onClick={() => setIsCloudModalOpen(true)}
@@ -196,7 +191,7 @@ const App: React.FC = () => {
             {session && (
               <button 
                 onClick={() => storage.signOut()} 
-                className="text-[9px] font-black uppercase text-rose-500 ml-2 hover:bg-rose-50 px-2 py-1 rounded-md"
+                className="text-[9px] font-black uppercase text-rose-500 ml-2 hover:bg-rose-50 px-2 py-1 rounded-md transition-colors"
               >
                 Выйти
               </button>
@@ -206,15 +201,14 @@ const App: React.FC = () => {
         {session && <div className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">{session.user.email}</div>}
       </header>
 
-      {/* Main Control Card */}
-      <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6">
+      <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6 transition-all">
         <div className={`mb-4 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 font-bold transition-all ${appState.isActive ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
           <div className="flex items-center gap-2">
             <span className="text-xl">{appState.isActive ? '🟢' : '💤'}</span>
             <span className="uppercase text-xs tracking-widest">{appState.isActive ? 'Смена открыта' : 'На отдыхе'}</span>
           </div>
           {appState.isActive && (
-            <div className="mt-2 text-3xl font-black tabular-nums tracking-tighter">
+            <div className="mt-2 text-3xl font-black tabular-nums tracking-tighter animate-pulse">
               {formatMinsToHHMM(activeDurationMins)}
             </div>
           )}
@@ -226,11 +220,11 @@ const App: React.FC = () => {
               <div className="grid grid-cols-2 gap-2">
                 <div className={`p-2 rounded-xl text-center border transition-all ${restElapsedMins >= 9 * 60 ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-amber-50 border-amber-100 text-amber-700 animate-blink'}`}>
                   <span className="text-[9px] block font-bold uppercase">До 9ч</span>
-                  <span className="text-sm font-black tabular-nums">{restElapsedMins >= 9 * 60 ? 'ГОТОВО' : formatMinsToHHMM(9 * 60 - restElapsedMins)}</span>
+                  <span className="text-sm font-black tabular-nums">{restElapsedMins >= 9 * 60 ? 'ГОТОВО' : formatMinsToHHMM(Math.max(0, 9 * 60 - restElapsedMins))}</span>
                 </div>
-                <div className={`p-2 rounded-xl text-center border transition-colors ${restElapsedMins >= 11 * 60 ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                <div className={`p-2 rounded-xl text-center border transition-all ${restElapsedMins >= 11 * 60 ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
                   <span className="text-[9px] block font-bold uppercase">До 11ч</span>
-                  <span className="text-sm font-black tabular-nums">{restElapsedMins >= 11 * 60 ? 'ГОТОВО' : formatMinsToHHMM(11 * 60 - restElapsedMins)}</span>
+                  <span className="text-sm font-black tabular-nums">{restElapsedMins >= 11 * 60 ? 'ГОТОВО' : formatMinsToHHMM(Math.max(0, 11 * 60 - restElapsedMins))}</span>
                 </div>
               </div>
             </div>
@@ -246,7 +240,7 @@ const App: React.FC = () => {
 
       <div className="grid grid-cols-2 gap-4 mb-8">
         <StatCard label="Вождение неделя" value={formatMinsToHHMM(weekMins)} sublabel="Макс: 56ч" variant="yellow" />
-        <StatCard label="Работа (Сутки)" value={formatMinsToHHMM(dailyDutyMins + activeDurationMins)} sublabel="Текущий день" variant="orange" />
+        <StatCard label="Работа (Сутки)" value={formatMinsToHHMM(dailyDutyMins + (appState.isActive ? activeDurationMins : 0))} sublabel="Текущий день" variant="orange" />
         <StatCard label="За 2 недели" value={formatMinsToHHMM(biWeekMins)} sublabel="Макс: 90ч" variant="green" />
         <StatCard label="10ч Вождение" value={`${extDrivingCount} / 2`} sublabel="Доп. часы" variant="blue" />
         <StatCard label="15ч Смены" value={`${extDutyCount} / 3`} sublabel="Растяжки (ЕС)" variant="indigo" />
@@ -254,19 +248,22 @@ const App: React.FC = () => {
       </div>
 
       {shifts.length > 0 && (
-        <div className="mb-8 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-xl">
-          <div className="flex items-center justify-between mb-4">
+        <div className="mb-8 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+             <svg width="60" height="60" viewBox="0 0 24 24" fill="white"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+          </div>
+          <div className="flex items-center justify-between mb-4 relative z-10">
             <h3 className="font-bold flex items-center gap-2">✨ AI Анализ</h3>
-            <button onClick={runAiAnalysis} disabled={isAnalyzing} className="text-[10px] bg-white text-indigo-900 px-3 py-1.5 rounded-full font-bold">
+            <button onClick={runAiAnalysis} disabled={isAnalyzing} className="text-[10px] bg-white text-indigo-900 px-3 py-1.5 rounded-full font-bold active:scale-95 transition-all disabled:opacity-50">
               {isAnalyzing ? 'АНАЛИЗ...' : 'ОБНОВИТЬ'}
             </button>
           </div>
-          <div className="text-sm leading-relaxed opacity-95">{aiAnalysis || "Нажмите обновить для анализа логов."}</div>
+          <div className="text-sm leading-relaxed opacity-95 relative z-10">{aiAnalysis || "Нажмите обновить для анализа логов тахографа."}</div>
         </div>
       )}
 
       <div className="space-y-4">
-        <h3 className="text-lg font-extrabold text-slate-800 flex items-center gap-2 px-2">
+        <h3 className="text-lg font-extrabold text-slate-800 flex items-center gap-2 px-2 uppercase tracking-tight">
           <span className="w-1.5 h-6 bg-slate-900 rounded-full"></span>
           Хронология
         </h3>
