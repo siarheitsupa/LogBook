@@ -3,51 +3,51 @@ import { GoogleGenAI } from "@google/genai";
 import { Shift } from "../types";
 
 export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
-  // Получаем ключ напрямую из process.env, как того требует SDK
-  const apiKey = (window as any).process?.env?.API_KEY || '';
+  // Используем ключ из окружения
+  const apiKey = process.env.API_KEY || (window as any).process?.env?.API_KEY || '';
   
   if (!apiKey) {
-    return "ИИ не настроен. API_KEY отсутствует.";
+    return "Ключ AI не найден. Проверьте настройки платформы.";
   }
 
   try {
     const ai = new GoogleGenAI({ apiKey });
     
-    const history = shifts.slice(0, 10).map(s => (
-      `- ${s.date}: вождение ${s.driveHours}ч ${s.driveMinutes}м (смена ${s.startTime}-${s.endTime})`
+    const history = shifts.slice(0, 12).map(s => (
+      `- ${s.date}: руль ${s.driveHours}ч ${s.driveMinutes}м (${s.startTime}-${s.endTime})`
     )).join('\n');
 
     const promptText = `
-      Проанализируй логи водителя на соответствие правилам ЕС 561/2006.
-      Последние смены:
+      Анализ логов тахографа (Регламент ЕС 561/2006).
+      История:
       ${history}
 
-      Дай краткий анализ (2 предложения) на русском языке. Есть ли нарушения? Что посоветуешь?
+      Дай краткое резюме на русском: есть ли нарушения режима вождения или отдыха? Что исправить? (макс 3 предложения).
     `;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: [{ role: 'user', parts: [{ text: promptText }] }],
       config: {
-        systemInstruction: "Ты — инспектор транспортной службы. Анализируешь тахограф. Отвечай строго на русском.",
-        temperature: 0.5,
+        systemInstruction: "Ты — эксперт по европейским правилам труда и отдыха водителей (EC 561/2006). Отвечай четко, профессионально и только на русском.",
+        temperature: 0.4,
       }
     });
     
-    if (!response || !response.text) {
-      return "ИИ вернул пустой ответ. Попробуйте еще раз.";
-    }
-
-    return response.text;
+    return response.text || "Анализ завершен, но ИИ не прислал текст.";
   } catch (error: any) {
-    console.error("Gemini Critical Error:", error);
+    console.error("Gemini Error:", error);
     
-    // Детальный разбор ошибки для пользователя
-    const msg = error.message || "";
-    if (msg.includes('403')) return "Ошибка 403: Доступ запрещен. Возможно, ключ не подходит для этой модели.";
-    if (msg.includes('429')) return "Ошибка 429: Слишком много запросов. Подождите 30 секунд.";
-    if (msg.includes('fetch')) return "Ошибка сети: Не удалось связаться с серверами Google AI. Проверьте интернет.";
+    const errorStr = JSON.stringify(error).toLowerCase() + (error.message || "").toLowerCase();
     
-    return `Ошибка ИИ: ${msg || "Неизвестная ошибка соединения"}`;
+    // Обработка региональной блокировки (самая частая проблема в Европе)
+    if (errorStr.includes('location is not supported') || errorStr.includes('unsupported location')) {
+      return "⚠️ Google AI официально не поддерживает ваш регион (например, страны ЕС). Чтобы анализ работал, включите VPN с сервером в США, Турции или другой поддерживаемой стране.";
+    }
+    
+    if (errorStr.includes('403')) return "Ошибка 403: Ключ не имеет прав. Проверьте статус ключа в Google AI Studio.";
+    if (errorStr.includes('429')) return "Ошибка 429: Слишком много запросов. Подождите минуту.";
+    
+    return `Ошибка ИИ: ${error.message || "проверьте интернет или VPN"}`;
   }
 };
