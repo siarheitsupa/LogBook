@@ -4,8 +4,12 @@ import { Shift } from "../types";
 
 export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
   try {
-    // Используем API_KEY строго из окружения, как того требует SDK
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      return "⚠️ API_KEY не найден в переменных окружения Vercel.";
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
     
     const history = shifts.slice(0, 12).map(s => (
       `- ${s.date}: руль ${s.driveHours}ч ${s.driveMinutes}м (${s.startTime}-${s.endTime})`
@@ -20,7 +24,7 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.5-flash-latest',
       contents: promptText,
       config: {
         systemInstruction: "Ты — эксперт по европейским правилам труда и отдыха водителей (EC 561/2006). Отвечай четко, профессионально и только на русском.",
@@ -37,6 +41,6 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
       return "⚠️ Регион не поддерживается Google AI. Используйте VPN (США, Турция).";
     }
     
-    return `Ошибка ИИ: ${error.message || "проверьте ключ в настройках Vercel"}`;
+    return `Ошибка ИИ: ${error.message || "проверьте настройки ключа"}`;
   }
 };
