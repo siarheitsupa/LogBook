@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Shift, AppState, CloudConfig } from './types';
 import { storage } from './services/storageService';
@@ -7,8 +8,11 @@ import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
 import TimelineItem from './components/TimelineItem';
 import CloudSettingsModal from './components/CloudSettingsModal';
+import AuthScreen from './components/AuthScreen';
+import { Session } from '@supabase/supabase-js';
 
 const App: React.FC = () => {
+  const [session, setSession] = useState<Session | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [appState, setAppState] = useState<AppState>({ isActive: false, startTime: null });
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,16 +29,37 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadInit = async () => {
       setIsLoading(true);
       storage.initCloud();
-      const data = await storage.getShifts();
-      setShifts(data);
+      
+      const currentSession = await storage.getSession();
+      setSession(currentSession);
+
+      const unsubscribe = storage.onAuthChange((newSession) => {
+        setSession(newSession);
+      });
+
+      if (currentSession) {
+        const data = await storage.getShifts();
+        setShifts(data);
+      }
+      
       setAppState(storage.getState());
       setIsLoading(false);
+      return unsubscribe;
     };
-    loadData();
+    loadInit();
   }, []);
+
+  // Reload shifts when session changes
+  useEffect(() => {
+    if (session) {
+      storage.getShifts().then(setShifts);
+    } else {
+      setShifts([]);
+    }
+  }, [session]);
 
   const handleMainAction = () => {
     if (!appState.isActive) {
@@ -61,20 +86,23 @@ const App: React.FC = () => {
     setEditingShift(null);
     
     if (!success && storage.isCloudEnabled()) {
-      alert('Ошибка синхронизации. Проверьте настройки облака.');
+      alert('Ошибка сохранения. Убедитесь, что вы вошли в систему.');
     }
   };
 
   const handleCloudSave = async (config: CloudConfig) => {
     if (storage.initCloud(config)) {
       setIsLoading(true);
-      const data = await storage.getShifts();
-      setShifts(data);
+      const sess = await storage.getSession();
+      setSession(sess);
+      if (sess) {
+        const data = await storage.getShifts();
+        setShifts(data);
+      }
       setIsLoading(false);
       setIsCloudModalOpen(false);
-      alert('Настройки успешно сохранены!');
     } else {
-      alert('Не удалось подключиться к БД. Проверьте URL и Ключ.');
+      alert('Ошибка конфигурации.');
     }
   };
 
@@ -88,43 +116,26 @@ const App: React.FC = () => {
     }
   };
 
-  const editShift = (shift: Shift) => {
-    setEditingShift(shift);
-    setIsModalOpen(true);
-  };
-
   const runAiAnalysis = async () => {
-    const gKey = storage.getGeminiKey();
-    if (!gKey) {
-      setIsCloudModalOpen(true);
-      return;
-    }
+    // API key for Gemini is handled via environment variable
     if (shifts.length === 0) return;
     setIsAnalyzing(true);
-    const result = await analyzeLogs(shifts, gKey);
+    const result = await analyzeLogs(shifts);
     setAiAnalysis(result);
     setIsAnalyzing(false);
   };
 
+  // If cloud is enabled but no session, show Auth Screen
+  if (storage.isCloudEnabled() && !session && !isLoading) {
+    return <AuthScreen />;
+  }
+
   const { shifts: enrichedShifts, totalDebt } = calculateLogSummary(shifts);
   const { weekMins, biWeekMins, dailyDutyMins, extDrivingCount, extDutyCount } = getStats(shifts);
-
   const lastShift = shifts[0];
   const lastShiftEndTime = lastShift ? new Date(`${lastShift.date}T${lastShift.endTime}`).getTime() : null;
-  
-  const restElapsedMins = (!appState.isActive && lastShiftEndTime) 
-    ? Math.max(0, (now - lastShiftEndTime) / (1000 * 60))
-    : 0;
-
-  const defaultStartTimeStr = appState.startTime 
-    ? `${pad(new Date(appState.startTime).getHours())}:${pad(new Date(appState.startTime).getMinutes())}`
-    : '08:00';
-
-  const activeDurationMins = appState.isActive && appState.startTime 
-    ? (now - appState.startTime) / (1000 * 60)
-    : 0;
-
-  const geminiConfigured = !!storage.getGeminiKey();
+  const restElapsedMins = (!appState.isActive && lastShiftEndTime) ? Math.max(0, (now - lastShiftEndTime) / (1000 * 60)) : 0;
+  const activeDurationMins = appState.isActive && appState.startTime ? (now - appState.startTime) / (1000 * 60) : 0;
 
   return (
     <div className="max-w-xl mx-auto min-h-screen pb-12 px-4 pt-6">
@@ -138,24 +149,27 @@ const App: React.FC = () => {
           <span className="text-lg font-black tracking-tight text-slate-800">DriverLog Pro</span>
           
           <div className="flex items-center gap-1 ml-2 pl-3 border-l border-slate-100">
-            <div className={`w-3 h-3 rounded-full transition-colors ${storage.isCloudEnabled() ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
             <button 
               onClick={() => setIsCloudModalOpen(true)}
-              className="p-1 hover:bg-slate-50 rounded-lg transition-colors text-slate-400"
+              className="p-1 hover:bg-slate-50 rounded-lg transition-colors text-slate-400 flex items-center gap-1.5"
             >
+              <div className={`w-2.5 h-2.5 rounded-full ${session ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
                 <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
               </svg>
             </button>
+            {session && (
+              <button 
+                onClick={() => storage.signOut()} 
+                className="text-[9px] font-black uppercase text-rose-500 ml-2 hover:bg-rose-50 px-2 py-1 rounded-md"
+              >
+                Выйти
+              </button>
+            )}
           </div>
         </div>
-        
-        {isLoading && (
-          <div className="absolute -bottom-4 text-[10px] font-bold text-blue-500 animate-pulse">
-            Синхронизация...
-          </div>
-        )}
+        {session && <div className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">{session.user.email}</div>}
       </header>
 
       {/* Main Control Card */}
@@ -165,35 +179,24 @@ const App: React.FC = () => {
             <span className="text-xl">{appState.isActive ? '🟢' : '💤'}</span>
             <span className="uppercase text-xs tracking-widest">{appState.isActive ? 'Смена открыта' : 'На отдыхе'}</span>
           </div>
-          
           {appState.isActive && (
             <div className="mt-2 text-3xl font-black tabular-nums tracking-tighter">
               {formatMinsToHHMM(activeDurationMins)}
-              <span className="text-[10px] font-bold block text-center opacity-60 uppercase mt-1">Длительность смены</span>
             </div>
           )}
-
           {!appState.isActive && lastShiftEndTime && (
             <div className="mt-4 w-full space-y-3">
-              <div className="bg-white/50 p-3 rounded-xl border border-slate-100">
-                <span className="text-[10px] block text-center uppercase text-slate-400 font-bold mb-1">Прошло отдыха</span>
-                <div className="text-3xl font-black text-slate-700 text-center tabular-nums tracking-tighter">
-                  {formatMinsToHHMM(restElapsedMins)}
-                </div>
+              <div className="text-3xl font-black text-slate-700 text-center tabular-nums tracking-tighter">
+                {formatMinsToHHMM(restElapsedMins)}
               </div>
-              
               <div className="grid grid-cols-2 gap-2">
                 <div className={`p-2 rounded-xl text-center border transition-colors ${restElapsedMins >= 9 * 60 ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-amber-50 border-amber-100 text-amber-700'}`}>
-                  <span className={`text-[9px] block font-bold uppercase ${restElapsedMins >= 9 * 60 ? 'opacity-90' : 'opacity-60'}`}>До 9ч</span>
-                  <span className="text-sm font-black tabular-nums">
-                    {restElapsedMins >= 9 * 60 ? 'ГОТОВО' : formatMinsToHHMM(9 * 60 - restElapsedMins)}
-                  </span>
+                  <span className="text-[9px] block font-bold uppercase">До 9ч</span>
+                  <span className="text-sm font-black tabular-nums">{restElapsedMins >= 9 * 60 ? 'ГОТОВО' : formatMinsToHHMM(9 * 60 - restElapsedMins)}</span>
                 </div>
                 <div className={`p-2 rounded-xl text-center border transition-colors ${restElapsedMins >= 11 * 60 ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
-                  <span className={`text-[9px] block font-bold uppercase ${restElapsedMins >= 11 * 60 ? 'opacity-90' : 'opacity-60'}`}>До 11ч</span>
-                  <span className="text-sm font-black tabular-nums">
-                    {restElapsedMins >= 11 * 60 ? 'ГОТОВО' : formatMinsToHHMM(11 * 60 - restElapsedMins)}
-                  </span>
+                  <span className="text-[9px] block font-bold uppercase">До 11ч</span>
+                  <span className="text-sm font-black tabular-nums">{restElapsedMins >= 11 * 60 ? 'ГОТОВО' : formatMinsToHHMM(11 * 60 - restElapsedMins)}</span>
                 </div>
               </div>
             </div>
@@ -207,7 +210,6 @@ const App: React.FC = () => {
         </button>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         <StatCard label="Вождение неделя" value={formatMinsToHHMM(weekMins)} sublabel="Макс: 56ч" variant="yellow" />
         <StatCard label="Работа (Сутки)" value={formatMinsToHHMM(dailyDutyMins + activeDurationMins)} sublabel="Текущий день" variant="orange" />
@@ -217,63 +219,36 @@ const App: React.FC = () => {
         <StatCard label="Долг (Отдых)" value={`${Math.ceil(totalDebt)}ч`} sublabel="Компенсация" variant="purple" />
       </div>
 
-      {/* AI Analysis */}
       {shifts.length > 0 && (
-        <div className="mb-8 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden transition-all active:scale-[0.99]">
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold flex items-center gap-2">
-                <span className="bg-white/20 p-1.5 rounded-xl text-lg">✨</span>
-                AI Анализ Норм
-              </h3>
-              <button 
-                onClick={runAiAnalysis} 
-                disabled={isAnalyzing} 
-                className={`text-[10px] bg-white text-indigo-900 px-3 py-1.5 rounded-full font-bold transition-all shadow-sm ${isAnalyzing ? 'opacity-50' : 'hover:scale-105 active:scale-95'}`}
-              >
-                {!geminiConfigured ? 'НАСТРОИТЬ' : isAnalyzing ? 'АНАЛИЗ...' : 'ОБНОВИТЬ'}
-              </button>
-            </div>
-            <div className={`text-sm leading-relaxed opacity-95 transition-all ${isAnalyzing ? 'animate-pulse' : ''}`}>
-              {aiAnalysis || (geminiConfigured ? "Нажмите «Обновить» для проверки логов на соответствие регламентам ЕС." : "ИИ не настроен. Нажмите «Настроить», чтобы ввести API Key.")}
-            </div>
+        <div className="mb-8 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-xl">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold flex items-center gap-2">✨ AI Анализ</h3>
+            <button onClick={runAiAnalysis} disabled={isAnalyzing} className="text-[10px] bg-white text-indigo-900 px-3 py-1.5 rounded-full font-bold">
+              {isAnalyzing ? 'АНАЛИЗ...' : 'ОБНОВИТЬ'}
+            </button>
           </div>
+          <div className="text-sm leading-relaxed opacity-95">{aiAnalysis || "Нажмите обновить для анализа логов."}</div>
         </div>
       )}
 
-      {/* Timeline */}
       <div className="space-y-4">
         <h3 className="text-lg font-extrabold text-slate-800 flex items-center gap-2 px-2">
           <span className="w-1.5 h-6 bg-slate-900 rounded-full"></span>
           Хронология
         </h3>
-        <div className="space-y-2">
-          {enrichedShifts.map((shift, idx) => (
-            <TimelineItem 
-              key={shift.id} 
-              shift={shift} 
-              onEdit={editShift} 
-              onDelete={deleteShift}
-              isInitiallyExpanded={idx === 0}
-            />
-          ))}
-        </div>
+        {enrichedShifts.map((shift, idx) => (
+          <TimelineItem 
+            key={shift.id} 
+            shift={shift} 
+            onEdit={(s) => { setEditingShift(s); setIsModalOpen(true); }} 
+            onDelete={deleteShift}
+            isInitiallyExpanded={idx === 0}
+          />
+        ))}
       </div>
 
-      <ShiftModal 
-        isOpen={isModalOpen}
-        onClose={() => { setIsModalOpen(false); setEditingShift(null); }}
-        onSave={handleSaveShift}
-        initialData={editingShift}
-        defaultStartTime={defaultStartTimeStr}
-      />
-
-      <CloudSettingsModal 
-        isOpen={isCloudModalOpen}
-        onClose={() => setIsCloudModalOpen(false)}
-        onSave={handleCloudSave}
-        onReset={() => { storage.resetCloud(); setShifts([]); }}
-      />
+      <ShiftModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveShift} initialData={editingShift} />
+      <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setShifts([]); setSession(null); }} />
     </div>
   );
 };

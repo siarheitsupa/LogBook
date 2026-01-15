@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { CloudConfig } from '../types';
 
@@ -11,7 +12,6 @@ interface CloudSettingsModalProps {
 const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose, onSave, onReset }) => {
   const [url, setUrl] = useState(localStorage.getItem('driverlog_cloud_config_v1_url') || '');
   const [key, setKey] = useState(localStorage.getItem('driverlog_cloud_config_v1_key') || '');
-  const [geminiKey, setGeminiKey] = useState(localStorage.getItem('driverlog_gemini_key_v1') || '');
   const [showSql, setShowSql] = useState(false);
 
   if (!isOpen) return null;
@@ -50,21 +50,6 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
               </div>
             </div>
           </div>
-
-          <div className="p-4 bg-purple-50/50 rounded-2xl border border-purple-100">
-            <h4 className="text-[10px] font-black text-purple-600 uppercase mb-3 tracking-widest">Интеллект (Gemini AI)</h4>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">API Key</label>
-              <input 
-                type="password" 
-                placeholder="AIzaSy..."
-                className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 ring-purple-500 outline-none"
-                value={geminiKey}
-                onChange={e => setGeminiKey(e.target.value)}
-              />
-              <p className="text-[9px] mt-2 text-slate-400 leading-tight">Ключ можно получить бесплатно в Google AI Studio</p>
-            </div>
-          </div>
         </div>
 
         <div className="mt-6 p-4 bg-amber-50 rounded-2xl border border-amber-100">
@@ -72,12 +57,14 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
             onClick={() => setShowSql(!showSql)}
             className="text-[10px] font-bold text-amber-700 uppercase flex items-center justify-between w-full"
           >
-            Инструкция SQL {showSql ? '↑' : '↓'}
+            Исправить SQL (Очистка + Auth) {showSql ? '↑' : '↓'}
           </button>
           {showSql && (
             <div className="mt-2 space-y-2">
-              <pre className="p-2 bg-white rounded-lg text-[8px] overflow-x-auto text-slate-600 font-mono leading-tight border border-amber-200">
+              <p className="text-[9px] text-amber-800 font-medium mb-2">Этот скрипт удалит старые данные и настроит доступ для каждого пользователя отдельно:</p>
+              <pre className="p-2 bg-white rounded-lg text-[7px] overflow-x-auto text-slate-600 font-mono leading-tight border border-amber-200">
                 {`DROP TABLE IF EXISTS shifts;
+
 CREATE TABLE shifts (
   id TEXT PRIMARY KEY,
   date DATE,
@@ -85,10 +72,16 @@ CREATE TABLE shifts (
   end_time TEXT,
   drive_hours INT,
   drive_minutes INT,
-  timestamp BIGINT
+  timestamp BIGINT,
+  user_id UUID REFERENCES auth.users NOT NULL DEFAULT auth.uid()
 );
+
 ALTER TABLE shifts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "p" ON shifts FOR ALL USING (true) WITH CHECK (true);`}
+
+CREATE POLICY "Users manage own shifts" 
+ON shifts FOR ALL 
+USING (auth.uid() = user_id) 
+WITH CHECK (auth.uid() = user_id);`}
               </pre>
             </div>
           )}
@@ -96,13 +89,13 @@ CREATE POLICY "p" ON shifts FOR ALL USING (true) WITH CHECK (true);`}
 
         <div className="flex flex-col gap-2 mt-8">
           <button 
-            onClick={() => onSave({ url, key, geminiKey })}
+            onClick={() => onSave({ url, key })}
             className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all"
           >
             Сохранить настройки
           </button>
           <button 
-            onClick={() => { onReset(); setUrl(''); setKey(''); setGeminiKey(''); onClose(); }}
+            onClick={() => { onReset(); setUrl(''); setKey(''); onClose(); }}
             className="w-full py-3 text-rose-500 font-bold text-sm hover:bg-rose-50 rounded-xl transition-colors"
           >
             Сбросить всё

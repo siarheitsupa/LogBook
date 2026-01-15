@@ -1,13 +1,16 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { Shift } from "../types";
 
-export const analyzeLogs = async (shifts: Shift[], manualApiKey?: string): Promise<string> => {
-  const apiKey = manualApiKey || process.env.API_KEY;
+// Always use process.env.API_KEY as per GenAI guidelines
+export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
+  const apiKey = process.env.API_KEY;
   
   if (!apiKey) {
-    return "ИИ не настроен. Пожалуйста, добавьте Gemini API Key в настройках облака (иконка шестеренки).";
+    return "ИИ не настроен. Пожалуйста, убедитесь, что API_KEY доступен в окружении.";
   }
 
+  // Use named parameter for initialization
   const ai = new GoogleGenAI({ apiKey });
   
   const history = shifts.slice(0, 10).map(s => (
@@ -29,6 +32,7 @@ export const analyzeLogs = async (shifts: Shift[], manualApiKey?: string): Promi
   `;
 
   try {
+    // Generate content using model and prompt as specified in guidelines
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
@@ -36,6 +40,7 @@ export const analyzeLogs = async (shifts: Shift[], manualApiKey?: string): Promi
         systemInstruction: "You are a professional fleet compliance officer specialized in EU driving and rest time regulations. Your goal is to help the driver stay legal. Response must be in Russian."
       }
     });
+    // Use .text property to extract output string
     return response.text || "Не удалось получить ответ от ИИ.";
   } catch (error: any) {
     console.error("Gemini Analysis Error:", error);
