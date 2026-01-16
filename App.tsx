@@ -203,9 +203,9 @@ const App: React.FC = () => {
         {session && <div className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">{session.user.email}</div>}
       </header>
 
-      {/* Main Status Box with Dark Mode for Resting */}
-      <div className={`rounded-3xl p-6 shadow-xl border transition-all duration-700 mb-6 ${appState.isActive ? 'bg-white border-slate-100 animate-neon-green' : 'bg-slate-900 border-slate-800'}`}>
-        <div className={`mb-4 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 font-bold transition-all duration-500 ${appState.isActive ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-800/50 text-slate-100 border border-slate-700'}`}>
+      {/* Main Status Box (Back to Light Mode) */}
+      <div className={`bg-white rounded-3xl p-6 shadow-xl border transition-all duration-500 mb-6 ${appState.isActive ? 'border-emerald-100 animate-neon-green' : 'border-slate-100'}`}>
+        <div className={`mb-4 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 font-bold transition-all ${appState.isActive ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-700 border border-slate-100'}`}>
           <div className="flex items-center gap-3">
             {appState.isActive ? (
               <>
@@ -216,7 +216,7 @@ const App: React.FC = () => {
               <>
                 <div className="p-1">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-moon-glow">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor" fillOpacity="0.3" />
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor" fillOpacity="0.4" />
                   </svg>
                 </div>
                 <span className="uppercase text-xs tracking-widest text-slate-400">На отдыхе</span>
@@ -230,22 +230,22 @@ const App: React.FC = () => {
           )}
           {!appState.isActive && lastShiftEndTime && (
             <div className="mt-4 w-full space-y-3">
-              <div className="text-4xl font-black text-white text-center tabular-nums tracking-tighter">
+              <div className="text-4xl font-black text-slate-800 text-center tabular-nums tracking-tighter">
                 {formatMinsToHHMM(restElapsedMins)}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {/* Блок отдыха 9ч */}
+                {/* Блок отдыха 9ч - Синхронизированный сочный зеленый */}
                 <div className={`relative h-14 overflow-hidden rounded-xl border transition-all flex flex-col items-center justify-center ${restElapsedMins >= 9 * 60 ? 'bg-emerald-500 border-emerald-600' : 'bg-rose-500 border-rose-600 animate-neon-red'}`}>
                    <div className="relative z-10 text-center">
-                     <span className="text-[9px] block font-bold uppercase text-white/70">До 9ч</span>
+                     <span className="text-[9px] block font-bold uppercase text-white/80">До 9ч</span>
                      <span className="text-sm font-black tabular-nums text-white">
                        {restElapsedMins >= 9 * 60 ? 'ГОТОВО' : formatMinsToHHMM(Math.max(0, 9 * 60 - restElapsedMins))}
                      </span>
                    </div>
                 </div>
 
-                {/* Блок отдыха 11ч */}
-                <div className={`relative h-14 overflow-hidden rounded-xl border transition-all flex flex-col items-center justify-center ${restElapsedMins >= 11 * 60 ? 'bg-emerald-500 border-emerald-600' : 'bg-slate-700/50 border-slate-600'}`}>
+                {/* Блок отдыха 11ч - Синхронизированный сочный зеленый */}
+                <div className={`relative h-14 overflow-hidden rounded-xl border transition-all flex flex-col items-center justify-center ${restElapsedMins >= 11 * 60 ? 'bg-emerald-500 border-emerald-600' : 'bg-slate-100 border-slate-200'}`}>
                    {restElapsedMins < 11 * 60 && (
                      <div 
                        className="absolute inset-y-0 left-0 bg-emerald-500/30 transition-all duration-1000 ease-out overflow-hidden" 
@@ -255,8 +255,8 @@ const App: React.FC = () => {
                      </div>
                    )}
                    <div className="relative z-10 text-center">
-                     <span className={`text-[9px] block font-bold uppercase ${restElapsedMins >= 11 * 60 ? 'text-white/70' : 'text-slate-400'}`}>До 11ч</span>
-                     <span className={`text-sm font-black tabular-nums text-white`}>
+                     <span className={`text-[9px] block font-bold uppercase ${restElapsedMins >= 11 * 60 ? 'text-white/80' : 'text-slate-500'}`}>До 11ч</span>
+                     <span className={`text-sm font-black tabular-nums ${restElapsedMins >= 11 * 60 ? 'text-white' : 'text-slate-700'}`}>
                        {restElapsedMins >= 11 * 60 ? 'ГОТОВО' : formatMinsToHHMM(Math.max(0, 11 * 60 - restElapsedMins))}
                      </span>
                    </div>
@@ -267,7 +267,7 @@ const App: React.FC = () => {
         </div>
         <button 
           onClick={handleMainAction}
-          className={`w-full py-5 rounded-2xl text-lg font-bold text-white shadow-lg transition-all active:scale-[0.97] ${appState.isActive ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-900/20' : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-900/40'}`}
+          className={`w-full py-5 rounded-2xl text-lg font-bold text-white shadow-lg transition-all active:scale-[0.97] ${appState.isActive ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-100' : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-100'}`}
         >
           {appState.isActive ? 'Завершить смену' : 'Начать смену'}
         </button>

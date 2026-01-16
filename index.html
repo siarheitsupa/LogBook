@@ -16,45 +16,45 @@
             -webkit-tap-highlight-color: transparent;
         }
         
-        /* Неоновый красный пульс */
+        /* Неоновый красный пульс (Аварийный) */
         @keyframes neon-pulse-red {
           0% {
             background-color: #f43f5e;
-            box-shadow: 0 0 10px rgba(244, 63, 94, 0.4);
+            box-shadow: 0 0 8px rgba(244, 63, 94, 0.4);
           }
           50% {
             background-color: #e11d48;
-            box-shadow: 0 0 20px rgba(244, 63, 94, 0.8);
+            box-shadow: 0 0 18px rgba(244, 63, 94, 0.8);
           }
           100% {
             background-color: #f43f5e;
-            box-shadow: 0 0 10px rgba(244, 63, 94, 0.4);
+            box-shadow: 0 0 8px rgba(244, 63, 94, 0.4);
           }
         }
 
-        /* Усиленное неоновое лунное свечение (Cyan/White) */
+        /* Ярко-алое лунное свечение */
         @keyframes moon-glow {
           0% { 
-            filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.6)); 
+            filter: drop-shadow(0 0 4px rgba(244, 63, 94, 0.5)); 
             transform: scale(1);
-            color: #ecfeff;
+            color: #f43f5e;
           }
           50% { 
-            filter: drop-shadow(0 0 20px rgba(34, 211, 238, 1)); 
+            filter: drop-shadow(0 0 15px rgba(244, 63, 94, 0.9)); 
             transform: scale(1.1);
-            color: #ffffff;
+            color: #e11d48;
           }
           100% { 
-            filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.6)); 
+            filter: drop-shadow(0 0 4px rgba(244, 63, 94, 0.5)); 
             transform: scale(1);
-            color: #ecfeff;
+            color: #f43f5e;
           }
         }
 
         /* Неоновый зеленый пульс */
         @keyframes neon-pulse-green {
           0% { box-shadow: 0 0 5px #10b981; }
-          50% { box-shadow: 0 0 25px #10b981; }
+          50% { box-shadow: 0 0 20px #10b981; }
           100% { box-shadow: 0 0 5px #10b981; }
         }
 
@@ -71,7 +71,7 @@
         }
 
         .animate-moon-glow {
-          animation: moon-glow 4s infinite ease-in-out;
+          animation: moon-glow 3s infinite ease-in-out;
         }
 
         .animate-neon-green {
@@ -84,7 +84,7 @@
           background: linear-gradient(
             90deg,
             transparent,
-            rgba(255, 255, 255, 0.2),
+            rgba(255, 255, 255, 0.4),
             transparent
           );
           animation: shimmer-flow 2s infinite linear;
