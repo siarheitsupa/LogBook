@@ -14,40 +14,52 @@
         body {
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
+            background-color: #f8fafc;
         }
         
+        /* iOS Liquid Glass Effect */
+        .liquid-glass {
+          background: rgba(255, 255, 255, 0.65);
+          backdrop-filter: blur(24px) saturate(180%);
+          -webkit-backdrop-filter: blur(24px) saturate(180%);
+          border: 1px solid rgba(255, 255, 255, 0.4);
+          box-shadow: 
+            0 20px 40px rgba(0, 0, 0, 0.06),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+        }
+
         /* Неоновый красный пульс (Аварийный) */
         @keyframes neon-pulse-red {
           0% {
             background-color: #f43f5e;
-            box-shadow: 0 0 8px rgba(244, 63, 94, 0.4);
+            box-shadow: 0 0 12px rgba(244, 63, 94, 0.4);
           }
           50% {
             background-color: #e11d48;
-            box-shadow: 0 0 18px rgba(244, 63, 94, 0.8);
+            box-shadow: 0 0 24px rgba(244, 63, 94, 0.7);
           }
           100% {
             background-color: #f43f5e;
-            box-shadow: 0 0 8px rgba(244, 63, 94, 0.4);
+            box-shadow: 0 0 12px rgba(244, 63, 94, 0.4);
           }
         }
 
-        /* Ярко-алое лунное свечение */
+        /* Ярко-алое лунное свечение (Liquid Style) */
         @keyframes moon-glow {
           0% { 
-            filter: drop-shadow(0 0 4px rgba(244, 63, 94, 0.5)); 
+            filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.4)); 
             transform: scale(1);
-            color: #f43f5e;
+            opacity: 0.8;
           }
           50% { 
-            filter: drop-shadow(0 0 18px rgba(244, 63, 94, 1)); 
-            transform: scale(1.15);
-            color: #e11d48;
+            filter: drop-shadow(0 0 25px rgba(244, 63, 94, 0.9)); 
+            transform: scale(1.1);
+            opacity: 1;
           }
           100% { 
-            filter: drop-shadow(0 0 4px rgba(244, 63, 94, 0.5)); 
+            filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.4)); 
             transform: scale(1);
-            color: #f43f5e;
+            opacity: 0.8;
           }
         }
 
@@ -60,9 +72,9 @@
 
         /* Неоновый зеленый пульс */
         @keyframes neon-pulse-green {
-          0% { box-shadow: 0 0 5px #10b981; }
-          50% { box-shadow: 0 0 20px #10b981; }
-          100% { box-shadow: 0 0 5px #10b981; }
+          0% { box-shadow: 0 0 8px #10b981; }
+          50% { box-shadow: 0 0 25px #10b981; }
+          100% { box-shadow: 0 0 8px #10b981; }
         }
 
         /* Анимация перелива (Shimmer) */
@@ -74,11 +86,11 @@
         .animate-neon-red {
           animation: neon-pulse-red 1s infinite ease-in-out;
           color: white !important;
-          border: none !important;
         }
 
         .animate-moon-glow {
-          animation: moon-glow 2.5s infinite ease-in-out;
+          animation: moon-glow 3s infinite ease-in-out;
+          color: #f43f5e;
         }
 
         .animate-float {

@@ -166,7 +166,6 @@ const App: React.FC = () => {
   const restElapsedMins = (!appState.isActive && lastShiftEndTime) ? Math.max(0, (now - lastShiftEndTime) / (1000 * 60)) : 0;
   const activeDurationMins = (appState.isActive && appState.startTime) ? Math.max(0, (now - appState.startTime) / (1000 * 60)) : 0;
 
-  const restProgress9 = Math.min(100, (restElapsedMins / (9 * 60)) * 100);
   const restProgress11 = Math.min(100, (restElapsedMins / (11 * 60)) * 100);
 
   return (
@@ -187,7 +186,6 @@ const App: React.FC = () => {
               <div className={`w-2.5 h-2.5 rounded-full ${session ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
-                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33-1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
               </svg>
             </button>
             {session && (
@@ -203,60 +201,63 @@ const App: React.FC = () => {
         {session && <div className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-widest">{session.user.email}</div>}
       </header>
 
-      {/* Main Status Box (Back to Light Mode) */}
-      <div className={`bg-white rounded-3xl p-6 shadow-xl border transition-all duration-500 mb-6 ${appState.isActive ? 'border-emerald-100 animate-neon-green' : 'border-slate-100'}`}>
-        <div className={`mb-4 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 font-bold transition-all ${appState.isActive ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-700 border border-slate-100'}`}>
+      {/* Main Status Box (iOS Liquid Glass Style) */}
+      <div className={`liquid-glass rounded-[2.5rem] p-7 transition-all duration-700 mb-6 ${appState.isActive ? 'animate-neon-green bg-white/80' : ''}`}>
+        <div className={`mb-6 p-5 rounded-[2rem] flex flex-col items-center justify-center gap-1 font-bold transition-all ${appState.isActive ? 'bg-emerald-400/10 text-emerald-600 border border-emerald-200/50' : 'bg-slate-400/5 text-slate-700 border border-slate-200/30'}`}>
           <div className="flex items-center gap-3">
             {appState.isActive ? (
               <>
                 <span className="text-xl">🟢</span>
-                <span className="uppercase text-xs tracking-widest text-emerald-600">Смена открыта</span>
+                <span className="uppercase text-[11px] tracking-[0.2em] text-emerald-600 font-black">Смена открыта</span>
               </>
             ) : (
               <>
-                <div className="p-1">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-moon-glow">
+                <div className="p-1.5">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-moon-glow">
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor" fillOpacity="0.4" />
                   </svg>
                 </div>
-                <span className="uppercase text-xs tracking-widest text-slate-400">На отдыхе</span>
+                <span className="uppercase text-[11px] tracking-[0.2em] text-slate-400 font-black">На отдыхе</span>
               </>
             )}
           </div>
+          
           {appState.isActive && (
-            <div className="mt-2 text-3xl font-black tabular-nums tracking-tighter animate-pulse text-emerald-600">
+            <div className="mt-3 text-5xl font-black tabular-nums tracking-tighter text-emerald-600 drop-shadow-sm">
               {formatMinsToHHMM(activeDurationMins)}
             </div>
           )}
+          
           {!appState.isActive && lastShiftEndTime && (
-            <div className="mt-4 w-full space-y-3">
-              <div className="text-4xl font-black text-slate-800 text-center tabular-nums tracking-tighter">
+            <div className="mt-4 w-full space-y-4">
+              <div className="text-5xl font-black text-slate-800 text-center tabular-nums tracking-tighter drop-shadow-sm">
                 {formatMinsToHHMM(restElapsedMins)}
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                {/* Блок отдыха 9ч - Синхронизированный сочный зеленый */}
-                <div className={`relative h-14 overflow-hidden rounded-xl border transition-all flex flex-col items-center justify-center ${restElapsedMins >= 9 * 60 ? 'bg-emerald-500 border-emerald-600' : 'bg-rose-500 border-rose-600 animate-neon-red'}`}>
+              
+              <div className="grid grid-cols-2 gap-3">
+                {/* Блок отдыха 9ч - Сочный Liquid стиль */}
+                <div className={`relative h-16 overflow-hidden rounded-2xl border transition-all duration-500 flex flex-col items-center justify-center shadow-sm ${restElapsedMins >= 9 * 60 ? 'bg-emerald-500 border-emerald-400 shadow-emerald-200' : 'bg-rose-500 border-rose-400 animate-neon-red shadow-rose-200'}`}>
                    <div className="relative z-10 text-center">
-                     <span className="text-[9px] block font-bold uppercase text-white/80">До 9ч</span>
-                     <span className="text-sm font-black tabular-nums text-white">
+                     <span className="text-[10px] block font-black uppercase text-white/70 tracking-widest mb-0.5">До 9ч</span>
+                     <span className="text-base font-black tabular-nums text-white">
                        {restElapsedMins >= 9 * 60 ? 'ГОТОВО' : formatMinsToHHMM(Math.max(0, 9 * 60 - restElapsedMins))}
                      </span>
                    </div>
                 </div>
 
-                {/* Блок отдыха 11ч - Синхронизированный сочный зеленый */}
-                <div className={`relative h-14 overflow-hidden rounded-xl border transition-all flex flex-col items-center justify-center ${restElapsedMins >= 11 * 60 ? 'bg-emerald-500 border-emerald-600' : 'bg-slate-100 border-slate-200'}`}>
+                {/* Блок отдыха 11ч - Сочный Liquid стиль */}
+                <div className={`relative h-16 overflow-hidden rounded-2xl border transition-all duration-500 flex flex-col items-center justify-center shadow-sm ${restElapsedMins >= 11 * 60 ? 'bg-emerald-500 border-emerald-400 shadow-emerald-200' : 'bg-white/40 border-white/60'}`}>
                    {restElapsedMins < 11 * 60 && (
                      <div 
-                       className="absolute inset-y-0 left-0 bg-emerald-500/30 transition-all duration-1000 ease-out overflow-hidden" 
+                       className="absolute inset-y-0 left-0 bg-emerald-500/20 transition-all duration-1000 ease-out overflow-hidden" 
                        style={{ width: `${restProgress11}%` }}
                      >
                        <div className="shimmer-layer"></div>
                      </div>
                    )}
                    <div className="relative z-10 text-center">
-                     <span className={`text-[9px] block font-bold uppercase ${restElapsedMins >= 11 * 60 ? 'text-white/80' : 'text-slate-500'}`}>До 11ч</span>
-                     <span className={`text-sm font-black tabular-nums ${restElapsedMins >= 11 * 60 ? 'text-white' : 'text-slate-700'}`}>
+                     <span className={`text-[10px] block font-black uppercase tracking-widest mb-0.5 ${restElapsedMins >= 11 * 60 ? 'text-white/70' : 'text-slate-400'}`}>До 11ч</span>
+                     <span className={`text-base font-black tabular-nums ${restElapsedMins >= 11 * 60 ? 'text-white' : 'text-slate-700'}`}>
                        {restElapsedMins >= 11 * 60 ? 'ГОТОВО' : formatMinsToHHMM(Math.max(0, 11 * 60 - restElapsedMins))}
                      </span>
                    </div>
@@ -265,11 +266,22 @@ const App: React.FC = () => {
             </div>
           )}
         </div>
+        
         <button 
           onClick={handleMainAction}
-          className={`w-full py-5 rounded-2xl text-lg font-bold text-white shadow-lg transition-all active:scale-[0.97] ${appState.isActive ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-100' : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-100'}`}
+          className={`w-full py-5 rounded-[1.75rem] text-xl font-black text-white shadow-2xl transition-all active:scale-[0.96] flex items-center justify-center gap-3 ${appState.isActive ? 'bg-gradient-to-br from-rose-500 to-rose-600 shadow-rose-200/50' : 'bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-emerald-200/50'}`}
         >
-          {appState.isActive ? 'Завершить смену' : 'Начать смену'}
+          {appState.isActive ? (
+            <>
+              <span>Завершить смену</span>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="6" width="12" height="12"></rect></svg>
+            </>
+          ) : (
+            <>
+              <span>Начать смену</span>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            </>
+          )}
         </button>
       </div>
 
@@ -283,22 +295,22 @@ const App: React.FC = () => {
       </div>
 
       {shifts.length > 0 && (
-        <div className="mb-8 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group">
+        <div className="mb-8 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[2.5rem] p-7 text-white shadow-xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
              <svg width="60" height="60" viewBox="0 0 24 24" fill="white"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
           </div>
           <div className="flex items-center justify-between mb-4 relative z-10">
-            <h3 className="font-bold flex items-center gap-2">✨ AI Анализ</h3>
-            <button onClick={runAiAnalysis} disabled={isAnalyzing} className="text-[10px] bg-white text-indigo-900 px-3 py-1.5 rounded-full font-bold active:scale-95 transition-all disabled:opacity-50">
+            <h3 className="font-black text-lg tracking-tight flex items-center gap-2">✨ AI Анализ</h3>
+            <button onClick={runAiAnalysis} disabled={isAnalyzing} className="text-[10px] bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full font-black active:scale-95 transition-all disabled:opacity-50">
               {isAnalyzing ? 'АНАЛИЗ...' : 'ОБНОВИТЬ'}
             </button>
           </div>
-          <div className="text-sm leading-relaxed opacity-95 relative z-10">{aiAnalysis || "Нажмите обновить для анализа логов тахографа."}</div>
+          <div className="text-sm leading-relaxed font-medium opacity-90 relative z-10">{aiAnalysis || "Нажмите обновить для анализа логов тахографа."}</div>
         </div>
       )}
 
       <div className="space-y-4">
-        <h3 className="text-lg font-extrabold text-slate-800 flex items-center gap-2 px-2 uppercase tracking-tight">
+        <h3 className="text-lg font-black text-slate-800 flex items-center gap-2 px-2 uppercase tracking-tighter">
           <span className="w-1.5 h-6 bg-slate-900 rounded-full"></span>
           Хронология
         </h3>
