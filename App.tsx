@@ -206,11 +206,22 @@ const App: React.FC = () => {
       <div className={`bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6 transition-all ${appState.isActive ? 'animate-neon-green' : ''}`}>
         <div className={`mb-4 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 font-bold transition-all ${appState.isActive ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
           <div className="flex items-center gap-2">
-            <span className="text-xl">{appState.isActive ? '🟢' : '💤'}</span>
-            <span className="uppercase text-xs tracking-widest">{appState.isActive ? 'Смена открыта' : 'На отдыхе'}</span>
+            {appState.isActive ? (
+              <>
+                <span className="text-xl">🟢</span>
+                <span className="uppercase text-xs tracking-widest">Смена открыта</span>
+              </>
+            ) : (
+              <>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-moon-glow">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor" fillOpacity="0.2" />
+                </svg>
+                <span className="uppercase text-xs tracking-widest text-slate-400">На отдыхе</span>
+              </>
+            )}
           </div>
           {appState.isActive && (
-            <div className="mt-2 text-3xl font-black tabular-nums tracking-tighter animate-pulse">
+            <div className="mt-2 text-3xl font-black tabular-nums tracking-tighter animate-pulse text-emerald-600">
               {formatMinsToHHMM(activeDurationMins)}
             </div>
           )}
@@ -220,37 +231,36 @@ const App: React.FC = () => {
                 {formatMinsToHHMM(restElapsedMins)}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {/* Блок отдыха 9ч */}
-                <div className={`relative h-14 overflow-hidden rounded-xl border transition-all flex flex-col items-center justify-center ${restElapsedMins >= 9 * 60 ? 'bg-emerald-500 border-emerald-600' : 'bg-slate-100 border-slate-200 animate-neon-red'}`}>
-                   {/* Убираем переливание если блок мигает красным */}
+                {/* Блок отдыха 9ч - БЕЗ переливания, белые цифры */}
+                <div className={`relative h-14 overflow-hidden rounded-xl border transition-all flex flex-col items-center justify-center ${restElapsedMins >= 9 * 60 ? 'bg-emerald-500 border-emerald-600' : 'bg-rose-500 border-rose-600 animate-neon-red'}`}>
+                   {/* Фоновая заливка прогресса (только цвет, без шиммера для левой кнопки) */}
                    {restElapsedMins < 9 * 60 ? null : (
                      <div 
-                       className="absolute inset-y-0 left-0 bg-emerald-500/30 transition-all duration-1000 ease-out overflow-hidden" 
+                       className="absolute inset-y-0 left-0 bg-emerald-600 transition-all duration-1000 ease-out" 
                        style={{ width: `${restProgress9}%` }}
-                     >
-                       <div className="shimmer-layer"></div>
-                     </div>
+                     />
                    )}
                    <div className="relative z-10 text-center">
-                     <span className={`text-[9px] block font-bold uppercase ${restElapsedMins >= 9 * 60 || restElapsedMins < 9 * 60 ? 'text-white' : 'text-slate-500'}`}>До 9ч</span>
-                     <span className={`text-sm font-black tabular-nums ${restElapsedMins >= 9 * 60 || restElapsedMins < 9 * 60 ? 'text-white' : 'text-slate-700'}`}>
+                     <span className="text-[9px] block font-bold uppercase text-white/80">До 9ч</span>
+                     <span className="text-sm font-black tabular-nums text-white">
                        {restElapsedMins >= 9 * 60 ? 'ГОТОВО' : formatMinsToHHMM(Math.max(0, 9 * 60 - restElapsedMins))}
                      </span>
                    </div>
                 </div>
 
-                {/* Блок отдыха 11ч */}
+                {/* Блок отдыха 11ч - С переливанием ТОЛЬКО до готовности */}
                 <div className={`relative h-14 overflow-hidden rounded-xl border transition-all flex flex-col items-center justify-center ${restElapsedMins >= 11 * 60 ? 'bg-emerald-500 border-emerald-600' : 'bg-slate-100 border-slate-200'}`}>
                    {restElapsedMins < 11 * 60 && (
                      <div 
                        className="absolute inset-y-0 left-0 bg-emerald-500/30 transition-all duration-1000 ease-out overflow-hidden" 
                        style={{ width: `${restProgress11}%` }}
                      >
+                       {/* Шиммер исчезает после 11ч */}
                        <div className="shimmer-layer"></div>
                      </div>
                    )}
                    <div className="relative z-10 text-center">
-                     <span className={`text-[9px] block font-bold uppercase ${restElapsedMins >= 11 * 60 ? 'text-emerald-50' : 'text-slate-500'}`}>До 11ч</span>
+                     <span className={`text-[9px] block font-bold uppercase ${restElapsedMins >= 11 * 60 ? 'text-white/80' : 'text-slate-500'}`}>До 11ч</span>
                      <span className={`text-sm font-black tabular-nums ${restElapsedMins >= 11 * 60 ? 'text-white' : 'text-slate-700'}`}>
                        {restElapsedMins >= 11 * 60 ? 'ГОТОВО' : formatMinsToHHMM(Math.max(0, 11 * 60 - restElapsedMins))}
                      </span>

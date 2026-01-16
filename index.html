@@ -19,20 +19,24 @@
         /* Неоновый красный пульс для привлечения внимания */
         @keyframes neon-pulse-red {
           0% {
-            background-color: #ef4444; /* red-500 */
+            background-color: #ef4444;
             box-shadow: 0 0 5px #ef4444, 0 0 10px #ef4444;
-            transform: scale(1);
           }
           50% {
-            background-color: #b91c1c; /* red-700 */
-            box-shadow: 0 0 15px #ff0000, 0 0 30px #ff0000;
-            transform: scale(1.02);
+            background-color: #b91c1c;
+            box-shadow: 0 0 15px #ff0000, 0 0 25px #ff0000;
           }
           100% {
             background-color: #ef4444;
             box-shadow: 0 0 5px #ef4444, 0 0 10px #ef4444;
-            transform: scale(1);
           }
+        }
+
+        /* Лунное свечение для иконки отдыха */
+        @keyframes moon-glow {
+          0% { filter: drop-shadow(0 0 2px #94a3b8); transform: scale(1); }
+          50% { filter: drop-shadow(0 0 8px #cbd5e1); transform: scale(1.05); }
+          100% { filter: drop-shadow(0 0 2px #94a3b8); transform: scale(1); }
         }
 
         /* Неоновый зеленый пульс для активной смены */
@@ -52,6 +56,11 @@
           animation: neon-pulse-red 0.8s infinite ease-in-out;
           color: white !important;
           border: none !important;
+        }
+
+        .animate-moon-glow {
+          animation: moon-glow 3s infinite ease-in-out;
+          color: #94a3b8;
         }
 
         .animate-neon-green {
