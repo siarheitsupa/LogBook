@@ -16,42 +16,45 @@
             -webkit-tap-highlight-color: transparent;
         }
         
-        /* Неоновый красный пульс для привлечения внимания */
+        /* Неоновый красный пульс */
         @keyframes neon-pulse-red {
           0% {
-            background-color: #ef4444;
-            box-shadow: 0 0 5px #ef4444, 0 0 10px #ef4444;
+            background-color: #f43f5e;
+            box-shadow: 0 0 10px rgba(244, 63, 94, 0.4);
           }
           50% {
-            background-color: #b91c1c;
-            box-shadow: 0 0 15px #ff0000, 0 0 25px #ff0000;
+            background-color: #e11d48;
+            box-shadow: 0 0 20px rgba(244, 63, 94, 0.8);
           }
           100% {
-            background-color: #ef4444;
-            box-shadow: 0 0 5px #ef4444, 0 0 10px #ef4444;
+            background-color: #f43f5e;
+            box-shadow: 0 0 10px rgba(244, 63, 94, 0.4);
           }
         }
 
-        /* Усиленное лунное свечение */
+        /* Усиленное неоновое лунное свечение (Cyan/White) */
         @keyframes moon-glow {
           0% { 
-            filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8)); 
+            filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.6)); 
             transform: scale(1);
+            color: #ecfeff;
           }
           50% { 
-            filter: drop-shadow(0 0 12px rgba(255, 255, 255, 1)); 
+            filter: drop-shadow(0 0 20px rgba(34, 211, 238, 1)); 
             transform: scale(1.1);
+            color: #ffffff;
           }
           100% { 
-            filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8)); 
+            filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.6)); 
             transform: scale(1);
+            color: #ecfeff;
           }
         }
 
-        /* Неоновый зеленый пульс для активной смены */
+        /* Неоновый зеленый пульс */
         @keyframes neon-pulse-green {
           0% { box-shadow: 0 0 5px #10b981; }
-          50% { box-shadow: 0 0 20px #10b981; }
+          50% { box-shadow: 0 0 25px #10b981; }
           100% { box-shadow: 0 0 5px #10b981; }
         }
 
@@ -62,14 +65,13 @@
         }
 
         .animate-neon-red {
-          animation: neon-pulse-red 0.8s infinite ease-in-out;
+          animation: neon-pulse-red 1s infinite ease-in-out;
           color: white !important;
           border: none !important;
         }
 
         .animate-moon-glow {
           animation: moon-glow 4s infinite ease-in-out;
-          color: #f8fafc; /* Очень светлый для эффекта луны */
         }
 
         .animate-neon-green {
@@ -82,10 +84,10 @@
           background: linear-gradient(
             90deg,
             transparent,
-            rgba(255, 255, 255, 0.4),
+            rgba(255, 255, 255, 0.2),
             transparent
           );
-          animation: shimmer-flow 1.5s infinite linear;
+          animation: shimmer-flow 2s infinite linear;
         }
     </style>
 <script type="importmap">
