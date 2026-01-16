@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { Shift } from "../types";
 
@@ -6,13 +5,11 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
   try {
     const apiKey = process.env.API_KEY;
     
-    // Проверка ключа
     if (!apiKey || apiKey === "undefined" || apiKey === "") {
-      console.error("AI Error: API_KEY is missing in process.env");
-      return "⚠️ API_KEY не найден в сборке. Пожалуйста:\n1. Добавьте API_KEY в Environment Variables на Vercel.\n2. Нажмите 'Redeploy' (сборка не обновится сама при изменении переменных).";
+      console.error("AI Error: API_KEY is missing");
+      return "⚠️ API_KEY не найден. Проверьте настройки окружения (Environment Variables).";
     }
 
-    // Always use the named parameter and process.env.API_KEY directly as per SDK guidelines
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const history = shifts.slice(0, 15).map(s => (
@@ -29,22 +26,27 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
       Пиши по-русски, профессионально.
     `;
 
-    // Upgraded to 'gemini-3-pro-preview' for complex reasoning tasks like regulatory analysis and rule checking
+    // Переключаемся на flash-модель, так как у нее обычно выше лимиты запросов (квоты)
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',
       contents: promptText,
       config: {
         systemInstruction: "Ты — ассистент водителя-дальнобойщика в Европе. Твоя задача — анализировать логи тахографа на соответствие правилам 561/2006. Будь краток и точен.",
+        temperature: 0.7,
       }
     });
     
-    // Use .text property directly as per the latest SDK spec
     return response.text || "Анализ завершен, но модель не вернула текст.";
   } catch (error: any) {
     console.error("Gemini Critical Error:", error);
     
+    // Обработка ошибки квоты (429)
+    if (error.message?.includes('429') || error.message?.includes('quota')) {
+      return "⚠️ Лимит запросов исчерпан (Quota Exceeded). Пожалуйста, попробуйте позже или используйте платный API ключ.";
+    }
+    
     if (error.message?.includes('API key not valid')) {
-      return "⚠️ Ошибка: API ключ Gemini недействителен или отозван.";
+      return "⚠️ Ошибка: API ключ Gemini недействителен.";
     }
     
     return `Ошибка AI: ${error.message || "неизвестная ошибка сети"}`;

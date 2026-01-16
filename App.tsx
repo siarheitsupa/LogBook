@@ -197,7 +197,7 @@ const App: React.FC = () => {
         <div className="text-[10px] text-slate-400 font-bold mt-3 uppercase tracking-widest opacity-40">{session.user.email}</div>
       </header>
 
-      {/* Main Status Block (iOS Liquid Glass) */}
+      {/* Main Status Block */}
       <div className={`liquid-glass rounded-[3rem] p-8 mb-8 transition-all duration-700 ${appState.isActive ? 'shadow-[0_20px_50px_rgba(16,185,129,0.1)]' : ''}`}>
         <div className={`mb-8 p-6 rounded-[2.5rem] flex flex-col items-center justify-center gap-1 transition-all relative overflow-hidden ${appState.isActive ? 'bg-emerald-500/5 border border-emerald-500/20' : 'bg-slate-500/5 border border-slate-500/10'}`}>
           <div className="flex items-center gap-3 relative z-10">
@@ -231,7 +231,6 @@ const App: React.FC = () => {
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                {/* 9h Resting Block */}
                 <div className={`relative h-20 overflow-hidden rounded-3xl border transition-all duration-500 flex flex-col items-center justify-center shadow-lg ${restElapsedMins >= 9 * 60 ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-300' : 'bg-gradient-to-br from-rose-400 to-rose-600 border-rose-300'}`}>
                    {restElapsedMins >= 9 * 60 && <div className="shimmer-liquid"></div>}
                    <div className="relative z-10 text-center">
@@ -242,7 +241,6 @@ const App: React.FC = () => {
                    </div>
                 </div>
 
-                {/* 11h Resting Block */}
                 <div className={`relative h-20 overflow-hidden rounded-3xl border transition-all duration-500 flex flex-col items-center justify-center shadow-lg ${restElapsedMins >= 11 * 60 ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-300' : 'bg-white/50 border-white/80'}`}>
                    {restElapsedMins >= 11 * 60 && <div className="shimmer-liquid"></div>}
                    {restElapsedMins < 11 * 60 && (
@@ -303,11 +301,21 @@ const App: React.FC = () => {
               <span className="text-2xl">✨</span>
               AI Аналитик
             </h3>
-            <button onClick={runAiAnalysis} disabled={isAnalyzing} className="text-[10px] bg-slate-900 text-white px-5 py-2.5 rounded-full font-black active:scale-95 transition-all disabled:opacity-50 shadow-xl">
+            <button 
+              onClick={runAiAnalysis} 
+              disabled={isAnalyzing} 
+              className={`text-[10px] bg-slate-900 text-white px-5 py-2.5 rounded-full font-black active:scale-95 transition-all disabled:opacity-50 shadow-xl ${isAnalyzing ? 'animate-pulse' : ''}`}
+            >
               {isAnalyzing ? 'АНАЛИЗ...' : 'ОБНОВИТЬ'}
             </button>
           </div>
-          <div className="text-sm leading-relaxed font-medium text-slate-600 relative z-10 p-4 bg-white/30 rounded-2xl border border-white/50">{aiAnalysis || "Нажмите обновить, чтобы я проверил ваши логи на соответствие регламенту ЕС 561/2006."}</div>
+          <div className="text-[13px] leading-relaxed font-semibold text-slate-700 relative z-10 p-5 bg-white/40 rounded-[2rem] border border-white/60 shadow-inner">
+            {aiAnalysis ? (
+              <div className="whitespace-pre-wrap">{aiAnalysis}</div>
+            ) : (
+              <span className="opacity-50 italic">Нажмите обновить, чтобы я проверил ваши логи на соответствие регламенту ЕС 561/2006.</span>
+            )}
+          </div>
         </div>
       )}
 
@@ -317,7 +325,7 @@ const App: React.FC = () => {
               <span className="w-2 h-8 bg-slate-900 rounded-full"></span>
               История логов
             </h3>
-            <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-3 py-1 rounded-full uppercase tracking-widest">{shifts.length} записей</span>
+            <span className="text-[10px] font-black text-slate-400 bg-white/50 backdrop-blur-md border border-white/60 px-4 py-1.5 rounded-full uppercase tracking-widest shadow-sm">{shifts.length} записей</span>
         </div>
         <div className="space-y-4">
             {enrichedShifts.map((shift, idx) => (
