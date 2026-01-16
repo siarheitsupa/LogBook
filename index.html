@@ -32,11 +32,20 @@
           }
         }
 
-        /* Лунное свечение для иконки отдыха */
+        /* Усиленное лунное свечение */
         @keyframes moon-glow {
-          0% { filter: drop-shadow(0 0 2px #94a3b8); transform: scale(1); }
-          50% { filter: drop-shadow(0 0 8px #cbd5e1); transform: scale(1.05); }
-          100% { filter: drop-shadow(0 0 2px #94a3b8); transform: scale(1); }
+          0% { 
+            filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8)); 
+            transform: scale(1);
+          }
+          50% { 
+            filter: drop-shadow(0 0 12px rgba(255, 255, 255, 1)); 
+            transform: scale(1.1);
+          }
+          100% { 
+            filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8)); 
+            transform: scale(1);
+          }
         }
 
         /* Неоновый зеленый пульс для активной смены */
@@ -59,8 +68,8 @@
         }
 
         .animate-moon-glow {
-          animation: moon-glow 3s infinite ease-in-out;
-          color: #94a3b8;
+          animation: moon-glow 4s infinite ease-in-out;
+          color: #f8fafc; /* Очень светлый для эффекта луны */
         }
 
         .animate-neon-green {

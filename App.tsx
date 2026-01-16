@@ -205,17 +205,19 @@ const App: React.FC = () => {
 
       <div className={`bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6 transition-all ${appState.isActive ? 'animate-neon-green' : ''}`}>
         <div className={`mb-4 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 font-bold transition-all ${appState.isActive ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {appState.isActive ? (
               <>
                 <span className="text-xl">🟢</span>
-                <span className="uppercase text-xs tracking-widest">Смена открыта</span>
+                <span className="uppercase text-xs tracking-widest text-emerald-600">Смена открыта</span>
               </>
             ) : (
               <>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-moon-glow">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor" fillOpacity="0.2" />
-                </svg>
+                <div className="p-1">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-moon-glow">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="white" fillOpacity="0.4" />
+                  </svg>
+                </div>
                 <span className="uppercase text-xs tracking-widest text-slate-400">На отдыхе</span>
               </>
             )}
@@ -231,15 +233,8 @@ const App: React.FC = () => {
                 {formatMinsToHHMM(restElapsedMins)}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {/* Блок отдыха 9ч - БЕЗ переливания, белые цифры */}
+                {/* Блок отдыха 9ч - Синхронизированный цвет, белые цифры */}
                 <div className={`relative h-14 overflow-hidden rounded-xl border transition-all flex flex-col items-center justify-center ${restElapsedMins >= 9 * 60 ? 'bg-emerald-500 border-emerald-600' : 'bg-rose-500 border-rose-600 animate-neon-red'}`}>
-                   {/* Фоновая заливка прогресса (только цвет, без шиммера для левой кнопки) */}
-                   {restElapsedMins < 9 * 60 ? null : (
-                     <div 
-                       className="absolute inset-y-0 left-0 bg-emerald-600 transition-all duration-1000 ease-out" 
-                       style={{ width: `${restProgress9}%` }}
-                     />
-                   )}
                    <div className="relative z-10 text-center">
                      <span className="text-[9px] block font-bold uppercase text-white/80">До 9ч</span>
                      <span className="text-sm font-black tabular-nums text-white">
@@ -248,14 +243,13 @@ const App: React.FC = () => {
                    </div>
                 </div>
 
-                {/* Блок отдыха 11ч - С переливанием ТОЛЬКО до готовности */}
+                {/* Блок отдыха 11ч - Синхронизированный цвет */}
                 <div className={`relative h-14 overflow-hidden rounded-xl border transition-all flex flex-col items-center justify-center ${restElapsedMins >= 11 * 60 ? 'bg-emerald-500 border-emerald-600' : 'bg-slate-100 border-slate-200'}`}>
                    {restElapsedMins < 11 * 60 && (
                      <div 
                        className="absolute inset-y-0 left-0 bg-emerald-500/30 transition-all duration-1000 ease-out overflow-hidden" 
                        style={{ width: `${restProgress11}%` }}
                      >
-                       {/* Шиммер исчезает после 11ч */}
                        <div className="shimmer-layer"></div>
                      </div>
                    )}
