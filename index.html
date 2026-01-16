@@ -40,8 +40,8 @@
             color: #f43f5e;
           }
           50% { 
-            filter: drop-shadow(0 0 15px rgba(244, 63, 94, 0.9)); 
-            transform: scale(1.1);
+            filter: drop-shadow(0 0 18px rgba(244, 63, 94, 1)); 
+            transform: scale(1.15);
             color: #e11d48;
           }
           100% { 
@@ -49,6 +49,13 @@
             transform: scale(1);
             color: #f43f5e;
           }
+        }
+
+        /* Анимация парения */
+        @keyframes float-slow {
+          0% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+          100% { transform: translateY(0px); }
         }
 
         /* Неоновый зеленый пульс */
@@ -71,7 +78,11 @@
         }
 
         .animate-moon-glow {
-          animation: moon-glow 3s infinite ease-in-out;
+          animation: moon-glow 2.5s infinite ease-in-out;
+        }
+
+        .animate-float {
+          animation: float-slow 4s infinite ease-in-out;
         }
 
         .animate-neon-green {
