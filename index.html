@@ -42,6 +42,12 @@
           100% { box-shadow: 0 0 5px #10b981; }
         }
 
+        /* Анимация перелива (Shimmer) */
+        @keyframes shimmer-flow {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+
         .animate-neon-red {
           animation: neon-pulse-red 0.8s infinite ease-in-out;
           color: white !important;
@@ -50,6 +56,18 @@
 
         .animate-neon-green {
           animation: neon-pulse-green 2s infinite ease-in-out;
+        }
+
+        .shimmer-layer {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.4),
+            transparent
+          );
+          animation: shimmer-flow 1.5s infinite linear;
         }
     </style>
 <script type="importmap">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shift, AppState, CloudConfig } from './types';
 import { storage } from './services/storageService';
 import { formatMinsToHHMM, getStats, calculateLogSummary } from './utils/timeUtils';
@@ -166,6 +166,9 @@ const App: React.FC = () => {
   const restElapsedMins = (!appState.isActive && lastShiftEndTime) ? Math.max(0, (now - lastShiftEndTime) / (1000 * 60)) : 0;
   const activeDurationMins = (appState.isActive && appState.startTime) ? Math.max(0, (now - appState.startTime) / (1000 * 60)) : 0;
 
+  const restProgress9 = Math.min(100, (restElapsedMins / (9 * 60)) * 100);
+  const restProgress11 = Math.min(100, (restElapsedMins / (11 * 60)) * 100);
+
   return (
     <div className="max-w-xl mx-auto min-h-screen pb-12 px-4 pt-6 animate-in fade-in duration-500">
       <header className="flex flex-col items-center mb-6 relative text-center">
@@ -217,13 +220,40 @@ const App: React.FC = () => {
                 {formatMinsToHHMM(restElapsedMins)}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <div className={`p-2 rounded-xl text-center border transition-all ${restElapsedMins >= 9 * 60 ? 'bg-emerald-500 border-emerald-600 text-white' : 'animate-neon-red'}`}>
-                  <span className="text-[9px] block font-bold uppercase">До 9ч</span>
-                  <span className="text-sm font-black tabular-nums">{restElapsedMins >= 9 * 60 ? 'ГОТОВО' : formatMinsToHHMM(Math.max(0, 9 * 60 - restElapsedMins))}</span>
+                {/* Блок отдыха 9ч */}
+                <div className={`relative h-14 overflow-hidden rounded-xl border transition-all flex flex-col items-center justify-center ${restElapsedMins >= 9 * 60 ? 'bg-emerald-500 border-emerald-600' : 'bg-slate-100 border-slate-200 animate-neon-red'}`}>
+                   {restElapsedMins < 9 * 60 && (
+                     <div 
+                       className="absolute inset-y-0 left-0 bg-emerald-500/30 transition-all duration-1000 ease-out overflow-hidden" 
+                       style={{ width: `${restProgress9}%` }}
+                     >
+                       <div className="shimmer-layer"></div>
+                     </div>
+                   )}
+                   <div className="relative z-10 text-center">
+                     <span className={`text-[9px] block font-bold uppercase ${restElapsedMins >= 9 * 60 ? 'text-emerald-50' : 'text-slate-500'}`}>До 9ч</span>
+                     <span className={`text-sm font-black tabular-nums ${restElapsedMins >= 9 * 60 ? 'text-white' : 'text-slate-700'}`}>
+                       {restElapsedMins >= 9 * 60 ? 'ГОТОВО' : formatMinsToHHMM(Math.max(0, 9 * 60 - restElapsedMins))}
+                     </span>
+                   </div>
                 </div>
-                <div className={`p-2 rounded-xl text-center border transition-all ${restElapsedMins >= 11 * 60 ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
-                  <span className="text-[9px] block font-bold uppercase">До 11ч</span>
-                  <span className="text-sm font-black tabular-nums">{restElapsedMins >= 11 * 60 ? 'ГОТОВО' : formatMinsToHHMM(Math.max(0, 11 * 60 - restElapsedMins))}</span>
+
+                {/* Блок отдыха 11ч */}
+                <div className={`relative h-14 overflow-hidden rounded-xl border transition-all flex flex-col items-center justify-center ${restElapsedMins >= 11 * 60 ? 'bg-emerald-500 border-emerald-600' : 'bg-slate-100 border-slate-200'}`}>
+                   {restElapsedMins < 11 * 60 && (
+                     <div 
+                       className="absolute inset-y-0 left-0 bg-emerald-500/30 transition-all duration-1000 ease-out overflow-hidden" 
+                       style={{ width: `${restProgress11}%` }}
+                     >
+                       <div className="shimmer-layer"></div>
+                     </div>
+                   )}
+                   <div className="relative z-10 text-center">
+                     <span className={`text-[9px] block font-bold uppercase ${restElapsedMins >= 11 * 60 ? 'text-emerald-50' : 'text-slate-500'}`}>До 11ч</span>
+                     <span className={`text-sm font-black tabular-nums ${restElapsedMins >= 11 * 60 ? 'text-white' : 'text-slate-700'}`}>
+                       {restElapsedMins >= 11 * 60 ? 'ГОТОВО' : formatMinsToHHMM(Math.max(0, 11 * 60 - restElapsedMins))}
+                     </span>
+                   </div>
                 </div>
               </div>
             </div>
