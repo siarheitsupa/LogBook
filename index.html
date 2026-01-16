@@ -7,110 +7,99 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
-      // Базовый полифилл
       window.process = { env: {} };
     </script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
-            background-color: #f8fafc;
+            background: radial-gradient(circle at top right, #f8fafc, #eff6ff);
+            min-height: 100vh;
         }
         
-        /* iOS Liquid Glass Effect */
+        /* Настоящий iOS Liquid Glass */
         .liquid-glass {
-          background: rgba(255, 255, 255, 0.65);
-          backdrop-filter: blur(24px) saturate(180%);
-          -webkit-backdrop-filter: blur(24px) saturate(180%);
-          border: 1px solid rgba(255, 255, 255, 0.4);
+          background: rgba(255, 255, 255, 0.45);
+          backdrop-filter: blur(30px) saturate(200%) brightness(1.05);
+          -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(1.05);
+          border: 1px solid rgba(255, 255, 255, 0.6);
+          border-top: 1.5px solid rgba(255, 255, 255, 0.8); /* Световой блик сверху */
           box-shadow: 
-            0 20px 40px rgba(0, 0, 0, 0.06),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+            0 15px 35px -5px rgba(0, 0, 0, 0.05),
+            0 5px 15px -3px rgba(0, 0, 0, 0.03),
+            inset 0 0 20px rgba(255, 255, 255, 0.3);
         }
 
-        /* Неоновый красный пульс (Аварийный) */
-        @keyframes neon-pulse-red {
-          0% {
-            background-color: #f43f5e;
-            box-shadow: 0 0 12px rgba(244, 63, 94, 0.4);
-          }
-          50% {
-            background-color: #e11d48;
-            box-shadow: 0 0 24px rgba(244, 63, 94, 0.7);
-          }
-          100% {
-            background-color: #f43f5e;
-            box-shadow: 0 0 12px rgba(244, 63, 94, 0.4);
-          }
+        .liquid-card {
+          background: rgba(255, 255, 255, 0.4);
+          backdrop-filter: blur(15px) saturate(150%);
+          border: 1px solid rgba(255, 255, 255, 0.5);
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04);
         }
 
-        /* Ярко-алое лунное свечение (Liquid Style) */
-        @keyframes moon-glow {
+        /* Анимация Liquid Moon */
+        @keyframes liquid-moon {
           0% { 
-            filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.4)); 
-            transform: scale(1);
-            opacity: 0.8;
+            filter: drop-shadow(0 0 5px rgba(244, 63, 94, 0.3));
+            transform: scale(1) rotate(-5deg);
           }
           50% { 
-            filter: drop-shadow(0 0 25px rgba(244, 63, 94, 0.9)); 
-            transform: scale(1.1);
-            opacity: 1;
+            filter: drop-shadow(0 0 15px rgba(244, 63, 94, 0.6));
+            transform: scale(1.08) rotate(5deg);
           }
           100% { 
-            filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.4)); 
-            transform: scale(1);
-            opacity: 0.8;
+            filter: drop-shadow(0 0 5px rgba(244, 63, 94, 0.3));
+            transform: scale(1) rotate(-5deg);
           }
         }
 
-        /* Анимация парения */
         @keyframes float-slow {
           0% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
+          50% { transform: translateY(-10px); }
           100% { transform: translateY(0px); }
         }
 
-        /* Неоновый зеленый пульс */
-        @keyframes neon-pulse-green {
-          0% { box-shadow: 0 0 8px #10b981; }
-          50% { box-shadow: 0 0 25px #10b981; }
-          100% { box-shadow: 0 0 8px #10b981; }
+        @keyframes shimmer-fast {
+          0% { transform: translateX(-150%); }
+          100% { transform: translateX(150%); }
         }
 
-        /* Анимация перелива (Shimmer) */
-        @keyframes shimmer-flow {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-
-        .animate-neon-red {
-          animation: neon-pulse-red 1s infinite ease-in-out;
-          color: white !important;
-        }
-
-        .animate-moon-glow {
-          animation: moon-glow 3s infinite ease-in-out;
+        .animate-liquid-moon {
+          animation: liquid-moon 4s infinite ease-in-out;
           color: #f43f5e;
         }
 
         .animate-float {
-          animation: float-slow 4s infinite ease-in-out;
+          animation: float-slow 5s infinite ease-in-out;
         }
 
-        .animate-neon-green {
-          animation: neon-pulse-green 2s infinite ease-in-out;
-        }
-
-        .shimmer-layer {
+        .shimmer-liquid {
           position: absolute;
           inset: 0;
           background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.4),
-            transparent
+            110deg,
+            transparent 30%,
+            rgba(255, 255, 255, 0.5) 45%,
+            rgba(255, 255, 255, 0.6) 50%,
+            rgba(255, 255, 255, 0.5) 55%,
+            transparent 70%
           );
-          animation: shimmer-flow 2s infinite linear;
+          animation: shimmer-fast 3s infinite linear;
+          pointer-events: none;
+        }
+        
+        /* Эффект гелевой кнопки */
+        .jelly-button {
+          transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          box-shadow: 
+            0 10px 20px -5px rgba(16, 185, 129, 0.4),
+            inset 0 -4px 6px rgba(0, 0, 0, 0.1),
+            inset 0 4px 6px rgba(255, 255, 255, 0.3);
+        }
+        
+        .jelly-button:active {
+          transform: scale(0.94);
+          box-shadow: 0 5px 10px -3px rgba(16, 185, 129, 0.3);
         }
     </style>
 <script type="importmap">
@@ -129,7 +118,7 @@
 }
 </script>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body class="text-slate-900">
     <div id="root"></div>
     <script type="module" src="./index.tsx"></script>
 </body>
