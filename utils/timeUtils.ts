@@ -4,8 +4,10 @@ import { Shift, RestEvent, ShiftWithRest } from '../types';
 export const pad = (n: number) => n.toString().padStart(2, '0');
 
 export const formatMinsToHHMM = (totalMinutes: number) => {
-  const h = Math.floor(totalMinutes / 60);
-  const m = Math.round(totalMinutes % 60);
+  // Сначала округляем общее количество минут до целого, чтобы избежать 08:60
+  const roundedTotalMins = Math.round(totalMinutes);
+  const h = Math.floor(roundedTotalMins / 60);
+  const m = roundedTotalMins % 60;
   return `${pad(h)}:${pad(m)}`;
 };
 
@@ -46,16 +48,18 @@ export const calculateLogSummary = (shifts: Shift[]) => {
       const diffMs = currStart.getTime() - prevEnd.getTime();
       const diffHours = diffMs / (1000 * 60 * 60);
 
-      if (diffHours >= 24) {
+      if (diffHours >= 9) { // Изменил порог для истории, чтобы ловить все виды отдыха
         const h = Math.floor(diffHours);
         const m = Math.round((diffHours - h) * 60);
         
         if (diffHours >= 45) {
           restEvent = { type: 'regular', durationHours: h, durationMinutes: m, debtHours: 0 };
+        } else if (diffHours >= 11) {
+          restEvent = { type: 'regular', durationHours: h, durationMinutes: m, debtHours: 0 };
         } else {
-          const debt = 45 - diffHours;
-          totalDebt += debt;
-          restEvent = { type: 'reduced', durationHours: h, durationMinutes: m, debtHours: debt };
+          const debt = 11 - diffHours;
+          if (debt > 0) totalDebt += debt;
+          restEvent = { type: 'reduced', durationHours: h, durationMinutes: m, debtHours: Math.max(0, debt) };
         }
       }
     }
@@ -78,19 +82,17 @@ export const getStats = (shifts: Shift[]) => {
   let weekMins = 0;
   let biWeekMins = 0;
   let dailyDutyMins = 0;
-  let extDrivingCount = 0; // 10h driving extensions (max 2)
-  let extDutyCount = 0;    // 15h duty extensions (max 3)
+  let extDrivingCount = 0;
+  let extDutyCount = 0;
 
   shifts.forEach(s => {
     const shiftTimestamp = new Date(s.date).getTime();
     const driveMins = s.driveHours * 60 + s.driveMinutes;
     const dutyMins = calculateShiftDurationMins(s);
 
-    // Weekly/Bi-weekly logic
     if (shiftTimestamp >= currentWeekStart) {
       weekMins += driveMins;
       if (driveMins > 9 * 60) extDrivingCount++;
-      // If duty period (spread) > 13h, it's a reduced daily rest / extended duty
       if (dutyMins > 13 * 60) extDutyCount++;
     }
     
@@ -98,7 +100,6 @@ export const getStats = (shifts: Shift[]) => {
       biWeekMins += driveMins;
     }
 
-    // Daily logic
     if (shiftTimestamp >= todayStart) {
       dailyDutyMins += dutyMins;
     }
