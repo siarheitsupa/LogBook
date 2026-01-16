@@ -1,11 +1,12 @@
+
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
-import process from 'node:process';
+import { cwd } from 'node:process';
 
 export default defineConfig(({ mode }) => {
-  // Fix: Use process.cwd() from imported node:process to avoid typing errors
+  // Use the directly imported cwd() function instead of process.cwd() to avoid type definition conflicts
   // Загружаем переменные окружения из системных (Vercel)
-  const env = loadEnv(mode, process.cwd(), '');
+  const env = loadEnv(mode, cwd(), '');
   
   return {
     plugins: [react()],

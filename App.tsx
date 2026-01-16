@@ -139,7 +139,7 @@ const App: React.FC = () => {
         <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-6 shadow-sm">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
-            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 012.83 0l.06.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33-1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 01-2.83 0l.06.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33-1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
           </svg>
         </div>
         <h2 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Настройка облака</h2>
@@ -222,7 +222,8 @@ const App: React.FC = () => {
               <div className="grid grid-cols-2 gap-2">
                 {/* Блок отдыха 9ч */}
                 <div className={`relative h-14 overflow-hidden rounded-xl border transition-all flex flex-col items-center justify-center ${restElapsedMins >= 9 * 60 ? 'bg-emerald-500 border-emerald-600' : 'bg-slate-100 border-slate-200 animate-neon-red'}`}>
-                   {restElapsedMins < 9 * 60 && (
+                   {/* Убираем переливание если блок мигает красным */}
+                   {restElapsedMins < 9 * 60 ? null : (
                      <div 
                        className="absolute inset-y-0 left-0 bg-emerald-500/30 transition-all duration-1000 ease-out overflow-hidden" 
                        style={{ width: `${restProgress9}%` }}
@@ -231,8 +232,8 @@ const App: React.FC = () => {
                      </div>
                    )}
                    <div className="relative z-10 text-center">
-                     <span className={`text-[9px] block font-bold uppercase ${restElapsedMins >= 9 * 60 ? 'text-emerald-50' : 'text-slate-500'}`}>До 9ч</span>
-                     <span className={`text-sm font-black tabular-nums ${restElapsedMins >= 9 * 60 ? 'text-white' : 'text-slate-700'}`}>
+                     <span className={`text-[9px] block font-bold uppercase ${restElapsedMins >= 9 * 60 || restElapsedMins < 9 * 60 ? 'text-white' : 'text-slate-500'}`}>До 9ч</span>
+                     <span className={`text-sm font-black tabular-nums ${restElapsedMins >= 9 * 60 || restElapsedMins < 9 * 60 ? 'text-white' : 'text-slate-700'}`}>
                        {restElapsedMins >= 9 * 60 ? 'ГОТОВО' : formatMinsToHHMM(Math.max(0, 9 * 60 - restElapsedMins))}
                      </span>
                    </div>

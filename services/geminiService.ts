@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { Shift } from "../types";
 
@@ -11,7 +12,8 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
       return "⚠️ API_KEY не найден в сборке. Пожалуйста:\n1. Добавьте API_KEY в Environment Variables на Vercel.\n2. Нажмите 'Redeploy' (сборка не обновится сама при изменении переменных).";
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    // Always use the named parameter and process.env.API_KEY directly as per SDK guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const history = shifts.slice(0, 15).map(s => (
       `- ${s.date}: вождение ${s.driveHours}ч ${s.driveMinutes}м, смена ${s.startTime}-${s.endTime}`
@@ -27,14 +29,16 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
       Пиши по-русски, профессионально.
     `;
 
+    // Upgraded to 'gemini-3-pro-preview' for complex reasoning tasks like regulatory analysis and rule checking
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: promptText,
       config: {
         systemInstruction: "Ты — ассистент водителя-дальнобойщика в Европе. Твоя задача — анализировать логи тахографа на соответствие правилам 561/2006. Будь краток и точен.",
       }
     });
     
+    // Use .text property directly as per the latest SDK spec
     return response.text || "Анализ завершен, но модель не вернула текст.";
   } catch (error: any) {
     console.error("Gemini Critical Error:", error);
