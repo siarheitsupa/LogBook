@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Shift } from '../types';
 
@@ -18,19 +17,26 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
   const [driveM, setDriveM] = useState('0');
 
   useEffect(() => {
-    if (initialData) {
-      setDate(initialData.date);
-      setStart(initialData.startTime);
-      setEnd(initialData.endTime);
-      setDriveH(initialData.driveHours.toString());
-      setDriveM(initialData.driveMinutes.toString());
-    } else {
-      const now = new Date();
-      setDate(now.toISOString().split('T')[0]);
-      if (defaultStartTime) setStart(defaultStartTime);
-      setEnd(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
-      setDriveH('0');
-      setDriveM('0');
+    if (isOpen) {
+      if (initialData) {
+        setDate(initialData.date);
+        setStart(initialData.startTime);
+        setEnd(initialData.endTime);
+        setDriveH(initialData.driveHours.toString());
+        setDriveM(initialData.driveMinutes.toString());
+      } else {
+        const now = new Date();
+        setDate(now.toISOString().split('T')[0]);
+        // Приоритет отдаем времени, которое было зафиксировано при нажатии кнопки "Начать смену"
+        if (defaultStartTime) {
+          setStart(defaultStartTime);
+        } else {
+          setStart('08:00');
+        }
+        setEnd(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
+        setDriveH('0');
+        setDriveM('0');
+      }
     }
   }, [initialData, isOpen, defaultStartTime]);
 
@@ -70,7 +76,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
               <label className="block text-xs font-semibold text-slate-500 uppercase mb-1 ml-1">Начало</label>
               <input 
                 type="time" 
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium" 
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:ring-2 ring-blue-500 outline-none" 
                 value={start} 
                 onChange={e => setStart(e.target.value)}
                 required 
@@ -80,7 +86,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
               <label className="block text-xs font-semibold text-slate-500 uppercase mb-1 ml-1">Конец</label>
               <input 
                 type="time" 
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium" 
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:ring-2 ring-blue-500 outline-none" 
                 value={end} 
                 onChange={e => setEnd(e.target.value)}
                 required 
@@ -93,7 +99,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
               <input 
                 type="number" 
                 placeholder="ЧЧ" 
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium" 
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:ring-2 ring-blue-500 outline-none" 
                 value={driveH} 
                 onChange={e => setDriveH(e.target.value)}
                 min="0" max="24"
@@ -103,7 +109,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
               <input 
                 type="number" 
                 placeholder="ММ" 
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium" 
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:ring-2 ring-blue-500 outline-none" 
                 value={driveM} 
                 onChange={e => setDriveM(e.target.value)}
                 min="0" max="59"

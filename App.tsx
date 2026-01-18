@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { Shift, AppState, CloudConfig } from './types';
 import { storage } from './services/storageService';
-import { formatMinsToHHMM, getStats, calculateLogSummary } from './utils/timeUtils';
+import { formatMinsToHHMM, getStats, calculateLogSummary, pad } from './utils/timeUtils';
 import { analyzeLogs } from './services/geminiService';
 import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
@@ -23,6 +24,7 @@ const App: React.FC = () => {
   const [now, setNow] = useState(Date.now());
   const [configUpdateTrigger, setConfigUpdateTrigger] = useState(0);
 
+  // Обновление 'now' каждую секунду. Влияет только на динамические счетчики.
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -70,6 +72,17 @@ const App: React.FC = () => {
       setShifts([]);
     }
   }, [session]);
+
+  // Мемоизация тяжелых расчетов истории и долгов
+  // Fix: Correct destructuring from calculateLogSummary which returns { shifts, totalDebt }
+  const { shifts: enrichedShifts, totalDebt } = useMemo(() => {
+    return calculateLogSummary(shifts);
+  }, [shifts]);
+
+  // Мемоизация статистики (неделя, 2 недели и т.д.)
+  const { weekMins, biWeekMins, dailyDutyMins, extDrivingCount, extDutyCount } = useMemo(() => {
+    return getStats(shifts);
+  }, [shifts]);
 
   const handleMainAction = () => {
     if (!appState.isActive) {
@@ -156,14 +169,19 @@ const App: React.FC = () => {
     return <AuthScreen />;
   }
 
-  const { shifts: enrichedShifts, totalDebt } = calculateLogSummary(shifts);
-  const { weekMins, biWeekMins, dailyDutyMins, extDrivingCount, extDutyCount } = getStats(shifts);
+  // Расчет значений, зависящих от реального времени
   const lastShift = shifts[0];
   const lastShiftEndTime = (lastShift && lastShift.date && lastShift.endTime) ? new Date(`${lastShift.date}T${lastShift.endTime}`).getTime() : null;
   const restElapsedMins = (!appState.isActive && lastShiftEndTime) ? Math.max(0, (now - lastShiftEndTime) / (1000 * 60)) : 0;
   const activeDurationMins = (appState.isActive && appState.startTime) ? Math.max(0, (now - appState.startTime) / (1000 * 60)) : 0;
 
   const restProgress11 = Math.min(100, (restElapsedMins / (11 * 60)) * 100);
+
+  // Конвертация времени старта активной смены в строку HH:mm для модалки
+  const autoFillStartTime = appState.startTime ? (() => {
+    const d = new Date(appState.startTime);
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  })() : undefined;
 
   return (
     <div className="max-w-xl mx-auto min-h-screen pb-16 px-4 pt-8 animate-in fade-in duration-500">
@@ -286,6 +304,7 @@ const App: React.FC = () => {
 
       <div className="grid grid-cols-2 gap-5 mb-10">
         <StatCard label="Вождение неделя" value={formatMinsToHHMM(weekMins)} sublabel="Лимит 56ч" variant="yellow" />
+        {/* Это единственный StatCard, который обновляется каждую секунду при активной смене */}
         <StatCard label="Работа (Сутки)" value={formatMinsToHHMM(dailyDutyMins + (appState.isActive ? activeDurationMins : 0))} sublabel="Текущий день" variant="orange" />
         <StatCard label="За 2 недели" value={formatMinsToHHMM(biWeekMins)} sublabel="Лимит 90ч" variant="green" />
         <StatCard label="10ч Вождение" value={`${extDrivingCount} / 2`} sublabel="Доступно" variant="blue" />
@@ -340,7 +359,13 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <ShiftModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveShift} initialData={editingShift} />
+      <ShiftModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSave={handleSaveShift} 
+        initialData={editingShift} 
+        defaultStartTime={autoFillStartTime}
+      />
       <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t + 1); }} />
     </div>
   );

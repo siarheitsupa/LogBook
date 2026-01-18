@@ -39,4 +39,4 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sublabel, variant }) 
   );
 };
 
-export default StatCard;
+export default React.memo(StatCard);

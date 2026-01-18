@@ -106,4 +106,4 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, is
   );
 };
 
-export default TimelineItem;
+export default React.memo(TimelineItem);

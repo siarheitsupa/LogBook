@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { Shift } from "../types";
 
@@ -10,6 +11,7 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
       return "⚠️ API_KEY не найден. Проверьте настройки окружения (Environment Variables).";
     }
 
+    // Initialize with correct named parameter
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const history = shifts.slice(0, 15).map(s => (
@@ -27,8 +29,9 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
       Пиши по-русски, профессионально.
     `;
 
+    // Complex reasoning for EU regulations requires gemini-3-pro-preview
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: promptText,
       config: {
         systemInstruction: "Ты — ассистент водителя-дальнобойщика в Европе. Твоя задача — анализировать логи тахографа на соответствие правилам 561/2006. Особое внимание уделяй правилам 24/45ч еженедельного отдыха и необходимости компенсации сокращенного отдыха. Будь краток и точен.",
@@ -36,6 +39,7 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
       }
     });
     
+    // Use .text property instead of text() method
     return response.text || "Анализ завершен, но модель не вернула текст.";
   } catch (error: any) {
     console.error("Gemini Critical Error:", error);
