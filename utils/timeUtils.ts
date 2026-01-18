@@ -1,10 +1,14 @@
-
 import { Shift, RestEvent, ShiftWithRest } from '../types';
 
 export const pad = (n: number) => n.toString().padStart(2, '0');
 
+/**
+ * Исправленная функция форматирования. 
+ * Сначала округляет общее время до минут, затем делит на часы/минуты.
+ * Это гарантирует, что 539.99 мин станет 09:00, а не 08:60.
+ */
 export const formatMinsToHHMM = (totalMinutes: number) => {
-  // Сначала округляем общее количество минут до целого, чтобы избежать 08:60
+  if (isNaN(totalMinutes) || totalMinutes < 0) return "00:00";
   const roundedTotalMins = Math.round(totalMinutes);
   const h = Math.floor(roundedTotalMins / 60);
   const m = roundedTotalMins % 60;
@@ -31,6 +35,13 @@ export const calculateShiftDurationMins = (shift: Shift): number => {
   return diff / (1000 * 60);
 };
 
+/**
+ * Расчет итогов с учетом правил ЕС 561/2006:
+ * - Регулярный недельный отдых: 45+ ч (долг 0)
+ * - Сокращенный недельный отдых: 24-45 ч (долг = 45 - факт)
+ * - Регулярный ежедневный отдых: 11+ ч (долг 0)
+ * - Сокращенный ежедневный отдых: 9-11 ч (долг = 11 - факт)
+ */
 export const calculateLogSummary = (shifts: Shift[]) => {
   const sorted = [...shifts].sort((a, b) => a.timestamp - b.timestamp);
   const enriched: ShiftWithRest[] = [];
@@ -48,18 +59,29 @@ export const calculateLogSummary = (shifts: Shift[]) => {
       const diffMs = currStart.getTime() - prevEnd.getTime();
       const diffHours = diffMs / (1000 * 60 * 60);
 
-      if (diffHours >= 9) { // Изменил порог для истории, чтобы ловить все виды отдыха
+      // Если отдых больше 9 часов, это значимое событие отдыха
+      if (diffHours >= 9) {
         const h = Math.floor(diffHours);
         const m = Math.round((diffHours - h) * 60);
         
         if (diffHours >= 45) {
+          // Регулярный недельный
           restEvent = { type: 'regular', durationHours: h, durationMinutes: m, debtHours: 0 };
+        } else if (diffHours >= 24) {
+          // Сокращенный недельный (Компенсация обязательна)
+          const debt = 45 - diffHours;
+          totalDebt += debt;
+          restEvent = { type: 'reduced', durationHours: h, durationMinutes: m, debtHours: debt };
         } else if (diffHours >= 11) {
+          // Регулярный ежедневный
           restEvent = { type: 'regular', durationHours: h, durationMinutes: m, debtHours: 0 };
         } else {
+          // Сокращенный ежедневный (9-11ч)
+          // Технически 561/2006 не требует компенсации ежедневного отдыха в часы, 
+          // но многие водители его отслеживают. Оставляем по просьбе пользователя.
           const debt = 11 - diffHours;
-          if (debt > 0) totalDebt += debt;
-          restEvent = { type: 'reduced', durationHours: h, durationMinutes: m, debtHours: Math.max(0, debt) };
+          totalDebt += debt;
+          restEvent = { type: 'reduced', durationHours: h, durationMinutes: m, debtHours: debt };
         }
       }
     }

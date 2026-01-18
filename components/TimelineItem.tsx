@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ShiftWithRest, Shift } from '../types';
 import { calculateShiftDurationMins, formatMinsToHHMM } from '../utils/timeUtils';
@@ -15,22 +14,32 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, is
 
   const duration = calculateShiftDurationMins(shift);
 
+  // Определение типа отдыха для подписей
+  const getRestLabel = () => {
+    if (!shift.restBefore) return "";
+    const hours = shift.restBefore.durationHours + (shift.restBefore.durationMinutes / 60);
+    if (hours >= 45) return "Регулярный недельный отдых";
+    if (hours >= 24) return "Сокращенный недельный отдых";
+    if (hours >= 11) return "Регулярный ежедневный отдых";
+    return "Сокращенный ежедневный отдых";
+  };
+
   return (
     <div className="group space-y-3 mb-6 last:mb-0">
       {/* Rest Period Above - Liquid Glass Style */}
       {shift.restBefore && (
-        <div className={`liquid-glass mx-6 py-4 px-6 rounded-[2rem] text-center relative overflow-hidden ${shift.restBefore.type === 'regular' ? 'border-blue-200/50' : 'border-purple-200/50'}`}>
-          <div className={`absolute top-0 left-0 w-1.5 h-full opacity-50 ${shift.restBefore.type === 'regular' ? 'bg-blue-500' : 'bg-purple-500'}`}></div>
-          <span className={`block text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${shift.restBefore.type === 'regular' ? 'text-blue-500/70' : 'text-purple-500/70'}`}>
-            {shift.restBefore.type === 'regular' ? 'РЕГУЛЯРНЫЙ ОТДЫХ' : 'СОКРАЩЕННЫЙ ОТДЫХ'}
+        <div className={`liquid-glass mx-6 py-4 px-6 rounded-[2rem] text-center relative overflow-hidden ${shift.restBefore.durationHours >= 24 ? 'border-indigo-200/50' : 'border-blue-200/50'}`}>
+          <div className={`absolute top-0 left-0 w-1.5 h-full opacity-50 ${shift.restBefore.durationHours >= 45 ? 'bg-emerald-500' : shift.restBefore.durationHours >= 24 ? 'bg-indigo-500' : 'bg-blue-500'}`}></div>
+          <span className={`block text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${shift.restBefore.durationHours >= 24 ? 'text-indigo-500/70' : 'text-blue-500/70'}`}>
+            {getRestLabel()}
           </span>
-          <span className={`text-xl font-black tabular-nums ${shift.restBefore.type === 'regular' ? 'text-blue-900' : 'text-purple-900'}`}>
+          <span className={`text-xl font-black tabular-nums ${shift.restBefore.durationHours >= 24 ? 'text-indigo-900' : 'text-blue-900'}`}>
             {shift.restBefore.durationHours}ч {shift.restBefore.durationMinutes}мин
           </span>
           {shift.restBefore.debtHours > 0 && (
             <div className="flex justify-center mt-1">
-              <span className="text-[9px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100 uppercase tracking-tighter">
-                Долг: {Math.ceil(shift.restBefore.debtHours)}ч
+              <span className="text-[9px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100 uppercase tracking-tighter shadow-sm">
+                К возврату: {Math.round(shift.restBefore.debtHours * 10) / 10}ч
               </span>
             </div>
           )}
