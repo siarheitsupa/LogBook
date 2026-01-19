@@ -19,107 +19,34 @@
             min-height: 100vh;
         }
         
-        /* Настоящий iOS Liquid Glass */
         .liquid-glass {
           background: rgba(255, 255, 255, 0.45);
           backdrop-filter: blur(30px) saturate(200%) brightness(1.05);
           -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(1.05);
           border: 1px solid rgba(255, 255, 255, 0.6);
-          border-top: 1.5px solid rgba(255, 255, 255, 0.8); /* Световой блик сверху */
+          border-top: 1.5px solid rgba(255, 255, 255, 0.8);
           box-shadow: 
             0 15px 35px -5px rgba(0, 0, 0, 0.05),
             0 5px 15px -3px rgba(0, 0, 0, 0.03),
             inset 0 0 20px rgba(255, 255, 255, 0.3);
         }
 
-        .liquid-card {
-          background: rgba(255, 255, 255, 0.4);
-          backdrop-filter: blur(15px) saturate(150%);
-          border: 1px solid rgba(255, 255, 255, 0.5);
-          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04);
-        }
-
-        /* Анимация Liquid Moon */
         @keyframes liquid-moon {
-          0% { 
-            filter: drop-shadow(0 0 5px rgba(244, 63, 94, 0.3));
-            transform: scale(1) rotate(-5deg);
-          }
-          50% { 
-            filter: drop-shadow(0 0 15px rgba(244, 63, 94, 0.6));
-            transform: scale(1.08) rotate(5deg);
-          }
-          100% { 
-            filter: drop-shadow(0 0 5px rgba(244, 63, 94, 0.3));
-            transform: scale(1) rotate(-5deg);
-          }
+          0% { filter: drop-shadow(0 0 5px rgba(244, 63, 94, 0.3)); transform: scale(1) rotate(-5deg); }
+          50% { filter: drop-shadow(0 0 15px rgba(244, 63, 94, 0.6)); transform: scale(1.08) rotate(5deg); }
+          100% { filter: drop-shadow(0 0 5px rgba(244, 63, 94, 0.3)); transform: scale(1) rotate(-5deg); }
         }
 
-        @keyframes float-slow {
-          0% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-          100% { transform: translateY(0px); }
-        }
-
-        @keyframes shimmer-fast {
-          0% { transform: translateX(-150%); }
-          100% { transform: translateX(150%); }
-        }
-
-        .animate-liquid-moon {
-          animation: liquid-moon 4s infinite ease-in-out;
-          color: #f43f5e;
-        }
-
-        .animate-float {
-          animation: float-slow 5s infinite ease-in-out;
-        }
-
-        .shimmer-liquid {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(
-            110deg,
-            transparent 30%,
-            rgba(255, 255, 255, 0.5) 45%,
-            rgba(255, 255, 255, 0.6) 50%,
-            rgba(255, 255, 255, 0.5) 55%,
-            transparent 70%
-          );
-          animation: shimmer-fast 3s infinite linear;
-          pointer-events: none;
-        }
+        .animate-liquid-moon { animation: liquid-moon 4s infinite ease-in-out; color: #f43f5e; }
+        .animate-float { animation: float-slow 5s infinite ease-in-out; }
         
-        /* Эффект гелевой кнопки */
         .jelly-button {
           transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-          box-shadow: 
-            0 10px 20px -5px rgba(16, 185, 129, 0.4),
-            inset 0 -4px 6px rgba(0, 0, 0, 0.1),
-            inset 0 4px 6px rgba(255, 255, 255, 0.3);
+          box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4), inset 0 -4px 6px rgba(0, 0, 0, 0.1), inset 0 4px 6px rgba(255, 255, 255, 0.3);
         }
-        
-        .jelly-button:active {
-          transform: scale(0.94);
-          box-shadow: 0 5px 10px -3px rgba(16, 185, 129, 0.3);
-        }
+        .jelly-button:active { transform: scale(0.94); }
 
-        /* Leaflet Overrides for Liquid Style */
-        .leaflet-container {
-          background: transparent !important;
-          border-radius: 3rem;
-        }
-        .leaflet-bar {
-          border: none !important;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-          border-radius: 12px !important;
-          overflow: hidden;
-        }
-        .leaflet-bar a {
-          background: rgba(255, 255, 255, 0.8) !important;
-          backdrop-filter: blur(10px);
-          color: #1e293b !important;
-        }
+        .leaflet-container { background: transparent !important; border-radius: 3rem; }
     </style>
 <script type="importmap">
 {

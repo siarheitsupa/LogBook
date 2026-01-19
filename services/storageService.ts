@@ -9,8 +9,9 @@ const CLOUD_CONFIG_KEY = 'driverlog_cloud_config_v1';
 let supabaseInstance: SupabaseClient | null = null;
 
 const getEnv = (key: string): string => {
-  // Приоритет: системное окружение -> localStorage (для ручной настройки)
-  const val = process.env[key] || (window as any).process?.env?.[key];
+  // Safe access to process.env that works in both build time and runtime
+  const env = (window as any).process?.env || {};
+  const val = process.env[key] || env[key];
   if (val) return val;
   
   const map: Record<string, string> = {
@@ -102,7 +103,11 @@ export const storage = {
           endTime: item.end_time,
           driveHours: item.drive_hours,
           driveMinutes: item.drive_minutes,
-          timestamp: typeof item.timestamp === 'string' ? parseInt(item.timestamp) : item.timestamp
+          timestamp: typeof item.timestamp === 'string' ? parseInt(item.timestamp) : item.timestamp,
+          startLat: item.start_lat,
+          startLng: item.start_lng,
+          endLat: item.end_lat,
+          endLng: item.end_lng
         }));
       }
     }
@@ -127,7 +132,11 @@ export const storage = {
         drive_hours: shift.driveHours,
         drive_minutes: shift.driveMinutes,
         timestamp: shift.timestamp,
-        user_id: user.id
+        user_id: user.id,
+        start_lat: shift.startLat,
+        start_lng: shift.startLng,
+        end_lat: shift.endLat,
+        end_lng: shift.endLng
       });
       return !error;
     }
@@ -154,7 +163,6 @@ export const storage = {
     url: !!getEnv('SUPABASE_URL'),
     key: !!getEnv('SUPABASE_ANON_KEY')
   }),
-  // Fix: Added missing resetCloud method to clear manual cloud configuration and reset Supabase client instance.
   resetCloud: () => {
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_url`);
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_key`);
