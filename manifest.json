@@ -5,7 +5,7 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait",
   "background_color": "#f8fafc",
   "theme_color": "#10b981",
   "description": "Профессиональный журнал учета времени вождения и отдыха для водителей-международников.",

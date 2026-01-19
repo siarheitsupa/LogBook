@@ -1,23 +1,46 @@
-const CACHE_NAME = 'driverlog-v1';
+const CACHE_NAME = 'driverlog-v3';
+const ASSETS_TO_CACHE = [
+  '/',
+  '/index.html',
+  '/manifest.json'
+];
 
-// На данном этапе мы просто обеспечиваем "устанавливаемость" приложения.
-// Service Worker перехватывает запросы, чтобы гарантировать корректную загрузку оболочки.
 self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('DriverLog: Caching app shell');
+      return cache.addAll(ASSETS_TO_CACHE);
+    })
+  );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+      );
+    })
+  );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  // Для навигационных запросов (переход по URL) всегда пробуем вернуть index.html, 
-  // если запрос не к ассету (скрипту, картинке).
+  // Обработка навигационных запросов (переход на страницы)
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
         return caches.match('/');
       })
     );
+    return;
   }
+
+  // Стратегия для остальных ресурсов: сначала кэш, потом сеть
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
+    })
+  );
 });
