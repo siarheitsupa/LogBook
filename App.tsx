@@ -7,6 +7,7 @@ import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
 import TimelineItem from './components/TimelineItem';
 import RouteMap from './components/RouteMap';
+import Dashboard from './components/Dashboard';
 import CloudSettingsModal from './components/CloudSettingsModal';
 import AuthScreen from './components/AuthScreen';
 import { Session } from '@supabase/supabase-js';
@@ -23,7 +24,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
   const [configUpdateTrigger, setConfigUpdateTrigger] = useState(0);
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'map' | 'stats'>('list');
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -387,27 +388,33 @@ const App: React.FC = () => {
           <div className="flex items-center justify-between px-2">
               <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
                 <span className="w-2 h-8 bg-slate-900 rounded-full"></span>
-                Логи и Маршрут
+                {viewMode === 'stats' ? 'Аналитика' : 'Логи и Маршрут'}
               </h3>
-              <div className="flex p-1 bg-white/50 backdrop-blur-md rounded-2xl border border-white/60 shadow-inner">
+              <div className="flex p-1 bg-white/50 backdrop-blur-md rounded-2xl border border-white/60 shadow-inner overflow-x-auto">
                 <button 
                   onClick={() => setViewMode('list')}
-                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${viewMode === 'list' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${viewMode === 'list' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
                 >
                   Список
                 </button>
                 <button 
                   onClick={() => setViewMode('map')}
-                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${viewMode === 'map' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${viewMode === 'map' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
                 >
                   Карта
+                </button>
+                <button 
+                  onClick={() => setViewMode('stats')}
+                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${viewMode === 'stats' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                >
+                  Dashboard
                 </button>
               </div>
           </div>
 
-          {viewMode === 'map' ? (
-            <RouteMap shifts={shifts} />
-          ) : (
+          {viewMode === 'map' && <RouteMap shifts={shifts} />}
+          {viewMode === 'stats' && <Dashboard shifts={enrichedShifts} />}
+          {viewMode === 'list' && (
             <div className="space-y-4">
                 {enrichedShifts.map((shift, idx) => (
                   <TimelineItem 
