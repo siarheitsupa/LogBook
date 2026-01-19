@@ -152,8 +152,7 @@ export const storage = {
   clearState: () => localStorage.removeItem(STATE_KEY),
   getEnvStatus: () => ({
     url: !!getEnv('SUPABASE_URL'),
-    key: !!getEnv('SUPABASE_ANON_KEY'),
-    gemini: !!process.env.API_KEY
+    key: !!getEnv('SUPABASE_ANON_KEY')
   }),
   // Fix: Added missing resetCloud method to clear manual cloud configuration and reset Supabase client instance.
   resetCloud: () => {

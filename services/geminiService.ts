@@ -4,14 +4,8 @@ import { Shift } from "../types";
 
 export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
   try {
-    const apiKey = process.env.API_KEY;
-    
-    if (!apiKey || apiKey === "undefined" || apiKey === "") {
-      console.error("AI Error: API_KEY is missing");
-      return "⚠️ API_KEY не найден. Проверьте настройки окружения (Environment Variables).";
-    }
-
-    // Initialize with correct named parameter
+    // API key must be obtained exclusively from the environment variable process.env.API_KEY.
+    // Initialization must use a named parameter: new GoogleGenAI({ apiKey: ... }).
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const history = shifts.slice(0, 15).map(s => (
@@ -29,7 +23,8 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
       Пиши по-русски, профессионально.
     `;
 
-    // Complex reasoning for EU regulations requires gemini-3-pro-preview
+    // Complex reasoning tasks require gemini-3-pro-preview.
+    // Always use ai.models.generateContent to query GenAI.
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: promptText,
@@ -39,19 +34,15 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
       }
     });
     
-    // Use .text property instead of text() method
+    // The response features a .text property (not a method).
     return response.text || "Анализ завершен, но модель не вернула текст.";
   } catch (error: any) {
     console.error("Gemini Critical Error:", error);
     
     if (error.message?.includes('429') || error.message?.includes('quota')) {
-      return "⚠️ Лимит запросов исчерпан (Quota Exceeded). Пожалуйста, попробуйте позже или используйте платный API ключ.";
+      return "⚠️ Лимит запросов исчерпан. Пожалуйста, попробуйте позже.";
     }
     
-    if (error.message?.includes('API key not valid')) {
-      return "⚠️ Ошибка: API ключ Gemini недействителен.";
-    }
-    
-    return `Ошибка AI: ${error.message || "неизвестная ошибка сети"}`;
+    return `Ошибка AI: не удалось проанализировать логи.`;
   }
 };

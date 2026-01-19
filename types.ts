@@ -7,11 +7,17 @@ export interface Shift {
   driveHours: number;
   driveMinutes: number;
   timestamp: number;
+  startLat?: number;
+  startLng?: number;
+  endLat?: number;
+  endLng?: number;
 }
 
 export interface AppState {
   isActive: boolean;
   startTime: number | null;
+  startLat?: number;
+  startLng?: number;
 }
 
 export interface RestEvent {

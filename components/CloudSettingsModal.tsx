@@ -14,7 +14,7 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
   const [url, setUrl] = useState('');
   const [key, setKey] = useState('');
   const [showSql, setShowSql] = useState(false);
-  const [envStatus, setEnvStatus] = useState({ url: false, key: false, gemini: false });
+  const [envStatus, setEnvStatus] = useState({ url: false, key: false });
 
   useEffect(() => {
     setUrl(localStorage.getItem('driverlog_cloud_config_v1_url') || '');
@@ -71,20 +71,6 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
                 />
               </div>
             </div>
-          </div>
-
-          <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
-            <div className="flex justify-between items-center">
-              <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Google Gemini (AI)</h4>
-              <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold ${envStatus.gemini ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                {envStatus.gemini ? 'АКТИВЕН' : 'НЕ НАЙДЕН'}
-              </span>
-            </div>
-            <p className="text-[9px] text-slate-500 mt-2 leading-tight">
-              {envStatus.gemini 
-                ? "API ключ подхвачен из системного окружения. Ручной ввод не требуется." 
-                : "Ключ Gemini должен быть прописан в API_KEY окружения вашей платформы."}
-            </p>
           </div>
         </div>
 

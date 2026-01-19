@@ -7,6 +7,7 @@ import { analyzeLogs } from './services/geminiService';
 import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
 import TimelineItem from './components/TimelineItem';
+import RouteMap from './components/RouteMap';
 import CloudSettingsModal from './components/CloudSettingsModal';
 import AuthScreen from './components/AuthScreen';
 import { Session } from '@supabase/supabase-js';
@@ -23,6 +24,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
   const [configUpdateTrigger, setConfigUpdateTrigger] = useState(0);
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   // Обновление 'now' каждую секунду. Влияет только на динамические счетчики.
   useEffect(() => {
@@ -74,7 +76,6 @@ const App: React.FC = () => {
   }, [session]);
 
   // Мемоизация тяжелых расчетов истории и долгов
-  // Fix: Correct destructuring from calculateLogSummary which returns { shifts, totalDebt }
   const { shifts: enrichedShifts, totalDebt } = useMemo(() => {
     return calculateLogSummary(shifts);
   }, [shifts]);
@@ -86,9 +87,25 @@ const App: React.FC = () => {
 
   const handleMainAction = () => {
     if (!appState.isActive) {
-      const newState = { isActive: true, startTime: Date.now() };
-      setAppState(newState);
-      storage.saveState(newState);
+      // Захват геопозиции при старте смены
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const newState = { 
+            isActive: true, 
+            startTime: Date.now(),
+            startLat: pos.coords.latitude,
+            startLng: pos.coords.longitude
+          };
+          setAppState(newState);
+          storage.saveState(newState);
+        },
+        () => {
+          // Если геолокация недоступна, запускаем без координат
+          const newState = { isActive: true, startTime: Date.now() };
+          setAppState(newState);
+          storage.saveState(newState);
+        }
+      );
     } else {
       setEditingShift(null);
       setIsModalOpen(true);
@@ -97,16 +114,38 @@ const App: React.FC = () => {
 
   const handleSaveShift = async (newShift: Shift) => {
     setIsLoading(true);
-    await storage.saveShift(newShift);
-    const updatedData = await storage.getShifts();
-    setShifts(updatedData);
-    if (!editingShift) {
-      setAppState({ isActive: false, startTime: null });
-      storage.clearState();
+    
+    // Захват геопозиции при финише смены
+    const finishSave = async (lat?: number, lng?: number) => {
+      const shiftWithGeo: Shift = {
+        ...newShift,
+        startLat: appState.startLat,
+        startLng: appState.startLng,
+        endLat: lat,
+        endLng: lng
+      };
+      await storage.saveShift(shiftWithGeo);
+      const updatedData = await storage.getShifts();
+      setShifts(updatedData);
+      if (!editingShift) {
+        setAppState({ isActive: false, startTime: null });
+        storage.clearState();
+      }
+      setIsLoading(false);
+      setIsModalOpen(false);
+      setEditingShift(null);
+    };
+
+    if (editingShift) {
+       // Если просто редактируем старую запись, сохраняем как есть
+       finishSave(newShift.endLat, newShift.endLng);
+    } else {
+      // Пытаемся получить координаты финиша для новой записи
+      navigator.geolocation.getCurrentPosition(
+        (pos) => finishSave(pos.coords.latitude, pos.coords.longitude),
+        () => finishSave()
+      );
     }
-    setIsLoading(false);
-    setIsModalOpen(false);
-    setEditingShift(null);
   };
 
   const handleCloudSave = async (config: CloudConfig) => {
@@ -304,7 +343,6 @@ const App: React.FC = () => {
 
       <div className="grid grid-cols-2 gap-5 mb-10">
         <StatCard label="Вождение неделя" value={formatMinsToHHMM(weekMins)} sublabel="Лимит 56ч" variant="yellow" />
-        {/* Это единственный StatCard, который обновляется каждую секунду при активной смене */}
         <StatCard label="Работа (Сутки)" value={formatMinsToHHMM(dailyDutyMins + (appState.isActive ? activeDurationMins : 0))} sublabel="Текущий день" variant="orange" />
         <StatCard label="За 2 недели" value={formatMinsToHHMM(biWeekMins)} sublabel="Лимит 90ч" variant="green" />
         <StatCard label="10ч Вождение" value={`${extDrivingCount} / 2`} sublabel="Доступно" variant="blue" />
@@ -339,23 +377,43 @@ const App: React.FC = () => {
       )}
 
       <div className="space-y-6">
-        <div className="flex items-center justify-between px-2">
-            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
-              <span className="w-2 h-8 bg-slate-900 rounded-full"></span>
-              История логов
-            </h3>
-            <span className="text-[10px] font-black text-slate-400 bg-white/50 backdrop-blur-md border border-white/60 px-4 py-1.5 rounded-full uppercase tracking-widest shadow-sm">{shifts.length} записей</span>
-        </div>
-        <div className="space-y-4">
-            {enrichedShifts.map((shift, idx) => (
-              <TimelineItem 
-                key={shift.id} 
-                shift={shift} 
-                onEdit={(s) => { setEditingShift(s); setIsModalOpen(true); }} 
-                onDelete={deleteShift}
-                isInitiallyExpanded={idx === 0}
-              />
-            ))}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between px-2">
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
+                <span className="w-2 h-8 bg-slate-900 rounded-full"></span>
+                Логи и Маршрут
+              </h3>
+              <div className="flex p-1 bg-white/50 backdrop-blur-md rounded-2xl border border-white/60 shadow-inner">
+                <button 
+                  onClick={() => setViewMode('list')}
+                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${viewMode === 'list' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                >
+                  Список
+                </button>
+                <button 
+                  onClick={() => setViewMode('map')}
+                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${viewMode === 'map' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                >
+                  Карта
+                </button>
+              </div>
+          </div>
+
+          {viewMode === 'map' ? (
+            <RouteMap shifts={shifts} />
+          ) : (
+            <div className="space-y-4">
+                {enrichedShifts.map((shift, idx) => (
+                  <TimelineItem 
+                    key={shift.id} 
+                    shift={shift} 
+                    onEdit={(s) => { setEditingShift(s); setIsModalOpen(true); }} 
+                    onDelete={deleteShift}
+                    isInitiallyExpanded={idx === 0}
+                  />
+                ))}
+            </div>
+          )}
         </div>
       </div>
 
