@@ -101,19 +101,27 @@ const App: React.FC = () => {
     
     setIsGeneratingPDF(true);
     const element = document.getElementById('pdf-report');
+    if (!element) {
+      alert("Ошибка: шаблон отчета не найден.");
+      setIsGeneratingPDF(false);
+      return;
+    }
+
     const opt = {
       margin: 0,
       filename: `driver-log-week-${new Date().toISOString().split('T')[0]}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     try {
-      await html2pdf().from(element).set(opt).save();
+      // html2pdf может работать как функция или как объект в зависимости от сборки
+      const exporter = typeof html2pdf === 'function' ? html2pdf() : html2pdf;
+      await exporter.from(element).set(opt).save();
     } catch (e) {
       console.error("PDF Export Error:", e);
-      alert("Ошибка при создании PDF.");
+      alert("Ошибка при создании PDF. Попробуйте обновить страницу.");
     } finally {
       setIsGeneratingPDF(false);
     }
