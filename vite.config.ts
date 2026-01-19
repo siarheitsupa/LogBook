@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   
   return {
     plugins: [react()],
+    base: './',
     define: {
       'process.env.API_KEY': JSON.stringify(env.API_KEY || ''),
       'process.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL || ''),
@@ -19,7 +20,7 @@ export default defineConfig(({ mode }) => {
       minify: 'esbuild',
       rollupOptions: {
         output: {
-          manualChunks: undefined, // Упрощаем чанки для избежания Circular Dependency
+          manualChunks: undefined,
         },
       },
     },

@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-// @ts-ignore - react-leaflet 5 alpha types are sometimes incompatible with strict TS environments
 import { MapContainer, TileLayer, Polyline, CircleMarker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Shift } from '../types';
@@ -8,9 +7,6 @@ interface RouteMapProps {
   shifts: Shift[];
 }
 
-/**
- * Вспомогательный компонент для управления границами карты.
- */
 const RecenterMap = ({ shifts }: RouteMapProps) => {
   const map = useMap();
   useMemo(() => {
@@ -62,10 +58,7 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
         {routePoints.length > 1 && (
           <Polyline 
             positions={routePoints} 
-            // @ts-ignore
-            color="#10b981"
-            weight={4}
-            opacity={0.6}
+            pathOptions={{ color: '#10b981', weight: 4, opacity: 0.6 }}
           />
         )}
 
@@ -77,11 +70,7 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
               <CircleMarker 
                 center={[s.startLat, s.startLng]} 
                 radius={8}
-                // @ts-ignore
-                fillColor="#10b981"
-                color="#fff"
-                weight={2}
-                fillOpacity={0.8}
+                pathOptions={{ fillColor: '#10b981', color: '#fff', weight: 2, fillOpacity: 0.8 }}
               >
                 <Popup>
                   <div className="text-xs font-bold font-sans p-1">
@@ -95,11 +84,7 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
               <CircleMarker 
                 center={[s.endLat, s.endLng]} 
                 radius={8}
-                // @ts-ignore
-                fillColor="#f43f5e"
-                color="#fff"
-                weight={2}
-                fillOpacity={0.8}
+                pathOptions={{ fillColor: '#f43f5e', color: '#fff', weight: 2, fillOpacity: 0.8 }}
               >
                 <Popup>
                   <div className="text-xs font-bold font-sans p-1">
