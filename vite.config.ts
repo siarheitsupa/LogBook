@@ -14,8 +14,14 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: 'dist',
+      emptyOutDir: true,
       sourcemap: false,
       minify: 'esbuild',
+      rollupOptions: {
+        output: {
+          manualChunks: undefined, // Упрощаем чанки для избежания Circular Dependency
+        },
+      },
     },
     server: {
       port: 3000
