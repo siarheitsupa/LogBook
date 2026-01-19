@@ -78,29 +78,16 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
             onClick={() => setShowSql(!showSql)}
             className="text-[10px] font-bold text-amber-700 uppercase flex items-center justify-between w-full"
           >
-            Инструкция SQL (Полная) {showSql ? '↑' : '↓'}
+            Инструкция SQL (Обновление) {showSql ? '↑' : '↓'}
           </button>
           {showSql && (
             <div className="mt-2 space-y-2">
-              <p className="text-[9px] text-amber-800 font-medium mb-2">Выполните это в SQL Editor (удалите старую таблицу если она есть):</p>
+              <p className="text-[9px] text-amber-800 font-medium mb-2">Выполните это в SQL Editor, чтобы добавить колонки координат без удаления данных:</p>
               <pre className="p-2 bg-white rounded-lg text-[7px] overflow-x-auto text-slate-600 font-mono leading-tight border border-amber-200">
-                {`DROP TABLE IF EXISTS shifts;
-CREATE TABLE shifts (
-  id TEXT PRIMARY KEY,
-  date DATE,
-  start_time TEXT,
-  end_time TEXT,
-  drive_hours INT,
-  drive_minutes INT,
-  timestamp BIGINT,
-  start_lat FLOAT8,
-  start_lng FLOAT8,
-  end_lat FLOAT8,
-  end_lng FLOAT8,
-  user_id UUID REFERENCES auth.users NOT NULL DEFAULT auth.uid()
-);
-ALTER TABLE shifts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage own" ON shifts FOR ALL USING (auth.uid() = user_id);`}
+                {`ALTER TABLE shifts ADD COLUMN IF NOT EXISTS start_lat FLOAT8;
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS start_lng FLOAT8;
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS end_lat FLOAT8;
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS end_lng FLOAT8;`}
               </pre>
             </div>
           )}

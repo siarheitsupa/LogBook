@@ -128,17 +128,18 @@ export const storage = {
   },
 
   saveShift: async (shift: Shift): Promise<void> => {
-    // Сохраняем локально сразу для отзывчивости
+    // 1. Сначала сохраняем локально, чтобы данные не пропали
     const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const idx = local.findIndex((s: any) => s.id === shift.id);
     if (idx > -1) local[idx] = shift; else local.unshift(shift);
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(local));
 
+    // 2. Попытка сохранения в облако
     if (supabaseInstance) {
       const { data: { session } } = await supabaseInstance.auth.getSession();
       if (!session?.user) throw new Error('Пользователь не авторизован');
 
-      const { error } = await supabaseInstance.from('shifts').upsert({
+      const payload: any = {
         id: shift.id,
         date: shift.date,
         start_time: shift.startTime,
@@ -151,9 +152,25 @@ export const storage = {
         start_lng: shift.startLng,
         end_lat: shift.endLat,
         end_lng: shift.endLng
-      });
+      };
+
+      const { error } = await supabaseInstance.from('shifts').upsert(payload);
       
       if (error) {
+        // Если база ругается на колонки координат, пробуем сохранить БЕЗ них
+        if (error.message.includes('column') || error.message.includes('schema cache')) {
+          console.warn("Schema mismatch, retrying without geo columns...");
+          const fallbackPayload = { ...payload };
+          delete fallbackPayload.start_lat;
+          delete fallbackPayload.start_lng;
+          delete fallbackPayload.end_lat;
+          delete fallbackPayload.end_lng;
+          
+          const { error: retryError } = await supabaseInstance.from('shifts').upsert(fallbackPayload);
+          if (retryError) throw new Error(`Ошибка БД: ${retryError.message}`);
+          return;
+        }
+        
         console.error("Supabase Save Error Details:", error);
         throw new Error(`Ошибка БД: ${error.message}`);
       }
