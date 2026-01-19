@@ -1,4 +1,3 @@
-
 import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
 import { Shift, AppState, CloudConfig } from '../types';
 
@@ -90,6 +89,8 @@ export const storage = {
   },
 
   getShifts: async (): Promise<Shift[]> => {
+    const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
+    
     if (supabaseInstance) {
       try {
         const { data, error } = await supabaseInstance
@@ -98,53 +99,68 @@ export const storage = {
           .order('timestamp', { ascending: false });
         
         if (!error && data) {
-          return data.map((item: any) => ({
+          const cloudData = data.map((item: any) => ({
             id: item.id,
             date: item.date,
             startTime: item.start_time,
             endTime: item.end_time,
             driveHours: item.drive_hours,
-            // Fixed typo: was drive_minutes, should be driveMinutes to match Shift interface
             driveMinutes: item.drive_minutes,
-            timestamp: typeof item.timestamp === 'string' ? parseInt(item.timestamp) : item.timestamp,
+            timestamp: Number(item.timestamp),
             startLat: item.start_lat,
             startLng: item.start_lng,
             endLat: item.end_lat,
             endLng: item.end_lng
           }));
+          
+          // Обновляем локальное хранилище для оффлайн доступа
+          localStorage.setItem(SHIFTS_KEY, JSON.stringify(cloudData));
+          return cloudData;
         }
       } catch (e) {
-        console.warn("Supabase fetch failed", e);
+        console.warn("Supabase fetch failed, fallback to local", e);
       }
     }
-    const local = localStorage.getItem(SHIFTS_KEY);
-    return local ? JSON.parse(local) : [];
+    return local;
   },
 
   saveShift: async (shift: Shift): Promise<boolean> => {
+    // 1. Сначала локально
     const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const idx = local.findIndex((s: any) => s.id === shift.id);
-    if (idx > -1) local[idx] = shift; else local.push(shift);
+    if (idx > -1) local[idx] = shift; else local.unshift(shift);
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(local));
 
+    // 2. Затем в облако
     if (supabaseInstance) {
-      const { data: { user } } = await supabaseInstance.auth.getUser();
-      if (!user) return false;
-      const { error } = await supabaseInstance.from('shifts').upsert({
-        id: shift.id,
-        date: shift.date,
-        start_time: shift.startTime,
-        end_time: shift.endTime,
-        drive_hours: shift.driveHours,
-        drive_minutes: shift.driveMinutes,
-        timestamp: shift.timestamp,
-        user_id: user.id,
-        start_lat: shift.startLat,
-        start_lng: shift.startLng,
-        end_lat: shift.endLat,
-        end_lng: shift.endLng
-      });
-      return !error;
+      try {
+        const { data: { session } } = await supabaseInstance.auth.getSession();
+        if (!session?.user) return false;
+
+        const { error } = await supabaseInstance.from('shifts').upsert({
+          id: shift.id,
+          date: shift.date,
+          start_time: shift.startTime,
+          end_time: shift.endTime,
+          drive_hours: shift.driveHours,
+          drive_minutes: shift.driveMinutes,
+          timestamp: shift.timestamp,
+          user_id: session.user.id,
+          start_lat: shift.startLat,
+          start_lng: shift.startLng,
+          end_lat: shift.endLat,
+          end_lng: shift.endLng
+        });
+        
+        if (error) {
+          console.error("Supabase upsert error:", error);
+          return false;
+        }
+        return true;
+      } catch (e) {
+        console.error("Cloud save failed:", e);
+        return false;
+      }
     }
     return true;
   },
@@ -152,6 +168,7 @@ export const storage = {
   deleteShift: async (id: string): Promise<boolean> => {
     const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(local.filter((s: any) => s.id !== id)));
+    
     if (supabaseInstance) {
       const { error } = await supabaseInstance.from('shifts').delete().eq('id', id);
       return !error;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shift, AppState, CloudConfig } from './types';
 import { storage } from './services/storageService';
@@ -26,7 +25,6 @@ const App: React.FC = () => {
   const [configUpdateTrigger, setConfigUpdateTrigger] = useState(0);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
-  // Обновление 'now' каждую секунду. Влияет только на динамические счетчики.
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -75,36 +73,31 @@ const App: React.FC = () => {
     }
   }, [session]);
 
-  // Мемоизация тяжелых расчетов истории и долгов
   const { shifts: enrichedShifts, totalDebt } = useMemo(() => {
     return calculateLogSummary(shifts);
   }, [shifts]);
 
-  // Мемоизация статистики (неделя, 2 недели и т.д.)
   const { weekMins, biWeekMins, dailyDutyMins, extDrivingCount, extDutyCount } = useMemo(() => {
     return getStats(shifts);
   }, [shifts]);
 
   const handleMainAction = () => {
     if (!appState.isActive) {
-      // Захват геопозиции при старте смены
+      const startShift = (lat?: number, lng?: number) => {
+        const newState = { 
+          isActive: true, 
+          startTime: Date.now(),
+          startLat: lat,
+          startLng: lng
+        };
+        setAppState(newState);
+        storage.saveState(newState);
+      };
+
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const newState = { 
-            isActive: true, 
-            startTime: Date.now(),
-            startLat: pos.coords.latitude,
-            startLng: pos.coords.longitude
-          };
-          setAppState(newState);
-          storage.saveState(newState);
-        },
-        () => {
-          // Если геолокация недоступна, запускаем без координат
-          const newState = { isActive: true, startTime: Date.now() };
-          setAppState(newState);
-          storage.saveState(newState);
-        }
+        (pos) => startShift(pos.coords.latitude, pos.coords.longitude),
+        () => startShift(),
+        { timeout: 5000 }
       );
     } else {
       setEditingShift(null);
@@ -115,36 +108,47 @@ const App: React.FC = () => {
   const handleSaveShift = async (newShift: Shift) => {
     setIsLoading(true);
     
-    // Захват геопозиции при финише смены
     const finishSave = async (lat?: number, lng?: number) => {
       const shiftWithGeo: Shift = {
         ...newShift,
         startLat: appState.startLat,
         startLng: appState.startLng,
-        endLat: lat,
-        endLng: lng
+        endLat: lat || newShift.endLat,
+        endLng: lng || newShift.endLng
       };
-      await storage.saveShift(shiftWithGeo);
-      const updatedData = await storage.getShifts();
-      setShifts(updatedData);
-      if (!editingShift) {
-        setAppState({ isActive: false, startTime: null });
-        storage.clearState();
+      
+      try {
+        await storage.saveShift(shiftWithGeo);
+        const updatedData = await storage.getShifts();
+        setShifts(updatedData);
+        
+        if (!editingShift) {
+          setAppState({ isActive: false, startTime: null });
+          storage.clearState();
+        }
+      } catch (e) {
+        console.error("Critical save error:", e);
+      } finally {
+        setIsLoading(false);
+        setIsModalOpen(false);
+        setEditingShift(null);
       }
-      setIsLoading(false);
-      setIsModalOpen(false);
-      setEditingShift(null);
     };
 
     if (editingShift) {
-       // Если просто редактируем старую запись, сохраняем как есть
-       finishSave(newShift.endLat, newShift.endLng);
+       await finishSave();
     } else {
-      // Пытаемся получить координаты финиша для новой записи
-      navigator.geolocation.getCurrentPosition(
-        (pos) => finishSave(pos.coords.latitude, pos.coords.longitude),
-        () => finishSave()
-      );
+      // Таймаут геолокации 3с, чтобы не блокировать сохранение лога
+      const geoPromise = new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 });
+      });
+
+      try {
+        const pos = await geoPromise;
+        await finishSave(pos.coords.latitude, pos.coords.longitude);
+      } catch (e) {
+        await finishSave();
+      }
     }
   };
 
@@ -208,7 +212,6 @@ const App: React.FC = () => {
     return <AuthScreen />;
   }
 
-  // Расчет значений, зависящих от реального времени
   const lastShift = shifts[0];
   const lastShiftEndTime = (lastShift && lastShift.date && lastShift.endTime) ? new Date(`${lastShift.date}T${lastShift.endTime}`).getTime() : null;
   const restElapsedMins = (!appState.isActive && lastShiftEndTime) ? Math.max(0, (now - lastShiftEndTime) / (1000 * 60)) : 0;
@@ -216,7 +219,6 @@ const App: React.FC = () => {
 
   const restProgress11 = Math.min(100, (restElapsedMins / (11 * 60)) * 100);
 
-  // Конвертация времени старта активной смены в строку HH:mm для модалки
   const autoFillStartTime = appState.startTime ? (() => {
     const d = new Date(appState.startTime);
     return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -251,10 +253,9 @@ const App: React.FC = () => {
             </button>
           </div>
         </div>
-        <div className="text-[10px] text-slate-400 font-bold mt-3 uppercase tracking-widest opacity-40">{session.user.email}</div>
+        <div className="text-[10px] text-slate-400 font-bold mt-3 uppercase tracking-widest opacity-40">{session?.user?.email}</div>
       </header>
 
-      {/* Main Status Block */}
       <div className={`liquid-glass rounded-[3rem] p-8 mb-8 transition-all duration-700 ${appState.isActive ? 'shadow-[0_20px_50px_rgba(16,185,129,0.1)]' : ''}`}>
         <div className={`mb-8 p-6 rounded-[2.5rem] flex flex-col items-center justify-center gap-1 transition-all relative overflow-hidden ${appState.isActive ? 'bg-emerald-500/5 border border-emerald-500/20' : 'bg-slate-500/5 border border-slate-500/10'}`}>
           <div className="flex items-center gap-3 relative z-10">
