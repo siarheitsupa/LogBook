@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-// @ts-ignore - react-leaflet 5 alpha types are often incomplete in build environments
+// @ts-ignore - react-leaflet 5 alpha types are sometimes incompatible with strict TS environments
 import { MapContainer, TileLayer, Polyline, CircleMarker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Shift } from '../types';
@@ -59,13 +59,15 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
         
-        <Polyline 
-          positions={routePoints} 
-          // @ts-ignore
-          color="#10b981"
-          weight={4}
-          opacity={0.6}
-        />
+        {routePoints.length > 1 && (
+          <Polyline 
+            positions={routePoints} 
+            // @ts-ignore
+            color="#10b981"
+            weight={4}
+            opacity={0.6}
+          />
+        )}
 
         <RecenterMap shifts={shifts} />
 
@@ -83,8 +85,8 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
               >
                 <Popup>
                   <div className="text-xs font-bold font-sans p-1">
-                    <p className="text-slate-400 uppercase tracking-widest text-[8px] mb-1">Старт</p>
-                    <p className="text-slate-900">{s.date} {s.startTime}</p>
+                    <p className="text-slate-400 uppercase tracking-widest text-[8px] mb-1 text-center">Старт</p>
+                    <p className="text-slate-900 whitespace-nowrap">{s.date} {s.startTime}</p>
                   </div>
                 </Popup>
               </CircleMarker>
@@ -101,8 +103,8 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
               >
                 <Popup>
                   <div className="text-xs font-bold font-sans p-1">
-                    <p className="text-slate-400 uppercase tracking-widest text-[8px] mb-1">Финиш</p>
-                    <p className="text-slate-900">{s.date} {s.endTime}</p>
+                    <p className="text-slate-400 uppercase tracking-widest text-[8px] mb-1 text-center">Финиш</p>
+                    <p className="text-slate-900 whitespace-nowrap">{s.date} {s.endTime}</p>
                   </div>
                 </Popup>
               </CircleMarker>

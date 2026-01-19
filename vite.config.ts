@@ -8,16 +8,21 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      'process.env.API_KEY': JSON.stringify(env.API_KEY),
-      'process.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL),
-      'process.env.SUPABASE_ANON_KEY': JSON.stringify(env.SUPABASE_ANON_KEY),
+      'process.env.API_KEY': JSON.stringify(env.API_KEY || ''),
+      'process.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL || ''),
+      'process.env.SUPABASE_ANON_KEY': JSON.stringify(env.SUPABASE_ANON_KEY || ''),
     },
     build: {
       outDir: 'dist',
-      sourcemap: true,
+      sourcemap: false,
+      minify: 'esbuild',
       rollupOptions: {
-        // Убрали external, чтобы Vite собрал все зависимости в бандл
-      }
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'leaflet', 'react-leaflet'],
+          },
+        },
+      },
     },
     server: {
       port: 3000
