@@ -16,13 +16,6 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       sourcemap: false,
       minify: 'esbuild',
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            vendor: ['react', 'react-dom', 'leaflet', 'react-leaflet'],
-          },
-        },
-      },
     },
     server: {
       port: 3000

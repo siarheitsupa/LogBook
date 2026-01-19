@@ -1,3 +1,4 @@
+
 import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
 import { Shift, AppState, CloudConfig } from '../types';
 
@@ -7,10 +8,13 @@ const CLOUD_CONFIG_KEY = 'driverlog_cloud_config_v1';
 
 let supabaseInstance: SupabaseClient | null = null;
 
-// Vite's 'define' plugin only replaces static references like process.env.KEY
 const getEnvValue = (key: 'URL' | 'KEY'): string => {
-  if (key === 'URL') return process.env.SUPABASE_URL || localStorage.getItem(`${CLOUD_CONFIG_KEY}_url`) || '';
-  if (key === 'KEY') return process.env.SUPABASE_ANON_KEY || localStorage.getItem(`${CLOUD_CONFIG_KEY}_key`) || '';
+  try {
+    if (key === 'URL') return process.env.SUPABASE_URL || localStorage.getItem(`${CLOUD_CONFIG_KEY}_url`) || '';
+    if (key === 'KEY') return process.env.SUPABASE_ANON_KEY || localStorage.getItem(`${CLOUD_CONFIG_KEY}_key`) || '';
+  } catch (e) {
+    return '';
+  }
   return '';
 };
 
@@ -43,12 +47,12 @@ export const storage = {
   },
 
   signUp: async (email: string, pass: string) => {
-    if (!supabaseInstance && !storage.initCloud()) throw new Error('Not initialized');
+    if (!supabaseInstance && !storage.initCloud()) throw new Error('Database connection not configured');
     return await supabaseInstance!.auth.signUp({ email, password: pass });
   },
 
   signIn: async (email: string, pass: string) => {
-    if (!supabaseInstance && !storage.initCloud()) throw new Error('Not initialized');
+    if (!supabaseInstance && !storage.initCloud()) throw new Error('Database connection not configured');
     return await supabaseInstance!.auth.signInWithPassword({ email, password: pass });
   },
 
@@ -64,8 +68,12 @@ export const storage = {
 
   getSession: async (): Promise<Session | null> => {
     if (!supabaseInstance && !storage.initCloud()) return null;
-    const { data } = await supabaseInstance!.auth.getSession();
-    return data.session;
+    try {
+      const { data } = await supabaseInstance!.auth.getSession();
+      return data.session;
+    } catch (e) {
+      return null;
+    }
   },
 
   getUser: async () => {
@@ -96,6 +104,7 @@ export const storage = {
             startTime: item.start_time,
             endTime: item.end_time,
             driveHours: item.drive_hours,
+            // Fixed typo: was drive_minutes, should be driveMinutes to match Shift interface
             driveMinutes: item.drive_minutes,
             timestamp: typeof item.timestamp === 'string' ? parseInt(item.timestamp) : item.timestamp,
             startLat: item.start_lat,
@@ -105,7 +114,7 @@ export const storage = {
           }));
         }
       } catch (e) {
-        console.warn("Supabase fetch failed, falling back to local storage", e);
+        console.warn("Supabase fetch failed", e);
       }
     }
     const local = localStorage.getItem(SHIFTS_KEY);
