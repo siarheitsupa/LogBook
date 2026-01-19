@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-// @ts-ignore - Fallback for build environments where types might be missing during CI
+// @ts-ignore - react-leaflet 5 alpha types are often incomplete in build environments
 import { MapContainer, TileLayer, Polyline, CircleMarker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Shift } from '../types';
@@ -9,7 +9,7 @@ interface RouteMapProps {
 }
 
 /**
- * Компонент для автоматического центрирования карты по координатам смен.
+ * Вспомогательный компонент для управления границами карты.
  */
 const RecenterMap = ({ shifts }: RouteMapProps) => {
   const map = useMap();
@@ -20,8 +20,12 @@ const RecenterMap = ({ shifts }: RouteMapProps) => {
       if (s.endLat && s.endLng) points.push([s.endLat, s.endLng]);
     });
     if (points.length > 0) {
-      const bounds = L.latLngBounds(points);
-      map.fitBounds(bounds, { padding: [50, 50] });
+      try {
+        const bounds = L.latLngBounds(points);
+        map.fitBounds(bounds, { padding: [50, 50] });
+      } catch (e) {
+        console.warn('Map bounds fitting failed', e);
+      }
     }
   }, [shifts, map]);
   return null;
@@ -57,12 +61,10 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
         
         <Polyline 
           positions={routePoints} 
-          // @ts-ignore - props compatibility for react-leaflet alpha
+          // @ts-ignore
           color="#10b981"
           weight={4}
           opacity={0.6}
-          lineCap="round"
-          lineJoin="round"
         />
 
         <RecenterMap shifts={shifts} />
@@ -80,9 +82,9 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
                 fillOpacity={0.8}
               >
                 <Popup>
-                  <div className="text-xs font-bold font-sans">
-                    <p className="text-slate-400 uppercase tracking-widest text-[8px] mb-1">Старт смены</p>
-                    <p>{s.date} {s.startTime}</p>
+                  <div className="text-xs font-bold font-sans p-1">
+                    <p className="text-slate-400 uppercase tracking-widest text-[8px] mb-1">Старт</p>
+                    <p className="text-slate-900">{s.date} {s.startTime}</p>
                   </div>
                 </Popup>
               </CircleMarker>
@@ -98,9 +100,9 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
                 fillOpacity={0.8}
               >
                 <Popup>
-                  <div className="text-xs font-bold font-sans">
-                    <p className="text-slate-400 uppercase tracking-widest text-[8px] mb-1">Конец смены</p>
-                    <p>{s.date} {s.endTime}</p>
+                  <div className="text-xs font-bold font-sans p-1">
+                    <p className="text-slate-400 uppercase tracking-widest text-[8px] mb-1">Финиш</p>
+                    <p className="text-slate-900">{s.date} {s.endTime}</p>
                   </div>
                 </Popup>
               </CircleMarker>

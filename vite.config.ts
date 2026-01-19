@@ -16,16 +16,7 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       sourcemap: true,
       rollupOptions: {
-        // Указываем библиотеки как внешние, так как они загружаются через importmap в index.html
-        external: [
-          'react',
-          'react-dom',
-          'react-dom/client',
-          'leaflet',
-          'react-leaflet',
-          '@google/genai',
-          '@supabase/supabase-js'
-        ],
+        // Убрали external, чтобы Vite собрал все зависимости в бандл
       }
     },
     server: {
