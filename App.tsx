@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shift, AppState, CloudConfig } from './types';
 import { storage } from './services/storageService';
-import { formatMinsToHHMM, getStats, calculateLogSummary, pad } from './utils/timeUtils';
+import { formatMinsToHHMM, getStats, calculateLogSummary, pad, getMonday } from './utils/timeUtils';
 import { analyzeLogs } from './services/geminiService';
 import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
@@ -10,7 +10,10 @@ import RouteMap from './components/RouteMap';
 import Dashboard from './components/Dashboard';
 import CloudSettingsModal from './components/CloudSettingsModal';
 import AuthScreen from './components/AuthScreen';
+import PrintableReport from './components/PrintableReport';
 import { Session } from '@supabase/supabase-js';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -21,6 +24,7 @@ const App: React.FC = () => {
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
   const [configUpdateTrigger, setConfigUpdateTrigger] = useState(0);
@@ -78,9 +82,42 @@ const App: React.FC = () => {
     return calculateLogSummary(shifts);
   }, [shifts]);
 
-  const { weekMins, biWeekMins, dailyDutyMins, extDrivingCount, extDutyCount } = useMemo(() => {
+  const stats = useMemo(() => {
     return getStats(shifts);
   }, [shifts]);
+
+  const { weekMins, biWeekMins, dailyDutyMins, extDrivingCount, extDutyCount } = stats;
+
+  const currentWeekShifts = useMemo(() => {
+    const monday = getMonday(new Date());
+    return enrichedShifts.filter(s => new Date(s.date) >= monday);
+  }, [enrichedShifts]);
+
+  const handleGeneratePDF = async () => {
+    if (currentWeekShifts.length === 0) {
+      alert("Нет данных за текущую неделю для экспорта.");
+      return;
+    }
+    
+    setIsGeneratingPDF(true);
+    const element = document.getElementById('pdf-report');
+    const opt = {
+      margin: 0,
+      filename: `driver-log-week-${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    try {
+      await html2pdf().from(element).set(opt).save();
+    } catch (e) {
+      console.error("PDF Export Error:", e);
+      alert("Ошибка при создании PDF.");
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
 
   const handleMainAction = () => {
     if (!appState.isActive) {
@@ -232,6 +269,11 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-xl mx-auto min-h-screen pb-16 px-4 pt-8 animate-in fade-in duration-500">
+      {/* Hidden printable element */}
+      <div className="fixed -top-[10000px] -left-[10000px]">
+        <PrintableReport shifts={currentWeekShifts} stats={{ weekMins, totalDebt }} userEmail={session?.user?.email || 'Driver'} />
+      </div>
+
       <header className="flex flex-col items-center mb-8 relative">
         <div className="flex items-center gap-3 liquid-glass p-2.5 pr-5 pl-4 rounded-full shadow-lg">
           <div className="w-11 h-11 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-lg overflow-hidden relative">
@@ -244,7 +286,15 @@ const App: React.FC = () => {
             <span className="text-lg font-black tracking-tight text-slate-800 leading-none">DriverLog Pro</span>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 opacity-60">Professional Edition</span>
           </div>
-          <div className="flex items-center gap-2 ml-4 pl-4 border-l border-slate-200/50">
+          <div className="flex items-center gap-1.5 ml-4 pl-4 border-l border-slate-200/50">
+            <button 
+              onClick={handleGeneratePDF}
+              disabled={isGeneratingPDF}
+              className={`p-2 hover:bg-emerald-50 text-emerald-600 rounded-xl transition-all ${isGeneratingPDF ? 'animate-pulse opacity-50' : ''}`}
+              title="Экспорт в PDF"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
             <button 
               onClick={() => setIsCloudModalOpen(true)}
               className="p-1.5 hover:bg-white/50 rounded-xl transition-all"
