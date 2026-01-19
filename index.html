@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>DriverLog Pro</title>
     
     <!-- PWA & Mobile Support -->
@@ -21,6 +21,9 @@
             -webkit-tap-highlight-color: transparent;
             background: radial-gradient(circle at top right, #f8fafc, #eff6ff);
             min-height: 100vh;
+            /* Support for notch area */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
         }
         
         .liquid-glass {
@@ -101,5 +104,14 @@
 <body class="text-slate-900">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => {
+            console.log('SW registration failed: ', err);
+          });
+        });
+      }
+    </script>
 </body>
 </html>
