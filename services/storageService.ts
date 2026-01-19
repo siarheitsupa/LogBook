@@ -1,4 +1,3 @@
-
 import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
 import { Shift, AppState, CloudConfig } from '../types';
 
@@ -8,30 +7,24 @@ const CLOUD_CONFIG_KEY = 'driverlog_cloud_config_v1';
 
 let supabaseInstance: SupabaseClient | null = null;
 
-const getEnv = (key: string): string => {
-  // Safe access to process.env that works in both build time and runtime
-  const env = (window as any).process?.env || {};
-  const val = process.env[key] || env[key];
-  if (val) return val;
-  
-  const map: Record<string, string> = {
-    'SUPABASE_URL': 'driverlog_cloud_config_v1_url',
-    'SUPABASE_ANON_KEY': 'driverlog_cloud_config_v1_key'
-  };
-  return localStorage.getItem(map[key] || '') || '';
+// Vite's 'define' plugin only replaces static references like process.env.KEY
+const getEnvValue = (key: 'URL' | 'KEY'): string => {
+  if (key === 'URL') return process.env.SUPABASE_URL || localStorage.getItem(`${CLOUD_CONFIG_KEY}_url`) || '';
+  if (key === 'KEY') return process.env.SUPABASE_ANON_KEY || localStorage.getItem(`${CLOUD_CONFIG_KEY}_key`) || '';
+  return '';
 };
 
 export const storage = {
   isConfigured: () => {
     if (supabaseInstance) return true;
-    const url = getEnv('SUPABASE_URL');
-    const key = getEnv('SUPABASE_ANON_KEY');
+    const url = getEnvValue('URL');
+    const key = getEnvValue('KEY');
     return !!(url && key && url.startsWith('http'));
   },
 
   initCloud: (manualConfig?: CloudConfig): boolean => {
-    const url = manualConfig?.url || getEnv('SUPABASE_URL');
-    const key = manualConfig?.key || getEnv('SUPABASE_ANON_KEY');
+    const url = manualConfig?.url || getEnvValue('URL');
+    const key = manualConfig?.key || getEnvValue('KEY');
     
     if (url && key && url.startsWith('http')) {
       try {
@@ -90,25 +83,29 @@ export const storage = {
 
   getShifts: async (): Promise<Shift[]> => {
     if (supabaseInstance) {
-      const { data, error } = await supabaseInstance
-        .from('shifts')
-        .select('*')
-        .order('timestamp', { ascending: false });
-      
-      if (!error && data) {
-        return data.map((item: any) => ({
-          id: item.id,
-          date: item.date,
-          startTime: item.start_time,
-          endTime: item.end_time,
-          driveHours: item.drive_hours,
-          driveMinutes: item.drive_minutes,
-          timestamp: typeof item.timestamp === 'string' ? parseInt(item.timestamp) : item.timestamp,
-          startLat: item.start_lat,
-          startLng: item.start_lng,
-          endLat: item.end_lat,
-          endLng: item.end_lng
-        }));
+      try {
+        const { data, error } = await supabaseInstance
+          .from('shifts')
+          .select('*')
+          .order('timestamp', { ascending: false });
+        
+        if (!error && data) {
+          return data.map((item: any) => ({
+            id: item.id,
+            date: item.date,
+            startTime: item.start_time,
+            endTime: item.end_time,
+            driveHours: item.drive_hours,
+            driveMinutes: item.drive_minutes,
+            timestamp: typeof item.timestamp === 'string' ? parseInt(item.timestamp) : item.timestamp,
+            startLat: item.start_lat,
+            startLng: item.start_lng,
+            endLat: item.end_lat,
+            endLng: item.end_lng
+          }));
+        }
+      } catch (e) {
+        console.warn("Supabase fetch failed, falling back to local storage", e);
       }
     }
     const local = localStorage.getItem(SHIFTS_KEY);
@@ -160,8 +157,8 @@ export const storage = {
   saveState: (s: AppState) => localStorage.setItem(STATE_KEY, JSON.stringify(s)),
   clearState: () => localStorage.removeItem(STATE_KEY),
   getEnvStatus: () => ({
-    url: !!getEnv('SUPABASE_URL'),
-    key: !!getEnv('SUPABASE_ANON_KEY')
+    url: !!getEnvValue('URL'),
+    key: !!getEnvValue('KEY')
   }),
   resetCloud: () => {
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_url`);
