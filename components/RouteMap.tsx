@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-// @ts-ignore - Fallback for build environments with strict tsc check on alpha libraries
+// @ts-ignore - Fallback for build environments where types might be missing during CI
 import { MapContainer, TileLayer, Polyline, CircleMarker, Popup, useMap } from 'react-leaflet';
-import * as L from 'leaflet';
+import L from 'leaflet';
 import { Shift } from '../types';
 
 interface RouteMapProps {
@@ -9,7 +9,7 @@ interface RouteMapProps {
 }
 
 /**
- * Component to automatically recenter and fit the map bounds based on shift coordinates.
+ * Компонент для автоматического центрирования карты по координатам смен.
  */
 const RecenterMap = ({ shifts }: RouteMapProps) => {
   const map = useMap();
@@ -30,7 +30,6 @@ const RecenterMap = ({ shifts }: RouteMapProps) => {
 const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
   const routePoints = useMemo(() => {
     const points: L.LatLngExpression[] = [];
-    // Сортируем по времени для правильной отрисовки линии маршрута
     const sorted = [...shifts].sort((a, b) => a.timestamp - b.timestamp);
     sorted.forEach(s => {
       if (s.startLat && s.startLng) points.push([s.startLat, s.startLng]);
@@ -58,7 +57,7 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
         
         <Polyline 
           positions={routePoints} 
-          // @ts-ignore - props flattening compatibility for react-leaflet alpha
+          // @ts-ignore - props compatibility for react-leaflet alpha
           color="#10b981"
           weight={4}
           opacity={0.6}
@@ -74,7 +73,7 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
               <CircleMarker 
                 center={[s.startLat, s.startLng]} 
                 radius={8}
-                // @ts-ignore - props flattening compatibility for react-leaflet alpha
+                // @ts-ignore
                 fillColor="#10b981"
                 color="#fff"
                 weight={2}
@@ -92,7 +91,7 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
               <CircleMarker 
                 center={[s.endLat, s.endLng]} 
                 radius={8}
-                // @ts-ignore - props flattening compatibility for react-leaflet alpha
+                // @ts-ignore
                 fillColor="#f43f5e"
                 color="#fff"
                 weight={2}
