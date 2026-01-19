@@ -57,6 +57,8 @@ export const storage = {
 
   signOut: async () => {
     if (supabaseInstance) await supabaseInstance.auth.signOut();
+    localStorage.removeItem(`${CLOUD_CONFIG_KEY}_url`);
+    localStorage.removeItem(`${CLOUD_CONFIG_KEY}_key`);
     Object.keys(localStorage).forEach(key => {
       if (key.includes('supabase.auth.token') || key.includes('sb-')) {
         localStorage.removeItem(key);
@@ -98,7 +100,9 @@ export const storage = {
           .select('*')
           .order('timestamp', { ascending: false });
         
-        if (!error && data) {
+        if (error) throw error;
+        
+        if (data) {
           const cloudData = data.map((item: any) => ({
             id: item.id,
             date: item.date,
@@ -113,67 +117,57 @@ export const storage = {
             endLng: item.end_lng
           }));
           
-          // Обновляем локальное хранилище для оффлайн доступа
           localStorage.setItem(SHIFTS_KEY, JSON.stringify(cloudData));
           return cloudData;
         }
       } catch (e) {
-        console.warn("Supabase fetch failed, fallback to local", e);
+        console.warn("Supabase fetch failed", e);
       }
     }
     return local;
   },
 
-  saveShift: async (shift: Shift): Promise<boolean> => {
-    // 1. Сначала локально
+  saveShift: async (shift: Shift): Promise<void> => {
+    // Сохраняем локально сразу для отзывчивости
     const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const idx = local.findIndex((s: any) => s.id === shift.id);
     if (idx > -1) local[idx] = shift; else local.unshift(shift);
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(local));
 
-    // 2. Затем в облако
     if (supabaseInstance) {
-      try {
-        const { data: { session } } = await supabaseInstance.auth.getSession();
-        if (!session?.user) return false;
+      const { data: { session } } = await supabaseInstance.auth.getSession();
+      if (!session?.user) throw new Error('Пользователь не авторизован');
 
-        const { error } = await supabaseInstance.from('shifts').upsert({
-          id: shift.id,
-          date: shift.date,
-          start_time: shift.startTime,
-          end_time: shift.endTime,
-          drive_hours: shift.driveHours,
-          drive_minutes: shift.driveMinutes,
-          timestamp: shift.timestamp,
-          user_id: session.user.id,
-          start_lat: shift.startLat,
-          start_lng: shift.startLng,
-          end_lat: shift.endLat,
-          end_lng: shift.endLng
-        });
-        
-        if (error) {
-          console.error("Supabase upsert error:", error);
-          return false;
-        }
-        return true;
-      } catch (e) {
-        console.error("Cloud save failed:", e);
-        return false;
+      const { error } = await supabaseInstance.from('shifts').upsert({
+        id: shift.id,
+        date: shift.date,
+        start_time: shift.startTime,
+        end_time: shift.endTime,
+        drive_hours: shift.driveHours,
+        drive_minutes: shift.driveMinutes,
+        timestamp: shift.timestamp,
+        user_id: session.user.id,
+        start_lat: shift.startLat,
+        start_lng: shift.startLng,
+        end_lat: shift.endLat,
+        end_lng: shift.endLng
+      });
+      
+      if (error) {
+        console.error("Supabase Save Error Details:", error);
+        throw new Error(`Ошибка БД: ${error.message}`);
       }
     }
-    return true;
   },
 
-  deleteShift: async (id: string): Promise<boolean> => {
+  deleteShift: async (id: string): Promise<void> => {
     const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(local.filter((s: any) => s.id !== id)));
     
     if (supabaseInstance) {
       const { error } = await supabaseInstance.from('shifts').delete().eq('id', id);
-      return !error;
+      if (error) throw error;
     }
-    return true;
   },
 
   getState: (): AppState => {
@@ -192,5 +186,3 @@ export const storage = {
     supabaseInstance = null;
   }
 };
-
-storage.initCloud();

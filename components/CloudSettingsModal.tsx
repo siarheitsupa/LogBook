@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { CloudConfig } from '../types';
 import { storage } from '../services/storageService';
@@ -79,13 +78,14 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
             onClick={() => setShowSql(!showSql)}
             className="text-[10px] font-bold text-amber-700 uppercase flex items-center justify-between w-full"
           >
-            Инструкция SQL (RLS) {showSql ? '↑' : '↓'}
+            Инструкция SQL (Полная) {showSql ? '↑' : '↓'}
           </button>
           {showSql && (
             <div className="mt-2 space-y-2">
-              <p className="text-[9px] text-amber-800 font-medium mb-2">Если база пустая, выполните этот код в SQL Editor на сайте Supabase:</p>
+              <p className="text-[9px] text-amber-800 font-medium mb-2">Выполните это в SQL Editor (удалите старую таблицу если она есть):</p>
               <pre className="p-2 bg-white rounded-lg text-[7px] overflow-x-auto text-slate-600 font-mono leading-tight border border-amber-200">
-                {`CREATE TABLE shifts (
+                {`DROP TABLE IF EXISTS shifts;
+CREATE TABLE shifts (
   id TEXT PRIMARY KEY,
   date DATE,
   start_time TEXT,
@@ -93,6 +93,10 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
   drive_hours INT,
   drive_minutes INT,
   timestamp BIGINT,
+  start_lat FLOAT8,
+  start_lng FLOAT8,
+  end_lat FLOAT8,
+  end_lng FLOAT8,
   user_id UUID REFERENCES auth.users NOT NULL DEFAULT auth.uid()
 );
 ALTER TABLE shifts ENABLE ROW LEVEL SECURITY;
@@ -107,13 +111,13 @@ CREATE POLICY "Users manage own" ON shifts FOR ALL USING (auth.uid() = user_id);
             onClick={() => onSave({ url, key })}
             className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all"
           >
-            Сохранить ручные настройки
+            Сохранить настройки
           </button>
           <button 
             onClick={() => { onReset(); setUrl(''); setKey(''); onClose(); }}
             className="w-full py-3 text-rose-500 font-bold text-sm hover:bg-rose-50 rounded-xl transition-colors"
           >
-            Сбросить всё (очистить LocalStorage)
+            Сбросить настройки
           </button>
         </div>
       </div>

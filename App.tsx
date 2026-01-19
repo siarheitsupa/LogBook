@@ -126,21 +126,22 @@ const App: React.FC = () => {
           setAppState({ isActive: false, startTime: null });
           storage.clearState();
         }
-      } catch (e) {
-        console.error("Critical save error:", e);
-      } finally {
-        setIsLoading(false);
         setIsModalOpen(false);
         setEditingShift(null);
+      } catch (e: any) {
+        console.error("Critical save error:", e);
+        alert(`Ошибка при сохранении: ${e.message}. Проверьте соединение и настройки БД.`);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     if (editingShift) {
        await finishSave();
     } else {
-      // Таймаут геолокации 3с, чтобы не блокировать сохранение лога
+      // Таймаут геолокации 2с для ускорения процесса сохранения
       const geoPromise = new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 });
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 2000 });
       });
 
       try {
@@ -164,11 +165,16 @@ const App: React.FC = () => {
 
   const deleteShift = async (id: string) => {
     if (window.confirm('Удалить эту смену?')) {
-      setIsLoading(true);
-      await storage.deleteShift(id);
-      const updatedData = await storage.getShifts();
-      setShifts(updatedData);
-      setIsLoading(false);
+      try {
+        setIsLoading(true);
+        await storage.deleteShift(id);
+        const updatedData = await storage.getShifts();
+        setShifts(updatedData);
+      } catch (e: any) {
+        alert(`Не удалось удалить: ${e.message}`);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
