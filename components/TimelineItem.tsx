@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ShiftWithRest, Shift } from '../types';
 import { calculateShiftDurationMins, formatMinsToHHMM } from '../utils/timeUtils';
@@ -14,39 +15,48 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, is
 
   const duration = calculateShiftDurationMins(shift);
 
-  // Определение типа отдыха для подписей
   const getRestLabel = () => {
     if (!shift.restBefore) return "";
     const hours = shift.restBefore.durationHours + (shift.restBefore.durationMinutes / 60);
+    
+    // Специальный заголовок для очень длинных пауз
+    if (hours > 144) return "Длительный перерыв / Отпуск";
+    
     if (hours >= 45) return "Регулярный недельный отдых";
     if (hours >= 24) return "Сокращенный недельный отдых";
     if (hours >= 11) return "Регулярный ежедневный отдых";
     return "Сокращенный ежедневный отдых";
   };
 
+  const getRestColors = () => {
+    if (!shift.restBefore) return "";
+    const hours = shift.restBefore.durationHours;
+    if (hours > 144) return "border-slate-200 text-slate-500 bg-slate-50/50";
+    if (hours >= 45) return "border-emerald-200/50 text-emerald-600 bg-emerald-50/30";
+    if (hours >= 24) return "border-indigo-200/50 text-indigo-600 bg-indigo-50/30";
+    return "border-blue-200/50 text-blue-600 bg-blue-50/30";
+  };
+
   return (
     <div className="group space-y-3 mb-6 last:mb-0">
-      {/* Rest Period Above - Liquid Glass Style */}
       {shift.restBefore && (
-        <div className={`liquid-glass mx-6 py-4 px-6 rounded-[2rem] text-center relative overflow-hidden ${shift.restBefore.durationHours >= 24 ? 'border-indigo-200/50' : 'border-blue-200/50'}`}>
-          <div className={`absolute top-0 left-0 w-1.5 h-full opacity-50 ${shift.restBefore.durationHours >= 45 ? 'bg-emerald-500' : shift.restBefore.durationHours >= 24 ? 'bg-indigo-500' : 'bg-blue-500'}`}></div>
-          <span className={`block text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${shift.restBefore.durationHours >= 24 ? 'text-indigo-500/70' : 'text-blue-500/70'}`}>
+        <div className={`liquid-glass mx-8 py-3 px-6 rounded-[1.8rem] text-center relative border transition-all ${getRestColors()}`}>
+          <span className="block text-[9px] font-black uppercase tracking-[0.2em] mb-0.5 opacity-70">
             {getRestLabel()}
           </span>
-          <span className={`text-xl font-black tabular-nums ${shift.restBefore.durationHours >= 24 ? 'text-indigo-900' : 'text-blue-900'}`}>
+          <span className="text-lg font-black tabular-nums tracking-tight">
             {shift.restBefore.durationHours}ч {shift.restBefore.durationMinutes}мин
           </span>
           {shift.restBefore.debtHours > 0 && (
             <div className="flex justify-center mt-1">
-              <span className="text-[9px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100 uppercase tracking-tighter shadow-sm">
-                К возврату: {Math.round(shift.restBefore.debtHours * 10) / 10}ч
+              <span className="text-[8px] font-black text-rose-500 bg-white/60 px-2 py-0.5 rounded-full border border-rose-100 uppercase tracking-tighter">
+                Долг: {Math.round(shift.restBefore.debtHours * 10) / 10}ч
               </span>
             </div>
           )}
         </div>
       )}
 
-      {/* Main Shift Card - iOS Liquid Glass Style */}
       <div className="liquid-glass rounded-[2.5rem] overflow-hidden transition-all duration-300 hover:shadow-2xl border-white/60">
         <div 
           onClick={() => setIsExpanded(!isExpanded)}
@@ -65,7 +75,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, is
           
           <div className="flex items-center gap-5">
             <div className="flex flex-col items-end">
-              <span className="text-base font-black text-blue-600 tracking-tight drop-shadow-sm">Руль: {shift.driveHours}ч {shift.driveMinutes}м</span>
+              <span className="text-base font-black text-blue-600 tracking-tight">Руль: {shift.driveHours}ч {shift.driveMinutes}м</span>
               <span className="text-[11px] font-black text-slate-400 uppercase tracking-tighter opacity-50 mt-0.5">СМЕНА: {formatMinsToHHMM(duration)}</span>
             </div>
             <div className={`w-9 h-9 rounded-full flex items-center justify-center bg-white/50 backdrop-blur-md shadow-inner transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`}>
@@ -76,7 +86,6 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, is
           </div>
         </div>
 
-        {/* Expandable Action Controls */}
         <div className={`grid transition-all duration-500 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100 pb-6 px-6' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
           <div className="overflow-hidden">
             <div className="pt-2 flex justify-end items-center gap-3">
