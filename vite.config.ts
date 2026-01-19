@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
   
   return {
     plugins: [react()],
-    base: './',
+    base: '/',
     define: {
       'process.env.API_KEY': JSON.stringify(env.API_KEY || ''),
       'process.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL || ''),
@@ -18,11 +18,6 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
       sourcemap: false,
       minify: 'esbuild',
-      rollupOptions: {
-        output: {
-          manualChunks: undefined,
-        },
-      },
     },
     server: {
       port: 3000
