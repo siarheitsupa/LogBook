@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shift, AppState, CloudConfig } from './types';
 import { storage } from './services/storageService';
@@ -468,7 +467,7 @@ const App: React.FC = () => {
                 </button>
                 <button 
                   onClick={() => setViewMode('stats')}
-                  className={`px-4 py-2 text-[10px) font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${viewMode === 'stats' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${viewMode === 'stats' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
                 >
                   Dashboard
                 </button>

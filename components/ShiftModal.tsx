@@ -17,7 +17,10 @@ const DrivingIcon = () => (
 
 const WorkIcon = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1 inline-block mb-0.5">
-    <path d="m15 12-8.373 8.373a1 1 0 1 1-3.007-3.007L12 9"/><path d="m9 15 3-3"/><path d="M15 12c2 0 4-1 4-3s-2-3-4-3-4 1-4 3 2 3 4 3Z"/>
+    <path d="M15.5 10.5 L19 7 L21 9 L17.5 12.5 Z" />
+    <path d="M17.5 10.5 L10 18" />
+    <path d="M8.5 10.5 L5 7 L3 9 L6.5 12.5 Z" />
+    <path d="M6.5 10.5 L14 18" />
   </svg>
 );
 
