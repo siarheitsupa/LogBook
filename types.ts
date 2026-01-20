@@ -15,6 +15,19 @@ export interface Shift {
   isCompensated?: boolean; // Флаг: компенсирован ли сокращенный отдых ПЕРЕД этой сменой
 }
 
+export type ExpenseCategory = 'Parking' | 'Customs' | 'Fuel' | 'Wash' | 'Toll' | 'Food' | 'Other';
+export type Currency = 'EUR' | 'PLN' | 'BYN' | 'HUF' | 'USD';
+
+export interface Expense {
+  id: string;
+  shiftId: string;
+  category: ExpenseCategory;
+  amount: number;
+  currency: Currency;
+  timestamp: number;
+  description?: string;
+}
+
 export interface AppState {
   isActive: boolean;
   startTime: number | null;
@@ -33,6 +46,7 @@ export interface RestEvent {
 
 export interface ShiftWithRest extends Shift {
   restBefore?: RestEvent;
+  expenses?: Expense[];
 }
 
 export interface CloudConfig {

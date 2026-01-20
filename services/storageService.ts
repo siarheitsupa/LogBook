@@ -1,7 +1,8 @@
 import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
-import { Shift, AppState, CloudConfig } from '../types';
+import { Shift, AppState, CloudConfig, Expense } from '../types';
 
 const SHIFTS_KEY = 'driverlog_shifts_v1';
+const EXPENSES_KEY = 'driverlog_expenses_v1';
 const STATE_KEY = 'driverlog_state_v1';
 const CLOUD_CONFIG_KEY = 'driverlog_cloud_config_v1';
 
@@ -92,16 +93,13 @@ export const storage = {
 
   getShifts: async (): Promise<Shift[]> => {
     const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
-    
     if (supabaseInstance) {
       try {
         const { data, error } = await supabaseInstance
           .from('shifts')
           .select('*')
           .order('timestamp', { ascending: false });
-        
         if (error) throw error;
-        
         if (data) {
           const cloudData = data.map((item: any) => ({
             id: item.id,
@@ -119,13 +117,10 @@ export const storage = {
             endLng: item.end_lng,
             isCompensated: item.is_compensated || false
           }));
-          
           localStorage.setItem(SHIFTS_KEY, JSON.stringify(cloudData));
           return cloudData;
         }
-      } catch (e) {
-        console.warn("Supabase fetch failed", e);
-      }
+      } catch (e) { console.warn("Supabase shifts fetch failed", e); }
     }
     return local;
   },
@@ -139,7 +134,6 @@ export const storage = {
     if (supabaseInstance) {
       const { data: { session } } = await supabaseInstance.auth.getSession();
       if (!session?.user) return;
-
       const payload: any = {
         id: shift.id,
         date: shift.date,
@@ -157,36 +151,70 @@ export const storage = {
         end_lng: shift.endLng,
         is_compensated: shift.isCompensated || false
       };
-
-      const { error } = await supabaseInstance.from('shifts').upsert(payload);
-      
-      if (error) {
-        if (error.message.includes('column') || error.code === '42703') {
-          const fallbackPayload = { 
-            id: payload.id,
-            date: payload.date,
-            start_time: payload.start_time,
-            end_time: payload.end_time,
-            drive_hours: payload.drive_hours,
-            drive_minutes: payload.drive_minutes,
-            timestamp: payload.timestamp,
-            user_id: payload.user_id
-          };
-          await supabaseInstance.from('shifts').upsert(fallbackPayload);
-        } else {
-          throw error;
-        }
-      }
+      await supabaseInstance.from('shifts').upsert(payload);
     }
   },
 
   deleteShift: async (id: string): Promise<void> => {
     const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(local.filter((s: any) => s.id !== id)));
-    
     if (supabaseInstance) {
-      const { error } = await supabaseInstance.from('shifts').delete().eq('id', id);
-      if (error) throw error;
+      await supabaseInstance.from('shifts').delete().eq('id', id);
+    }
+  },
+
+  getExpenses: async (): Promise<Expense[]> => {
+    const local = JSON.parse(localStorage.getItem(EXPENSES_KEY) || '[]');
+    if (supabaseInstance) {
+      try {
+        const { data, error } = await supabaseInstance.from('expenses').select('*');
+        if (error) throw error;
+        if (data) {
+          const cloudData: Expense[] = data.map((item: any) => ({
+            id: item.id,
+            shiftId: item.shift_id,
+            category: item.category,
+            amount: Number(item.amount),
+            currency: item.currency,
+            timestamp: Number(item.timestamp),
+            description: item.description
+          }));
+          localStorage.setItem(EXPENSES_KEY, JSON.stringify(cloudData));
+          return cloudData;
+        }
+      } catch (e) { console.warn("Supabase expenses fetch failed", e); }
+    }
+    return local;
+  },
+
+  saveExpense: async (expense: Expense): Promise<void> => {
+    const local = JSON.parse(localStorage.getItem(EXPENSES_KEY) || '[]');
+    const idx = local.findIndex((e: any) => e.id === expense.id);
+    if (idx > -1) local[idx] = expense; else local.unshift(expense);
+    localStorage.setItem(EXPENSES_KEY, JSON.stringify(local));
+
+    if (supabaseInstance) {
+      const { data: { session } } = await supabaseInstance.auth.getSession();
+      if (!session?.user) return;
+      const payload = {
+        id: expense.id,
+        shift_id: expense.shiftId,
+        category: expense.category,
+        amount: expense.amount,
+        currency: expense.currency,
+        timestamp: expense.timestamp,
+        description: expense.description,
+        user_id: session.user.id
+      };
+      await supabaseInstance.from('expenses').upsert(payload);
+    }
+  },
+
+  deleteExpense: async (id: string): Promise<void> => {
+    const local = JSON.parse(localStorage.getItem(EXPENSES_KEY) || '[]');
+    localStorage.setItem(EXPENSES_KEY, JSON.stringify(local.filter((e: any) => e.id !== id)));
+    if (supabaseInstance) {
+      await supabaseInstance.from('expenses').delete().eq('id', id);
     }
   },
 

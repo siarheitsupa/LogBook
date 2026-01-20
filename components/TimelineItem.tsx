@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ShiftWithRest, Shift } from '../types';
+import React, { useState, useMemo } from 'react';
+import { ShiftWithRest, Shift, Currency } from '../types';
 import { calculateShiftDurationMins, formatMinsToHHMM } from '../utils/timeUtils';
 
 interface TimelineItemProps {
@@ -7,6 +7,7 @@ interface TimelineItemProps {
   onEdit: (shift: Shift) => void;
   onDelete: (id: string) => void;
   onToggleCompensation?: (shift: Shift) => void;
+  onAddExpense?: (shiftId: string) => void;
   isInitiallyExpanded?: boolean;
 }
 
@@ -25,7 +26,13 @@ const WorkIcon = () => (
   </svg>
 );
 
-const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, onToggleCompensation, isInitiallyExpanded = false }) => {
+const WalletIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+  </svg>
+);
+
+const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, onToggleCompensation, onAddExpense, isInitiallyExpanded = false }) => {
   const [isExpanded, setIsExpanded] = useState(isInitiallyExpanded);
 
   const duration = calculateShiftDurationMins(shift);
@@ -33,13 +40,20 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
                     Date.now() > shift.restBefore.compensationDeadline && 
                     !shift.restBefore.isCompensated;
 
+  const expensesSummary = useMemo(() => {
+    if (!shift.expenses || shift.expenses.length === 0) return null;
+    const totals: Record<string, number> = {};
+    shift.expenses.forEach(e => {
+      totals[e.currency] = (totals[e.currency] || 0) + e.amount;
+    });
+    return Object.entries(totals).map(([cur, val]) => `${Math.round(val)} ${cur}`).join(', ');
+  }, [shift.expenses]);
+
   const getRestLabel = () => {
     if (!shift.restBefore) return "";
     const hours = shift.restBefore.durationHours + (shift.restBefore.durationMinutes / 60);
-    
     if (hours > 144) return "Длительный перерыв / Отпуск";
     if (shift.restBefore.type === 'long_pause') return "Длительная пауза / Ожидание";
-    
     if (hours >= 45) return "Регулярный недельный отдых";
     if (shift.restBefore.type === 'weekly_reduced') return "Сокращенный недельный отдых";
     if (hours >= 11) return "Регулярный ежедневный отдых";
@@ -50,7 +64,6 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
     if (!shift.restBefore) return "";
     if (shift.restBefore.isCompensated) return "border-emerald-200 text-emerald-600 bg-emerald-50/20 grayscale-[0.5]";
     if (isOverdue) return "border-rose-500 text-rose-700 bg-rose-50 animate-pulse border-2 shadow-[0_0_15px_rgba(244,63,94,0.3)]";
-    
     const hours = shift.restBefore.durationHours;
     if (hours > 144) return "border-slate-200 text-slate-500 bg-slate-50/50";
     if (shift.restBefore.type === 'long_pause') return "border-slate-200 text-slate-400 bg-slate-50/20";
@@ -71,7 +84,6 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
             <span className="text-xl font-black tabular-nums tracking-tight">
               {shift.restBefore.durationHours}ч {shift.restBefore.durationMinutes}мин
             </span>
-            
             {shift.restBefore.type === 'weekly_reduced' && !shift.restBefore.isCompensated && (
               <div className="mt-2 w-full pt-2 border-t border-orange-200/50 space-y-1">
                 <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-tight">
@@ -88,7 +100,6 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
                 </button>
               </div>
             )}
-
             {shift.restBefore.isCompensated && (
                <button 
                 onClick={() => onToggleCompensation && onToggleCompensation(shift)}
@@ -116,7 +127,6 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
               </span>
             </div>
           </div>
-          
           <div className="flex items-center gap-5">
             <div className="flex flex-col items-end">
               <div className="flex gap-3">
@@ -141,25 +151,40 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
 
         <div className={`grid transition-all duration-500 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100 pb-6 px-6' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
           <div className="overflow-hidden">
-            <div className="pt-2 flex justify-end items-center gap-3">
+            {expensesSummary && (
+              <div className="mb-4 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
+                <span className="text-emerald-500"><WalletIcon /></span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-tight">Траты: {expensesSummary}</span>
+              </div>
+            )}
+            <div className="pt-2 flex justify-between items-center gap-2">
               <button 
-                onClick={(e) => { e.stopPropagation(); onEdit(shift); }}
-                className="flex items-center gap-2.5 px-6 py-4 bg-blue-500 text-white rounded-2xl hover:brightness-110 active:scale-95 transition-all text-xs font-black uppercase tracking-wider shadow-lg shadow-blue-200"
+                onClick={(e) => { e.stopPropagation(); onAddExpense && onAddExpense(shift.id); }}
+                className="flex items-center gap-2 px-5 py-3.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-2xl hover:bg-emerald-100 active:scale-95 transition-all text-[10px] font-black uppercase tracking-wider"
               >
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                Изменить
+                <WalletIcon />
+                + Расход
               </button>
-              <button 
-                onClick={(e) => { e.stopPropagation(); onDelete(shift.id); }}
-                className="flex items-center gap-2.5 px-6 py-4 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl hover:bg-rose-100 active:scale-95 transition-all text-xs font-black uppercase tracking-wider"
-              >
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                Удалить
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onEdit(shift); }}
+                  className="flex items-center gap-2 px-5 py-3.5 bg-blue-500 text-white rounded-2xl hover:brightness-110 active:scale-95 transition-all text-[10px] font-black uppercase tracking-wider shadow-lg shadow-blue-200"
+                >
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Изменить
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onDelete(shift.id); }}
+                  className="flex items-center gap-2 px-5 py-3.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl hover:bg-rose-100 active:scale-95 transition-all text-[10px] font-black uppercase tracking-wider"
+                >
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Удалить
+                </button>
+              </div>
             </div>
           </div>
         </div>
