@@ -107,7 +107,6 @@ const App: React.FC = () => {
       return;
     }
 
-    // Fix: Explicitly cast orientation to literal type 'portrait' as const to satisfy Html2PdfOptions.
     const opt = {
       margin: 0,
       filename: `driver-log-week-${new Date().toISOString().split('T')[0]}.pdf`,
@@ -176,7 +175,6 @@ const App: React.FC = () => {
         setEditingShift(null);
       } catch (e: any) {
         console.error("Critical save error:", e);
-        // Если это ошибка схемы, выводим подробности
         if (e.message.includes("SQL")) {
            alert(e.message);
         } else {
