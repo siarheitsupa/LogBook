@@ -12,7 +12,7 @@ const Dashboard: React.FC<DashboardProps> = ({ shifts }) => {
   const weeklyData = useMemo(() => {
     const monday = getMonday(new Date());
     const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-    const result = days.map(day => ({ day, hours: 0 }));
+    const result = days.map(day => ({ day, driving: 0, work: 0 }));
 
     shifts.forEach(s => {
       const shiftDate = new Date(s.date);
@@ -21,11 +21,16 @@ const Dashboard: React.FC<DashboardProps> = ({ shifts }) => {
         let dayIdx = shiftDate.getDay() - 1;
         if (dayIdx === -1) dayIdx = 6;
         
-        result[dayIdx].hours += s.driveHours + (s.driveMinutes / 60);
+        result[dayIdx].driving += s.driveHours + (s.driveMinutes / 60);
+        result[dayIdx].work += (s.workHours || 0) + ((s.workMinutes || 0) / 60);
       }
     });
 
-    return result.map(d => ({ ...d, hours: Math.round(d.hours * 10) / 10 }));
+    return result.map(d => ({ 
+      ...d, 
+      driving: Math.round(d.driving * 10) / 10,
+      work: Math.round(d.work * 10) / 10
+    }));
   }, [shifts]);
 
   const debtTrendData = useMemo(() => {
@@ -47,10 +52,15 @@ const Dashboard: React.FC<DashboardProps> = ({ shifts }) => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="liquid-glass rounded-[3rem] p-8 border-emerald-200/50">
-        <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-3">
-          <span className="w-2 h-6 bg-emerald-500 rounded-full"></span>
-          Нагрузка за неделю (Часы)
-        </h3>
+        <div className="flex flex-col mb-6">
+          <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest flex items-center gap-3">
+            <span className="w-2 h-6 bg-blue-500 rounded-full"></span>
+            Активность за неделю
+          </h3>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 ml-5 opacity-60">
+            Вождение vs Прочая работа (часы)
+          </p>
+        </div>
         <WeeklyActivityChart data={weeklyData} />
       </div>
 
