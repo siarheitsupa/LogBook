@@ -86,7 +86,7 @@ const App: React.FC = () => {
     return getStats(shifts);
   }, [shifts]);
 
-  const { weekMins, biWeekMins, dailyDutyMins, extDrivingCount, extDutyCount } = stats;
+  const { weekMins, workWeekMins, biWeekMins, dailyDutyMins, extDrivingCount, extDutyCount } = stats;
 
   const currentWeekShifts = useMemo(() => {
     const monday = getMonday(new Date());
@@ -107,16 +107,16 @@ const App: React.FC = () => {
       return;
     }
 
+    // Fix: Explicitly cast 'jpeg' to literal type to satisfy Html2PdfOptions
     const opt = {
       margin: 0,
       filename: `driver-log-week-${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
+      image: { type: 'jpeg' as const, quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, letterRendering: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     try {
-      // html2pdf может работать как функция или как объект в зависимости от сборки
       const exporter = typeof html2pdf === 'function' ? html2pdf() : html2pdf;
       await exporter.from(element).set(opt).save();
     } catch (e) {
@@ -176,7 +176,12 @@ const App: React.FC = () => {
         setEditingShift(null);
       } catch (e: any) {
         console.error("Critical save error:", e);
-        alert(`Ошибка при сохранении: ${e.message}. Проверьте соединение и настройки БД.`);
+        // Если это ошибка схемы, выводим подробности
+        if (e.message.includes("SQL")) {
+           alert(e.message);
+        } else {
+           alert(`Ошибка при сохранении: ${e.message}.`);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -277,7 +282,6 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-xl mx-auto min-h-screen pb-16 px-4 pt-8 animate-in fade-in duration-500">
-      {/* Hidden printable element */}
       <div className="fixed -top-[10000px] -left-[10000px]">
         <PrintableReport shifts={currentWeekShifts} stats={{ weekMins, totalDebt }} userEmail={session?.user?.email || 'Driver'} />
       </div>
@@ -408,7 +412,7 @@ const App: React.FC = () => {
 
       <div className="grid grid-cols-2 gap-5 mb-10">
         <StatCard label="Вождение неделя" value={formatMinsToHHMM(weekMins)} sublabel="Лимит 56ч" variant="yellow" />
-        <StatCard label="Работа (Сутки)" value={formatMinsToHHMM(dailyDutyMins + (appState.isActive ? activeDurationMins : 0))} sublabel="Текущий день" variant="orange" />
+        <StatCard label="Работа неделя" value={formatMinsToHHMM(workWeekMins)} sublabel="⚒️ (Молотки)" variant="orange" />
         <StatCard label="За 2 недели" value={formatMinsToHHMM(biWeekMins)} sublabel="Лимит 90ч" variant="green" />
         <StatCard label="10ч Вождение" value={`${extDrivingCount} / 2`} sublabel="Доступно" variant="blue" />
         <StatCard label="15ч Смены" value={`${extDutyCount} / 3`} sublabel="Доступно" variant="indigo" />

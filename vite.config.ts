@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react';
 import process from 'node:process';
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
+  // Fix: Explicitly cast process to any to access cwd() method as it is sometimes missing in the TS declaration
+  const env = loadEnv(mode, (process as any).cwd(), '');
   
   return {
     plugins: [react()],

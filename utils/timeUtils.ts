@@ -129,6 +129,7 @@ export const getStats = (shifts: Shift[]) => {
   const prevWeekStart = currentWeekStart - (7 * 24 * 60 * 60 * 1000);
 
   let weekMins = 0;
+  let workWeekMins = 0; // Суммарные молотки
   let biWeekMins = 0;
   let dailyDutyMins = 0;
   let extDrivingCount = 0;
@@ -137,10 +138,12 @@ export const getStats = (shifts: Shift[]) => {
   shifts.forEach(s => {
     const shiftTimestamp = new Date(s.date).getTime();
     const driveMins = s.driveHours * 60 + s.driveMinutes;
+    const workMins = (s.workHours || 0) * 60 + (s.workMinutes || 0);
     const dutyMins = calculateShiftDurationMins(s);
 
     if (shiftTimestamp >= currentWeekStart) {
       weekMins += driveMins;
+      workWeekMins += workMins;
       if (driveMins > 9 * 60) extDrivingCount++;
       if (dutyMins > 13 * 60) extDutyCount++;
     }
@@ -154,5 +157,5 @@ export const getStats = (shifts: Shift[]) => {
     }
   });
 
-  return { weekMins, biWeekMins, dailyDutyMins, extDrivingCount, extDutyCount };
+  return { weekMins, workWeekMins, biWeekMins, dailyDutyMins, extDrivingCount, extDutyCount };
 };

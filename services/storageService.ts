@@ -108,10 +108,10 @@ export const storage = {
             date: item.date,
             startTime: item.start_time,
             endTime: item.end_time,
-            driveHours: item.drive_hours,
-            driveMinutes: item.drive_minutes,
-            workHours: item.work_hours || 0,
-            workMinutes: item.work_minutes || 0,
+            driveHours: Number(item.drive_hours || 0),
+            driveMinutes: Number(item.drive_minutes || 0),
+            workHours: Number(item.work_hours || 0),
+            workMinutes: Number(item.work_minutes || 0),
             timestamp: Number(item.timestamp),
             startLat: item.start_lat,
             startLng: item.start_lng,
@@ -130,14 +130,16 @@ export const storage = {
   },
 
   saveShift: async (shift: Shift): Promise<void> => {
+    // 1. Сначала сохраняем локально, чтобы данные не пропали
     const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const idx = local.findIndex((s: any) => s.id === shift.id);
     if (idx > -1) local[idx] = shift; else local.unshift(shift);
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(local));
 
+    // 2. Пробуем синхронизировать с облаком
     if (supabaseInstance) {
       const { data: { session } } = await supabaseInstance.auth.getSession();
-      if (!session?.user) throw new Error('Пользователь не авторизован');
+      if (!session?.user) return; // Если не авторизован, просто выходим (данные остались в local)
 
       const payload: any = {
         id: shift.id,
@@ -159,18 +161,29 @@ export const storage = {
       const { error } = await supabaseInstance.from('shifts').upsert(payload);
       
       if (error) {
-        // Если база ругается на колонки координат или новых полей работы, пробуем сохранить с минимальным набором
-        console.warn("Schema mismatch, retrying without geo/work columns...");
-        const fallbackPayload = { ...payload };
-        delete fallbackPayload.start_lat;
-        delete fallbackPayload.start_lng;
-        delete fallbackPayload.end_lat;
-        delete fallbackPayload.end_lng;
-        delete fallbackPayload.work_hours;
-        delete fallbackPayload.work_minutes;
+        console.error("Supabase Save Error:", error);
         
-        const { error: retryError } = await supabaseInstance.from('shifts').upsert(fallbackPayload);
-        if (retryError) throw new Error(`Ошибка БД: ${retryError.message}`);
+        // Если ошибка в колонках (не выполнен SQL), пробуем "спасательный" вариант без новых колонок
+        if (error.message.includes('column') || error.code === '42703') {
+          console.warn("SCHEMA MISMATCH: Новые колонки (work_hours/geo) отсутствуют в БД. Сохраняю только базовые данные.");
+          
+          const fallbackPayload = { 
+            id: payload.id,
+            date: payload.date,
+            start_time: payload.start_time,
+            end_time: payload.end_time,
+            drive_hours: payload.drive_hours,
+            drive_minutes: payload.drive_minutes,
+            timestamp: payload.timestamp,
+            user_id: payload.user_id
+          };
+          
+          await supabaseInstance.from('shifts').upsert(fallbackPayload);
+          // Выбрасываем ошибку для уведомления пользователя в UI, но данные уже в local + базовые в cloud
+          throw new Error("ВНИМАНИЕ: Колонки 'Работа' не созданы в вашей БД Supabase. Выполните SQL-инструкцию в настройках.");
+        } else {
+          throw error;
+        }
       }
     }
   },

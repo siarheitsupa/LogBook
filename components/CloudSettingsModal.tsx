@@ -78,18 +78,19 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
             onClick={() => setShowSql(!showSql)}
             className="text-[10px] font-bold text-amber-700 uppercase flex items-center justify-between w-full"
           >
-            Инструкция SQL (Обновление) {showSql ? '↑' : '↓'}
+            Инструкция SQL (ВАЖНО!) {showSql ? '↑' : '↓'}
           </button>
           {showSql && (
             <div className="mt-2 space-y-2">
-              <p className="text-[9px] text-amber-800 font-medium mb-2">Выполните это в SQL Editor, чтобы добавить колонки координат и работы:</p>
-              <pre className="p-2 bg-white rounded-lg text-[7px] overflow-x-auto text-slate-600 font-mono leading-tight border border-amber-200">
-                {`ALTER TABLE shifts ADD COLUMN IF NOT EXISTS start_lat FLOAT8;
-ALTER TABLE shifts ADD COLUMN IF NOT EXISTS start_lng FLOAT8;
-ALTER TABLE shifts ADD COLUMN IF NOT EXISTS end_lat FLOAT8;
-ALTER TABLE shifts ADD COLUMN IF NOT EXISTS end_lng FLOAT8;
-ALTER TABLE shifts ADD COLUMN IF NOT EXISTS work_hours INT4 DEFAULT 0;
-ALTER TABLE shifts ADD COLUMN IF NOT EXISTS work_minutes INT4 DEFAULT 0;`}
+              <p className="text-[9px] text-amber-800 font-bold mb-2">Чтобы "молотки" и координаты сохранялись, выполните это в SQL Editor:</p>
+              <pre className="p-3 bg-white rounded-lg text-[8px] overflow-x-auto text-slate-800 font-mono leading-relaxed border border-amber-300 shadow-inner">
+                {`ALTER TABLE shifts 
+ADD COLUMN IF NOT EXISTS start_lat FLOAT8,
+ADD COLUMN IF NOT EXISTS start_lng FLOAT8,
+ADD COLUMN IF NOT EXISTS end_lat FLOAT8,
+ADD COLUMN IF NOT EXISTS end_lng FLOAT8,
+ADD COLUMN IF NOT EXISTS work_hours INT4 DEFAULT 0,
+ADD COLUMN IF NOT EXISTS work_minutes INT4 DEFAULT 0;`}
               </pre>
             </div>
           )}
