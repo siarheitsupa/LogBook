@@ -19,6 +19,8 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sublabel, variant }) 
     indigo: 'bg-indigo-400/10 text-indigo-900 border-indigo-200/50 shadow-indigo-200/20',
   };
 
+  const processedSublabel = sublabel?.replace('⚒️', '').trim() || sublabel;
+
   return (
     <div 
       className={`p-6 rounded-[2.5rem] border shadow-2xl flex flex-col items-center justify-center text-center transition-all hover:scale-[1.03] active:scale-95 animate-float backdrop-blur-xl ${styles[variant]}`}
@@ -30,9 +32,9 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sublabel, variant }) 
       <span className="text-[10px] font-black leading-tight opacity-60 uppercase tracking-widest px-2 mb-2">
         {label}
       </span>
-      {sublabel && (
+      {processedSublabel && (
         <span className="text-[9px] font-black bg-white/60 text-slate-500 px-3 py-1 rounded-full shadow-sm border border-white/40">
-          {sublabel}
+          {processedSublabel}
         </span>
       )}
     </div>

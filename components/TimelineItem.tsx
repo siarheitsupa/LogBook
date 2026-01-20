@@ -9,6 +9,18 @@ interface TimelineItemProps {
   isInitiallyExpanded?: boolean;
 }
 
+const DrivingIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+    <circle cx="12" cy="12" r="10"/><path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M12 2l0 7"/><path d="M12 15l0 7"/><path d="M2 12l7 0"/><path d="M15 12l7 0"/>
+  </svg>
+);
+
+const WorkIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+    <path d="m15 12-8.373 8.373a1 1 0 1 1-3.007-3.007L12 9"/><path d="m9 15 3-3"/><path d="M15 12c2 0 4-1 4-3s-2-3-4-3-4 1-4 3 2 3 4 3Z"/>
+  </svg>
+);
+
 const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, isInitiallyExpanded = false }) => {
   const [isExpanded, setIsExpanded] = useState(isInitiallyExpanded);
 
@@ -75,9 +87,15 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, is
           
           <div className="flex items-center gap-5">
             <div className="flex flex-col items-end">
-              <div className="flex gap-2">
-                <span className="text-sm font-black text-amber-600 tracking-tight">⚒️ {shift.workHours}ч {shift.workMinutes}м</span>
-                <span className="text-sm font-black text-blue-600 tracking-tight">🚗 {shift.driveHours}ч {shift.driveMinutes}м</span>
+              <div className="flex gap-3">
+                <span className="flex items-center text-sm font-black text-amber-600 tracking-tight">
+                  <WorkIcon />
+                  {shift.workHours}ч {shift.workMinutes}м
+                </span>
+                <span className="flex items-center text-sm font-black text-blue-600 tracking-tight">
+                  <DrivingIcon />
+                  {shift.driveHours}ч {shift.driveMinutes}м
+                </span>
               </div>
               <span className="text-[11px] font-black text-slate-400 uppercase tracking-tighter opacity-50 mt-0.5">СМЕНА: {formatMinsToHHMM(duration)}</span>
             </div>

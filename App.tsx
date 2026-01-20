@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shift, AppState, CloudConfig } from './types';
 import { storage } from './services/storageService';
@@ -107,13 +108,13 @@ const App: React.FC = () => {
       return;
     }
 
-    // Fix: Explicitly cast 'jpeg' to literal type to satisfy Html2PdfOptions
+    // Fix: Explicitly cast orientation to literal type 'portrait' as const to satisfy Html2PdfOptions.
     const opt = {
       margin: 0,
       filename: `driver-log-week-${new Date().toISOString().split('T')[0]}.pdf`,
       image: { type: 'jpeg' as const, quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
     };
 
     try {
@@ -467,7 +468,7 @@ const App: React.FC = () => {
                 </button>
                 <button 
                   onClick={() => setViewMode('stats')}
-                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${viewMode === 'stats' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
+                  className={`px-4 py-2 text-[10px) font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${viewMode === 'stats' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}
                 >
                   Dashboard
                 </button>

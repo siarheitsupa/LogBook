@@ -9,6 +9,18 @@ interface ShiftModalProps {
   defaultStartTime?: string;
 }
 
+const DrivingIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1 inline-block mb-0.5">
+    <circle cx="12" cy="12" r="10"/><path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M12 2l0 7"/><path d="M12 15l0 7"/><path d="M2 12l7 0"/><path d="M15 12l7 0"/>
+  </svg>
+);
+
+const WorkIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1 inline-block mb-0.5">
+    <path d="m15 12-8.373 8.373a1 1 0 1 1-3.007-3.007L12 9"/><path d="m9 15 3-3"/><path d="M15 12c2 0 4-1 4-3s-2-3-4-3-4 1-4 3 2 3 4 3Z"/>
+  </svg>
+);
+
 const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initialData, defaultStartTime }) => {
   const [date, setDate] = useState('');
   const [start, setStart] = useState('08:00');
@@ -72,7 +84,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
             <label className="block text-xs font-semibold text-slate-500 uppercase mb-1 ml-1">Дата</label>
             <input 
               type="date" 
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium" 
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:border-slate-400 outline-none transition-all" 
               value={date} 
               onChange={e => setDate(e.target.value)}
               required 
@@ -102,12 +114,14 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1 ml-1">Вождение</label>
+              <label className="flex items-center text-xs font-semibold text-slate-500 uppercase mb-1 ml-1">
+                <DrivingIcon /> Вождение
+              </label>
               <div className="flex items-center gap-1">
                 <input 
                   type="number" 
                   placeholder="ЧЧ" 
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:ring-2 ring-emerald-500 outline-none" 
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:ring-2 ring-blue-500 outline-none" 
                   value={driveH} 
                   onChange={e => setDriveH(e.target.value)}
                   min="0" max="24"
@@ -117,7 +131,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
                 <input 
                   type="number" 
                   placeholder="ММ" 
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:ring-2 ring-emerald-500 outline-none" 
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:ring-2 ring-blue-500 outline-none" 
                   value={driveM} 
                   onChange={e => setDriveM(e.target.value)}
                   min="0" max="59"
@@ -126,7 +140,9 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1 ml-1">Работа (⚒️)</label>
+              <label className="flex items-center text-xs font-semibold text-slate-500 uppercase mb-1 ml-1">
+                <WorkIcon /> Работа
+              </label>
               <div className="flex items-center gap-1">
                 <input 
                   type="number" 
