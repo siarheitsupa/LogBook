@@ -116,7 +116,8 @@ export const storage = {
             startLat: item.start_lat,
             startLng: item.start_lng,
             endLat: item.end_lat,
-            endLng: item.end_lng
+            endLng: item.end_lng,
+            isCompensated: item.is_compensated || false
           }));
           
           localStorage.setItem(SHIFTS_KEY, JSON.stringify(cloudData));
@@ -130,16 +131,14 @@ export const storage = {
   },
 
   saveShift: async (shift: Shift): Promise<void> => {
-    // 1. Сначала сохраняем локально, чтобы данные не пропали
     const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const idx = local.findIndex((s: any) => s.id === shift.id);
     if (idx > -1) local[idx] = shift; else local.unshift(shift);
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(local));
 
-    // 2. Пробуем синхронизировать с облаком
     if (supabaseInstance) {
       const { data: { session } } = await supabaseInstance.auth.getSession();
-      if (!session?.user) return; // Если не авторизован, просто выходим (данные остались в local)
+      if (!session?.user) return;
 
       const payload: any = {
         id: shift.id,
@@ -155,18 +154,14 @@ export const storage = {
         start_lat: shift.startLat,
         start_lng: shift.startLng,
         end_lat: shift.endLat,
-        end_lng: shift.endLng
+        end_lng: shift.endLng,
+        is_compensated: shift.isCompensated || false
       };
 
       const { error } = await supabaseInstance.from('shifts').upsert(payload);
       
       if (error) {
-        console.error("Supabase Save Error:", error);
-        
-        // Если ошибка в колонках (не выполнен SQL), пробуем "спасательный" вариант без новых колонок
         if (error.message.includes('column') || error.code === '42703') {
-          console.warn("SCHEMA MISMATCH: Новые колонки (work_hours/geo) отсутствуют в БД. Сохраняю только базовые данные.");
-          
           const fallbackPayload = { 
             id: payload.id,
             date: payload.date,
@@ -177,10 +172,7 @@ export const storage = {
             timestamp: payload.timestamp,
             user_id: payload.user_id
           };
-          
           await supabaseInstance.from('shifts').upsert(fallbackPayload);
-          // Выбрасываем ошибку для уведомления пользователя в UI, но данные уже в local + базовые в cloud
-          throw new Error("ВНИМАНИЕ: Колонки 'Работа' не созданы в вашей БД Supabase. Выполните SQL-инструкцию в настройках.");
         } else {
           throw error;
         }

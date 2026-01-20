@@ -201,6 +201,20 @@ const App: React.FC = () => {
     }
   };
 
+  const handleToggleCompensation = async (shift: Shift) => {
+    try {
+      setIsLoading(true);
+      const updatedShift = { ...shift, isCompensated: !shift.isCompensated };
+      await storage.saveShift(updatedShift);
+      const updatedData = await storage.getShifts();
+      setShifts(updatedData);
+    } catch (e: any) {
+      alert(`Ошибка: ${e.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCloudSave = async (config: CloudConfig) => {
     if (storage.initCloud(config)) {
       setIsLoading(true);
@@ -482,6 +496,7 @@ const App: React.FC = () => {
                     shift={shift} 
                     onEdit={(s) => { setEditingShift(s); setIsModalOpen(true); }} 
                     onDelete={deleteShift}
+                    onToggleCompensation={handleToggleCompensation}
                     isInitiallyExpanded={idx === 0}
                   />
                 ))}

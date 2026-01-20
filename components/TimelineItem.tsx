@@ -6,6 +6,7 @@ interface TimelineItemProps {
   shift: ShiftWithRest;
   onEdit: (shift: Shift) => void;
   onDelete: (id: string) => void;
+  onToggleCompensation?: (shift: Shift) => void;
   isInitiallyExpanded?: boolean;
 }
 
@@ -24,10 +25,13 @@ const WorkIcon = () => (
   </svg>
 );
 
-const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, isInitiallyExpanded = false }) => {
+const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, onToggleCompensation, isInitiallyExpanded = false }) => {
   const [isExpanded, setIsExpanded] = useState(isInitiallyExpanded);
 
   const duration = calculateShiftDurationMins(shift);
+  const isOverdue = shift.restBefore?.compensationDeadline && 
+                    Date.now() > shift.restBefore.compensationDeadline && 
+                    !shift.restBefore.isCompensated;
 
   const getRestLabel = () => {
     if (!shift.restBefore) return "";
@@ -37,38 +41,63 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, is
     if (shift.restBefore.type === 'long_pause') return "Длительная пауза / Ожидание";
     
     if (hours >= 45) return "Регулярный недельный отдых";
-    if (hours >= 24) return "Сокращенный недельный отдых";
+    if (shift.restBefore.type === 'weekly_reduced') return "Сокращенный недельный отдых";
     if (hours >= 11) return "Регулярный ежедневный отдых";
     return "Сокращенный ежедневный отдых";
   };
 
   const getRestColors = () => {
     if (!shift.restBefore) return "";
+    if (shift.restBefore.isCompensated) return "border-emerald-200 text-emerald-600 bg-emerald-50/20 grayscale-[0.5]";
+    if (isOverdue) return "border-rose-500 text-rose-700 bg-rose-50 animate-pulse border-2 shadow-[0_0_15px_rgba(244,63,94,0.3)]";
+    
     const hours = shift.restBefore.durationHours;
     if (hours > 144) return "border-slate-200 text-slate-500 bg-slate-50/50";
     if (shift.restBefore.type === 'long_pause') return "border-slate-200 text-slate-400 bg-slate-50/20";
     if (hours >= 45) return "border-emerald-200/50 text-emerald-600 bg-emerald-50/30";
-    if (hours >= 24) return "border-indigo-200/50 text-indigo-600 bg-indigo-50/30";
+    if (shift.restBefore.type === 'weekly_reduced') return "border-orange-300 text-orange-700 bg-orange-50/50 border-l-8";
     return "border-blue-200/50 text-blue-600 bg-blue-50/30";
   };
 
   return (
     <div className="group space-y-3 mb-6 last:mb-0">
       {shift.restBefore && (
-        <div className={`liquid-glass mx-8 py-3 px-6 rounded-[1.8rem] text-center relative border transition-all ${getRestColors()}`}>
-          <span className="block text-[9px] font-black uppercase tracking-[0.2em] mb-0.5 opacity-70">
-            {getRestLabel()}
-          </span>
-          <span className="text-lg font-black tabular-nums tracking-tight">
-            {shift.restBefore.durationHours}ч {shift.restBefore.durationMinutes}мин
-          </span>
-          {shift.restBefore.debtHours > 0 && (
-            <div className="flex justify-center mt-1">
-              <span className="text-[8px] font-black text-rose-500 bg-white/60 px-2 py-0.5 rounded-full border border-rose-100 uppercase tracking-tighter">
-                Долг: {Math.round(shift.restBefore.debtHours * 10) / 10}ч
-              </span>
-            </div>
-          )}
+        <div className={`liquid-glass mx-6 py-4 px-6 rounded-[2rem] text-center relative border transition-all ${getRestColors()}`}>
+          <div className="flex flex-col items-center">
+            <span className="block text-[9px] font-black uppercase tracking-[0.2em] mb-1 opacity-70">
+              {shift.restBefore.isCompensated && "✅ КОРРЕКТНО "}
+              {getRestLabel()}
+            </span>
+            <span className="text-xl font-black tabular-nums tracking-tight">
+              {shift.restBefore.durationHours}ч {shift.restBefore.durationMinutes}мин
+            </span>
+            
+            {shift.restBefore.type === 'weekly_reduced' && !shift.restBefore.isCompensated && (
+              <div className="mt-2 w-full pt-2 border-t border-orange-200/50 space-y-1">
+                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-tight">
+                  <span className="text-rose-500">Долг: {Math.round(shift.restBefore.debtHours * 10) / 10}ч</span>
+                  <span className={isOverdue ? 'text-rose-600 underline' : 'text-slate-500'}>
+                    До: {new Date(shift.restBefore.compensationDeadline!).toLocaleDateString('ru-RU')}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => onToggleCompensation && onToggleCompensation(shift)}
+                  className="w-full mt-2 py-2 bg-orange-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-md"
+                >
+                  Отметить как компенсированный
+                </button>
+              </div>
+            )}
+
+            {shift.restBefore.isCompensated && (
+               <button 
+                onClick={() => onToggleCompensation && onToggleCompensation(shift)}
+                className="mt-2 text-[8px] font-black uppercase text-slate-400 underline"
+               >
+                 Отменить компенсацию
+               </button>
+            )}
+          </div>
         </div>
       )}
 

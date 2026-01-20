@@ -5,13 +5,14 @@ export interface Shift {
   endTime: string; // HH:mm
   driveHours: number;
   driveMinutes: number;
-  workHours: number; // Новое поле: прочая работа (молотки)
-  workMinutes: number; // Новое поле: прочая работа (молотки)
+  workHours: number; // прочая работа (молотки)
+  workMinutes: number; // прочая работа (молотки)
   timestamp: number;
   startLat?: number;
   startLng?: number;
   endLat?: number;
   endLng?: number;
+  isCompensated?: boolean; // Флаг: компенсирован ли сокращенный отдых ПЕРЕД этой сменой
 }
 
 export interface AppState {
@@ -22,10 +23,12 @@ export interface AppState {
 }
 
 export interface RestEvent {
-  type: 'regular' | 'reduced' | 'long_pause';
+  type: 'regular' | 'reduced' | 'weekly_reduced' | 'long_pause';
   durationHours: number;
   durationMinutes: number;
   debtHours: number;
+  compensationDeadline?: number | null;
+  isCompensated?: boolean;
 }
 
 export interface ShiftWithRest extends Shift {

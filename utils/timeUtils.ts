@@ -46,7 +46,6 @@ export const calculateLogSummary = (shifts: Shift[]) => {
   // Группируем смены по неделям для анализа отдыха
   const weeklyRests: Record<string, number> = {};
 
-  // Первый проход: находим самый длинный отдых в каждой неделе
   for (let i = 1; i < sorted.length; i++) {
     const prev = sorted[i - 1];
     const curr = sorted[i];
@@ -66,7 +65,6 @@ export const calculateLogSummary = (shifts: Shift[]) => {
     }
   }
 
-  // Второй проход: формируем события отдыха
   for (let i = 0; i < sorted.length; i++) {
     const curr = sorted[i];
     let restEvent: RestEvent | undefined;
@@ -86,18 +84,26 @@ export const calculateLogSummary = (shifts: Shift[]) => {
         const m = Math.round((diffHours - h) * 60);
         const weekKey = `${new Date(currStartTs).getFullYear()}-W${getWeekNumber(new Date(currStartTs))}`;
         
-        let type: 'regular' | 'reduced' | 'long_pause' = 'regular';
+        let type: 'regular' | 'reduced' | 'weekly_reduced' | 'long_pause' = 'regular';
         let debt = 0;
+        let deadline: number | null = null;
 
         if (diffHours >= 45) {
           type = 'regular';
         } else if (diffHours >= 24) {
-          // Если это самый длинный отдых в неделе, считаем его еженедельным
           if (weeklyRests[weekKey] === diffHours) {
-            type = 'reduced';
+            type = 'weekly_reduced';
             debt = 45 - diffHours;
+            
+            // Дедлайн: Конец текущей недели + 21 день
+            const sunday = new Date(currStartTs);
+            const day = sunday.getDay();
+            const diffToSunday = day === 0 ? 0 : 7 - day;
+            sunday.setDate(sunday.getDate() + diffToSunday);
+            sunday.setHours(23, 59, 59, 999);
+            
+            deadline = sunday.getTime() + (21 * 24 * 60 * 60 * 1000);
           } else {
-            // Иначе это просто длительная пауза, долг не начисляем
             type = 'long_pause';
             debt = 0;
           }
@@ -108,8 +114,18 @@ export const calculateLogSummary = (shifts: Shift[]) => {
           debt = 11 - diffHours;
         }
 
-        totalDebt += debt;
-        restEvent = { type, durationHours: h, durationMinutes: m, debtHours: debt };
+        if (!curr.isCompensated) {
+           totalDebt += debt;
+        }
+        
+        restEvent = { 
+          type, 
+          durationHours: h, 
+          durationMinutes: m, 
+          debtHours: debt,
+          compensationDeadline: deadline,
+          isCompensated: curr.isCompensated || false
+        };
       }
     }
     
@@ -129,7 +145,7 @@ export const getStats = (shifts: Shift[]) => {
   const prevWeekStart = currentWeekStart - (7 * 24 * 60 * 60 * 1000);
 
   let weekMins = 0;
-  let workWeekMins = 0; // Суммарные молотки
+  let workWeekMins = 0;
   let biWeekMins = 0;
   let dailyDutyMins = 0;
   let extDrivingCount = 0;
