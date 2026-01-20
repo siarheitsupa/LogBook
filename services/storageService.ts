@@ -32,7 +32,13 @@ export const storage = {
     
     if (url && key && url.startsWith('http')) {
       try {
-        supabaseInstance = createClient(url, key);
+        supabaseInstance = createClient(url, key, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+          }
+        });
         if (manualConfig) {
           localStorage.setItem(`${CLOUD_CONFIG_KEY}_url`, url);
           localStorage.setItem(`${CLOUD_CONFIG_KEY}_key`, key);
@@ -57,11 +63,16 @@ export const storage = {
   },
 
   signOut: async () => {
-    if (supabaseInstance) await supabaseInstance.auth.signOut();
-    localStorage.removeItem(`${CLOUD_CONFIG_KEY}_url`);
-    localStorage.removeItem(`${CLOUD_CONFIG_KEY}_key`);
+    if (supabaseInstance) {
+      try {
+        await supabaseInstance.auth.signOut();
+      } catch (e) {
+        console.warn("Sign out error", e);
+      }
+    }
+    // Полная очистка хранилища от следов Supabase
     Object.keys(localStorage).forEach(key => {
-      if (key.includes('supabase.auth.token') || key.includes('sb-')) {
+      if (key.includes('supabase.auth.token') || key.includes('sb-') || key.includes('driverlog_cloud_config_v1')) {
         localStorage.removeItem(key);
       }
     });
@@ -72,13 +83,17 @@ export const storage = {
     if (!supabaseInstance && !storage.initCloud()) return null;
     try {
       const { data, error } = await supabaseInstance!.auth.getSession();
-      if (error && (error.message.includes('refresh_token') || error.message.includes('not found'))) {
-        console.warn("Stale session detected, clearing storage...");
-        await storage.signOut();
-        return null;
+      if (error) {
+        if (error.message.includes('refresh_token') || error.message.includes('not found')) {
+          console.warn("Stale session detected in getSession, clearing...");
+          await storage.signOut();
+          return null;
+        }
+        throw error;
       }
       return data.session;
     } catch (e) {
+      console.error("Session error:", e);
       return null;
     }
   },
@@ -87,7 +102,8 @@ export const storage = {
     if (!supabaseInstance && !storage.initCloud()) return { data: { user: null }, error: new Error('Offline') };
     try {
       const result = await supabaseInstance!.auth.getUser();
-      if (result.error && result.error.message.includes('refresh_token')) {
+      if (result.error && (result.error.message.includes('refresh_token') || result.error.status === 401)) {
+        console.warn("User fetch failed due to auth error, signing out...");
         await storage.signOut();
       }
       return result;
@@ -99,9 +115,11 @@ export const storage = {
   onAuthChange: (callback: (session: Session | null) => void) => {
     if (!supabaseInstance && !storage.initCloud()) return () => {};
     const { data: { subscription } } = supabaseInstance!.auth.onAuthStateChange((event, session) => {
-      if (event === 'TOKEN_REFRESHED') console.log('Token refreshed');
-      if (event === 'SIGNED_OUT') callback(null);
-      else callback(session);
+      if (event === 'SIGNED_OUT') {
+        callback(null);
+      } else if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+        callback(session);
+      }
     });
     return () => subscription.unsubscribe();
   },
@@ -226,7 +244,7 @@ export const storage = {
   },
 
   deleteExpense: async (id: string): Promise<void> => {
-    const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
+    const local = JSON.parse(localStorage.getItem(EXPENSES_KEY) || '[]');
     localStorage.setItem(EXPENSES_KEY, JSON.stringify(local.filter((e: any) => e.id !== id)));
     if (supabaseInstance) {
       await supabaseInstance.from('expenses').delete().eq('id', id);
