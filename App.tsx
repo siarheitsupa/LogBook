@@ -6,7 +6,6 @@ import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
 import ExpensesModal from './components/ExpensesModal';
 import TimelineItem from './components/TimelineItem';
-import RouteMap from './components/RouteMap';
 import Dashboard from './components/Dashboard';
 import CloudSettingsModal from './components/CloudSettingsModal';
 import AuthScreen from './components/AuthScreen';
@@ -25,7 +24,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
   const [configUpdateTrigger, setConfigUpdateTrigger] = useState(0);
-  const [viewMode, setViewMode] = useState<'list' | 'map' | 'stats'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'stats'>('list');
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -137,47 +136,57 @@ const App: React.FC = () => {
   };
 
   if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="w-10 h-10 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div></div>;
-  if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-black mb-6">DriverLog Cloud</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button><CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={() => setConfigUpdateTrigger(t => t+1)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} /></div>;
+  if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-black mb-6">DriverLog Cloud</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button></div>;
   if (!session) return <AuthScreen />;
 
   return (
-    <div className="max-w-xl mx-auto min-h-screen pb-24 px-4 pt-6 bg-slate-50/50">
-      <header className="flex justify-center mb-6">
-        <div className="liquid-glass p-2 px-5 rounded-full flex items-center gap-3">
-          <div className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-white text-[10px]">🚚</div>
-          <span className="text-sm font-black text-slate-800 uppercase tracking-tight">DriverLog Pro</span>
-          <button onClick={() => storage.signOut()} className="text-[9px] font-black text-rose-500 uppercase ml-2">Выход</button>
+    <div className="max-w-xl mx-auto min-h-screen pb-24 px-4 pt-8 bg-slate-50/50">
+      {/* Красивая шапка с Professional Edition и индикатором активности */}
+      <header className="flex flex-col items-center mb-8 relative">
+        <div className="flex items-center gap-3 liquid-glass p-2.5 pr-5 pl-4 rounded-full shadow-lg">
+          <div className="w-11 h-11 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-lg overflow-hidden relative">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>
+            {appState.isActive && (
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-900 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+            )}
+          </div>
+          <div className="flex flex-col">
+            <span className="text-lg font-black tracking-tight text-slate-800 leading-none">DriverLog Pro</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 opacity-60">Professional Edition</span>
+          </div>
+          <button onClick={() => storage.signOut()} className="ml-4 text-[10px] font-black uppercase text-rose-500 px-2 py-1.5 rounded-lg active:bg-rose-50">Выйти</button>
         </div>
       </header>
 
-      {/* Центральный таймер */}
-      <div className="liquid-glass rounded-[3rem] p-8 mb-6 text-center shadow-xl border-white">
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">{restInfo.label}</span>
+      {/* Центральный таймер с восстановленной цветовой схемой */}
+      <div className="liquid-glass rounded-[3.5rem] p-8 mb-8 text-center shadow-xl border-white relative overflow-hidden">
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <span className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">{restInfo.label}</span>
         </div>
-        <h1 className="text-6xl font-black text-slate-900 mb-8 tabular-nums tracking-tighter">{restInfo.time}</h1>
-        <div className="grid grid-cols-2 gap-3">
-          <div className={`p-4 rounded-[1.8rem] transition-all ${restInfo.isRest && restInfo.mins >= 540 ? 'bg-emerald-500 text-white shadow-lg' : 'bg-slate-50 text-slate-400'}`}>
-            <span className="text-[8px] font-black uppercase block mb-1">9 ЧАСОВ</span>
-            <span className="text-lg font-black">{restInfo.isRest ? formatMinsToHHMM(Math.max(0, 540 - restInfo.mins)) : '09:00'}</span>
+        <h1 className="text-7xl font-black text-slate-900 mb-8 tabular-nums tracking-tighter">{restInfo.time}</h1>
+        <div className="grid grid-cols-2 gap-4">
+          <div className={`p-4 rounded-[2rem] transition-all duration-500 flex flex-col items-center justify-center shadow-lg ${restInfo.isRest && restInfo.mins >= 540 ? 'bg-rose-500 text-white shadow-rose-200' : 'bg-rose-50 text-rose-500'}`}>
+            <span className="text-[9px] font-black uppercase block mb-1 opacity-70">9 ЧАСОВ</span>
+            <span className="text-xl font-black">{restInfo.isRest ? formatMinsToHHMM(Math.max(0, 540 - restInfo.mins)) : '09:00'}</span>
           </div>
-          <div className={`p-4 rounded-[1.8rem] transition-all ${restInfo.isRest && restInfo.mins >= 660 ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400'}`}>
-            <span className="text-[8px] font-black uppercase block mb-1">11 ЧАСОВ</span>
-            <span className="text-lg font-black">{restInfo.isRest ? formatMinsToHHMM(Math.max(0, 660 - restInfo.mins)) : '11:00'}</span>
+          <div className={`p-4 rounded-[2rem] transition-all duration-500 flex flex-col items-center justify-center shadow-lg ${restInfo.isRest && restInfo.mins >= 660 ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-emerald-50 text-emerald-600'}`}>
+            <span className="text-[9px] font-black uppercase block mb-1 opacity-70">11 ЧАСОВ</span>
+            <span className="text-xl font-black">{restInfo.isRest ? formatMinsToHHMM(Math.max(0, 660 - restInfo.mins)) : '11:00'}</span>
           </div>
         </div>
       </div>
 
       <button 
         onClick={() => appState.isActive ? setIsModalOpen(true) : navigator.geolocation.getCurrentPosition(p => { setAppState({ isActive: true, startTime: Date.now(), startLat: p.coords.latitude, startLng: p.coords.longitude }); storage.saveState({ isActive: true, startTime: Date.now(), startLat: p.coords.latitude, startLng: p.coords.longitude }); })}
-        className={`w-full py-6 px-8 rounded-full flex items-center justify-between text-xl font-black text-white shadow-2xl transition-all mb-8 ${appState.isActive ? 'bg-rose-500' : 'bg-emerald-500'}`}
+        className={`w-full py-7 px-8 rounded-full flex items-center justify-between text-2xl font-black text-white shadow-2xl transition-all mb-10 overflow-hidden relative group ${appState.isActive ? 'bg-gradient-to-r from-rose-500 to-rose-600' : 'bg-gradient-to-r from-emerald-500 to-emerald-600'}`}
       >
-        <span className="uppercase tracking-tight">{appState.isActive ? 'Завершить смену' : 'Начать смену'}</span>
-        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">▶</div>
+        <div className="shimmer-liquid opacity-20"></div>
+        <span className="uppercase tracking-tight pl-4">{appState.isActive ? 'Завершить смену' : 'Начать смену'}</span>
+        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md border border-white/30">▶</div>
       </button>
 
       {/* Панель статистики - 8 блоков */}
-      <div className="grid grid-cols-2 gap-3 mb-8">
+      <div className="grid grid-cols-2 gap-4 mb-10">
         <StatCard label="Вождение Неделя" value={formatMinsToHHMM(stats.weekMins)} sublabel="Лимит 56ч" variant="yellow" />
         <StatCard label="Работа Неделя" value={formatMinsToHHMM(stats.workWeekMins)} sublabel="(Молотки)" variant="indigo" />
         <StatCard label="Вождение 2 нед" value={formatMinsToHHMM(stats.biWeekMins)} sublabel="Лимит 90ч" variant="green" />
@@ -189,17 +198,21 @@ const App: React.FC = () => {
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between px-2 mb-4">
-          <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter">История логов</h3>
-          <div className="flex p-1 bg-slate-100 rounded-xl">
-            <button onClick={() => setViewMode('list')} className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-lg ${viewMode === 'list' ? 'bg-white shadow-sm' : 'text-slate-400'}`}>Лог</button>
-            <button onClick={() => setViewMode('map')} className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-lg ${viewMode === 'map' ? 'bg-white shadow-sm' : 'text-slate-400'}`}>Карта</button>
+        <div className="flex items-center justify-between px-2 mb-6">
+          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">История логов</h3>
+          <div className="flex p-1 bg-white/50 rounded-2xl border shadow-sm">
+            <button onClick={() => setViewMode('list')} className={`px-5 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${viewMode === 'list' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Лог</button>
+            <button onClick={() => setViewMode('stats')} className={`px-5 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${viewMode === 'stats' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Dashboard</button>
           </div>
         </div>
 
-        {viewMode === 'list' && enrichedShifts.map((s, idx) => (
-          <TimelineItem key={s.id} shift={s} onEdit={setEditingShift} onDelete={deleteShift} onAddExpense={setActiveShiftForExpense} onToggleCompensation={() => {}} isInitiallyExpanded={idx === 0} />
-        ))}
+        {viewMode === 'list' ? (
+          enrichedShifts.map((s, idx) => (
+            <TimelineItem key={s.id} shift={s} onEdit={setEditingShift} onDelete={deleteShift} onAddExpense={setActiveShiftForExpense} onToggleCompensation={() => {}} isInitiallyExpanded={idx === 0} />
+          ))
+        ) : (
+          <Dashboard shifts={enrichedShifts} />
+        )}
       </div>
 
       <ShiftModal isOpen={isModalOpen || !!editingShift} onClose={() => { setIsModalOpen(false); setEditingShift(null); }} onSave={handleSaveShift} initialData={editingShift} />
