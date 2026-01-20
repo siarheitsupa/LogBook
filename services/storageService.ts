@@ -71,7 +71,12 @@ export const storage = {
   getSession: async (): Promise<Session | null> => {
     if (!supabaseInstance && !storage.initCloud()) return null;
     try {
-      const { data } = await supabaseInstance!.auth.getSession();
+      const { data, error } = await supabaseInstance!.auth.getSession();
+      if (error && (error.message.includes('refresh_token') || error.message.includes('not found'))) {
+        console.warn("Stale session detected, clearing storage...");
+        await storage.signOut();
+        return null;
+      }
       return data.session;
     } catch (e) {
       return null;
@@ -80,13 +85,23 @@ export const storage = {
 
   getUser: async () => {
     if (!supabaseInstance && !storage.initCloud()) return { data: { user: null }, error: new Error('Offline') };
-    return await supabaseInstance!.auth.getUser();
+    try {
+      const result = await supabaseInstance!.auth.getUser();
+      if (result.error && result.error.message.includes('refresh_token')) {
+        await storage.signOut();
+      }
+      return result;
+    } catch (e) {
+      return { data: { user: null }, error: e };
+    }
   },
 
   onAuthChange: (callback: (session: Session | null) => void) => {
     if (!supabaseInstance && !storage.initCloud()) return () => {};
-    const { data: { subscription } } = supabaseInstance!.auth.onAuthStateChange((_event, session) => {
-      callback(session);
+    const { data: { subscription } } = supabaseInstance!.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESHED') console.log('Token refreshed');
+      if (event === 'SIGNED_OUT') callback(null);
+      else callback(session);
     });
     return () => subscription.unsubscribe();
   },
@@ -211,7 +226,7 @@ export const storage = {
   },
 
   deleteExpense: async (id: string): Promise<void> => {
-    const local = JSON.parse(localStorage.getItem(EXPENSES_KEY) || '[]');
+    const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     localStorage.setItem(EXPENSES_KEY, JSON.stringify(local.filter((e: any) => e.id !== id)));
     if (supabaseInstance) {
       await supabaseInstance.from('expenses').delete().eq('id', id);

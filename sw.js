@@ -1,15 +1,14 @@
-const CACHE_NAME = 'driverlog-v3';
+const CACHE_NAME = 'driverlog-pro-v4';
 const ASSETS_TO_CACHE = [
   '/',
-  '/index.html',
-  '/manifest.json'
+  '/index.html'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('DriverLog: Caching app shell');
-      return cache.addAll(ASSETS_TO_CACHE);
+      // Кэшируем только критические файлы, не падаем если иконок нет
+      return cache.addAll(ASSETS_TO_CACHE).catch(err => console.warn('SW: Cache addAll warning', err));
     })
   );
   self.skipWaiting();
@@ -27,20 +26,26 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Обработка навигационных запросов (переход на страницы)
+  // Для API запросов и Supabase используем только сеть
+  if (event.request.url.includes('supabase.co') || event.request.url.includes('google')) {
+    return;
+  }
+
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match('/');
-      })
+      fetch(event.request).catch(() => caches.match('/'))
     );
     return;
   }
 
-  // Стратегия для остальных ресурсов: сначала кэш, потом сеть
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+      return response || fetch(event.request).catch(() => {
+        // Если это картинка (иконка), которой нет, возвращаем пустой ответ вместо 404
+        if (event.request.destination === 'image') {
+          return new Response('', { status: 404 });
+        }
+      });
     })
   );
 });
