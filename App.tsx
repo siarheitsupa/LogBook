@@ -141,7 +141,7 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-xl mx-auto min-h-screen pb-24 px-4 pt-8 bg-slate-50/50">
-      {/* Шапка с точкой настроек и индикатором активности */}
+      {/* Шапка с мигающей точкой настроек и индикатором активности */}
       <header className="flex flex-col items-center mb-8 relative">
         <div className="flex items-center gap-3 liquid-glass p-2.5 pr-4 pl-4 rounded-full shadow-lg">
           <div className="w-11 h-11 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-lg overflow-hidden relative">
@@ -155,9 +155,13 @@ const App: React.FC = () => {
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 opacity-60">Professional Edition</span>
           </div>
           <div className="flex items-center gap-2 ml-2">
-            <button onClick={() => setIsCloudModalOpen(true)} className="relative p-2 text-slate-400 hover:text-slate-600 transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-              <span className="absolute top-1 right-1 w-2 h-2 bg-emerald-500 rounded-full border border-white animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.5)]"></span>
+            {/* Вместо шестеренки просто мигающая зеленая точка */}
+            <button 
+              onClick={() => setIsCloudModalOpen(true)} 
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100/50 transition-colors"
+              title="Настройки облака"
+            >
+              <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
             </button>
             <button onClick={() => storage.signOut()} className="text-[9px] font-black uppercase text-rose-500 px-2 py-2 rounded-xl active:bg-rose-50">Выйти</button>
           </div>
