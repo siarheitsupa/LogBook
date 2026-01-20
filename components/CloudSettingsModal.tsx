@@ -82,12 +82,14 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
           </button>
           {showSql && (
             <div className="mt-2 space-y-2">
-              <p className="text-[9px] text-amber-800 font-medium mb-2">Выполните это в SQL Editor, чтобы добавить колонки координат без удаления данных:</p>
+              <p className="text-[9px] text-amber-800 font-medium mb-2">Выполните это в SQL Editor, чтобы добавить колонки координат и работы:</p>
               <pre className="p-2 bg-white rounded-lg text-[7px] overflow-x-auto text-slate-600 font-mono leading-tight border border-amber-200">
                 {`ALTER TABLE shifts ADD COLUMN IF NOT EXISTS start_lat FLOAT8;
 ALTER TABLE shifts ADD COLUMN IF NOT EXISTS start_lng FLOAT8;
 ALTER TABLE shifts ADD COLUMN IF NOT EXISTS end_lat FLOAT8;
-ALTER TABLE shifts ADD COLUMN IF NOT EXISTS end_lng FLOAT8;`}
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS end_lng FLOAT8;
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS work_hours INT4 DEFAULT 0;
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS work_minutes INT4 DEFAULT 0;`}
               </pre>
             </div>
           )}

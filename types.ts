@@ -5,6 +5,8 @@ export interface Shift {
   endTime: string; // HH:mm
   driveHours: number;
   driveMinutes: number;
+  workHours: number; // Новое поле: прочая работа (молотки)
+  workMinutes: number; // Новое поле: прочая работа (молотки)
   timestamp: number;
   startLat?: number;
   startLng?: number;

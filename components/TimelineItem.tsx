@@ -75,7 +75,10 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, is
           
           <div className="flex items-center gap-5">
             <div className="flex flex-col items-end">
-              <span className="text-base font-black text-blue-600 tracking-tight">Руль: {shift.driveHours}ч {shift.driveMinutes}м</span>
+              <div className="flex gap-2">
+                <span className="text-sm font-black text-amber-600 tracking-tight">⚒️ {shift.workHours}ч {shift.workMinutes}м</span>
+                <span className="text-sm font-black text-blue-600 tracking-tight">🚗 {shift.driveHours}ч {shift.driveMinutes}м</span>
+              </div>
               <span className="text-[11px] font-black text-slate-400 uppercase tracking-tighter opacity-50 mt-0.5">СМЕНА: {formatMinsToHHMM(duration)}</span>
             </div>
             <div className={`w-9 h-9 rounded-full flex items-center justify-center bg-white/50 backdrop-blur-md shadow-inner transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`}>

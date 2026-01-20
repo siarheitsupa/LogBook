@@ -15,6 +15,8 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
   const [end, setEnd] = useState('18:00');
   const [driveH, setDriveH] = useState('0');
   const [driveM, setDriveM] = useState('0');
+  const [workH, setWorkH] = useState('0');
+  const [workM, setWorkM] = useState('0');
 
   useEffect(() => {
     if (isOpen) {
@@ -24,10 +26,11 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         setEnd(initialData.endTime);
         setDriveH(initialData.driveHours.toString());
         setDriveM(initialData.driveMinutes.toString());
+        setWorkH((initialData.workHours || 0).toString());
+        setWorkM((initialData.workMinutes || 0).toString());
       } else {
         const now = new Date();
         setDate(now.toISOString().split('T')[0]);
-        // Приоритет отдаем времени, которое было зафиксировано при нажатии кнопки "Начать смену"
         if (defaultStartTime) {
           setStart(defaultStartTime);
         } else {
@@ -36,6 +39,8 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         setEnd(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
         setDriveH('0');
         setDriveM('0');
+        setWorkH('0');
+        setWorkM('0');
       }
     }
   }, [initialData, isOpen, defaultStartTime]);
@@ -51,6 +56,8 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
       endTime: end,
       driveHours: parseInt(driveH) || 0,
       driveMinutes: parseInt(driveM) || 0,
+      workHours: parseInt(workH) || 0,
+      workMinutes: parseInt(workM) || 0,
       timestamp: new Date(`${date}T${start}`).getTime()
     };
     onSave(shift);
@@ -93,28 +100,54 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
               />
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1 ml-1">Время вождения</label>
-            <div className="flex items-center gap-2">
-              <input 
-                type="number" 
-                placeholder="ЧЧ" 
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:ring-2 ring-blue-500 outline-none" 
-                value={driveH} 
-                onChange={e => setDriveH(e.target.value)}
-                min="0" max="24"
-                required 
-              />
-              <span className="font-bold text-slate-400">:</span>
-              <input 
-                type="number" 
-                placeholder="ММ" 
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:ring-2 ring-blue-500 outline-none" 
-                value={driveM} 
-                onChange={e => setDriveM(e.target.value)}
-                min="0" max="59"
-                required 
-              />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1 ml-1">Вождение</label>
+              <div className="flex items-center gap-1">
+                <input 
+                  type="number" 
+                  placeholder="ЧЧ" 
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:ring-2 ring-emerald-500 outline-none" 
+                  value={driveH} 
+                  onChange={e => setDriveH(e.target.value)}
+                  min="0" max="24"
+                  required 
+                />
+                <span className="font-bold text-slate-400">:</span>
+                <input 
+                  type="number" 
+                  placeholder="ММ" 
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:ring-2 ring-emerald-500 outline-none" 
+                  value={driveM} 
+                  onChange={e => setDriveM(e.target.value)}
+                  min="0" max="59"
+                  required 
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1 ml-1">Работа (⚒️)</label>
+              <div className="flex items-center gap-1">
+                <input 
+                  type="number" 
+                  placeholder="ЧЧ" 
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:ring-2 ring-amber-500 outline-none" 
+                  value={workH} 
+                  onChange={e => setWorkH(e.target.value)}
+                  min="0" max="24"
+                  required 
+                />
+                <span className="font-bold text-slate-400">:</span>
+                <input 
+                  type="number" 
+                  placeholder="ММ" 
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-medium focus:ring-2 ring-amber-500 outline-none" 
+                  value={workM} 
+                  onChange={e => setWorkM(e.target.value)}
+                  min="0" max="59"
+                  required 
+                />
+              </div>
             </div>
           </div>
           <div className="flex gap-3 pt-4">

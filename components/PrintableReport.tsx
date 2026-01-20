@@ -58,6 +58,7 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ shifts, stats, userEm
               <th className="border border-black p-2 text-left">Дата</th>
               <th className="border border-black p-2 text-center">Начало</th>
               <th className="border border-black p-2 text-center">Конец</th>
+              <th className="border border-black p-2 text-right">Работа</th>
               <th className="border border-black p-2 text-right">Вождение</th>
               <th className="border border-black p-2 text-right">Смена</th>
             </tr>
@@ -68,6 +69,7 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ shifts, stats, userEm
                 <td className="border border-black p-2 font-bold">{s.date}</td>
                 <td className="border border-black p-2 text-center">{s.startTime}</td>
                 <td className="border border-black p-2 text-center">{s.endTime}</td>
+                <td className="border border-black p-2 text-right">{s.workHours || 0}ч {s.workMinutes || 0}м</td>
                 <td className="border border-black p-2 text-right font-black">{s.driveHours}ч {s.driveMinutes}м</td>
                 <td className="border border-black p-2 text-right">{formatMinsToHHMM(calculateShiftDurationMins(s))}</td>
               </tr>
