@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ShiftWithRest, Shift } from '../types';
 import { calculateShiftDurationMins, formatMinsToHHMM } from '../utils/timeUtils';
@@ -19,8 +18,8 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, is
     if (!shift.restBefore) return "";
     const hours = shift.restBefore.durationHours + (shift.restBefore.durationMinutes / 60);
     
-    // Специальный заголовок для очень длинных пауз
     if (hours > 144) return "Длительный перерыв / Отпуск";
+    if (shift.restBefore.type === 'long_pause') return "Длительная пауза / Ожидание";
     
     if (hours >= 45) return "Регулярный недельный отдых";
     if (hours >= 24) return "Сокращенный недельный отдых";
@@ -32,6 +31,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, is
     if (!shift.restBefore) return "";
     const hours = shift.restBefore.durationHours;
     if (hours > 144) return "border-slate-200 text-slate-500 bg-slate-50/50";
+    if (shift.restBefore.type === 'long_pause') return "border-slate-200 text-slate-400 bg-slate-50/20";
     if (hours >= 45) return "border-emerald-200/50 text-emerald-600 bg-emerald-50/30";
     if (hours >= 24) return "border-indigo-200/50 text-indigo-600 bg-indigo-50/30";
     return "border-blue-200/50 text-blue-600 bg-blue-50/30";

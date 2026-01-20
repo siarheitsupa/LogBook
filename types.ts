@@ -1,4 +1,3 @@
-
 export interface Shift {
   id: string;
   date: string; // YYYY-MM-DD
@@ -21,7 +20,7 @@ export interface AppState {
 }
 
 export interface RestEvent {
-  type: 'regular' | 'reduced';
+  type: 'regular' | 'reduced' | 'long_pause';
   durationHours: number;
   durationMinutes: number;
   debtHours: number;
