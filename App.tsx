@@ -136,42 +136,48 @@ const App: React.FC = () => {
   };
 
   if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="w-10 h-10 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div></div>;
-  if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-black mb-6">DriverLog Cloud</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button></div>;
+  if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-black mb-6">DriverLog Cloud</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button><CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={() => setConfigUpdateTrigger(t => t+1)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} /></div>;
   if (!session) return <AuthScreen />;
 
   return (
     <div className="max-w-xl mx-auto min-h-screen pb-24 px-4 pt-8 bg-slate-50/50">
-      {/* Красивая шапка с Professional Edition и индикатором активности */}
+      {/* Шапка с точкой настроек и индикатором активности */}
       <header className="flex flex-col items-center mb-8 relative">
-        <div className="flex items-center gap-3 liquid-glass p-2.5 pr-5 pl-4 rounded-full shadow-lg">
+        <div className="flex items-center gap-3 liquid-glass p-2.5 pr-4 pl-4 rounded-full shadow-lg">
           <div className="w-11 h-11 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-lg overflow-hidden relative">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>
             {appState.isActive && (
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-900 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-900 animate-pulse"></span>
             )}
           </div>
           <div className="flex flex-col">
             <span className="text-lg font-black tracking-tight text-slate-800 leading-none">DriverLog Pro</span>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 opacity-60">Professional Edition</span>
           </div>
-          <button onClick={() => storage.signOut()} className="ml-4 text-[10px] font-black uppercase text-rose-500 px-2 py-1.5 rounded-lg active:bg-rose-50">Выйти</button>
+          <div className="flex items-center gap-2 ml-2">
+            <button onClick={() => setIsCloudModalOpen(true)} className="relative p-2 text-slate-400 hover:text-slate-600 transition-colors">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              <span className="absolute top-1 right-1 w-2 h-2 bg-emerald-500 rounded-full border border-white animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.5)]"></span>
+            </button>
+            <button onClick={() => storage.signOut()} className="text-[9px] font-black uppercase text-rose-500 px-2 py-2 rounded-xl active:bg-rose-50">Выйти</button>
+          </div>
         </div>
       </header>
 
-      {/* Центральный таймер с восстановленной цветовой схемой */}
+      {/* Центральный таймер с насыщенной цветовой схемой */}
       <div className="liquid-glass rounded-[3.5rem] p-8 mb-8 text-center shadow-xl border-white relative overflow-hidden">
         <div className="flex items-center justify-center gap-2 mb-4">
           <span className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">{restInfo.label}</span>
         </div>
         <h1 className="text-7xl font-black text-slate-900 mb-8 tabular-nums tracking-tighter">{restInfo.time}</h1>
         <div className="grid grid-cols-2 gap-4">
-          <div className={`p-4 rounded-[2rem] transition-all duration-500 flex flex-col items-center justify-center shadow-lg ${restInfo.isRest && restInfo.mins >= 540 ? 'bg-rose-500 text-white shadow-rose-200' : 'bg-rose-50 text-rose-500'}`}>
-            <span className="text-[9px] font-black uppercase block mb-1 opacity-70">9 ЧАСОВ</span>
-            <span className="text-xl font-black">{restInfo.isRest ? formatMinsToHHMM(Math.max(0, 540 - restInfo.mins)) : '09:00'}</span>
+          <div className={`p-5 rounded-[2.2rem] transition-all duration-500 flex flex-col items-center justify-center shadow-md ${restInfo.isRest && restInfo.mins >= 540 ? 'bg-rose-500 text-white shadow-rose-200' : 'bg-rose-100 text-rose-600'}`}>
+            <span className="text-[10px] font-black uppercase block mb-1 opacity-70">9 ЧАСОВ</span>
+            <span className="text-2xl font-black">{restInfo.isRest ? formatMinsToHHMM(Math.max(0, 540 - restInfo.mins)) : '09:00'}</span>
           </div>
-          <div className={`p-4 rounded-[2rem] transition-all duration-500 flex flex-col items-center justify-center shadow-lg ${restInfo.isRest && restInfo.mins >= 660 ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-emerald-50 text-emerald-600'}`}>
-            <span className="text-[9px] font-black uppercase block mb-1 opacity-70">11 ЧАСОВ</span>
-            <span className="text-xl font-black">{restInfo.isRest ? formatMinsToHHMM(Math.max(0, 660 - restInfo.mins)) : '11:00'}</span>
+          <div className={`p-5 rounded-[2.2rem] transition-all duration-500 flex flex-col items-center justify-center shadow-md ${restInfo.isRest && restInfo.mins >= 660 ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-emerald-100 text-emerald-700'}`}>
+            <span className="text-[10px] font-black uppercase block mb-1 opacity-70">11 ЧАСОВ</span>
+            <span className="text-2xl font-black">{restInfo.isRest ? formatMinsToHHMM(Math.max(0, 660 - restInfo.mins)) : '11:00'}</span>
           </div>
         </div>
       </div>
@@ -182,10 +188,13 @@ const App: React.FC = () => {
       >
         <div className="shimmer-liquid opacity-20"></div>
         <span className="uppercase tracking-tight pl-4">{appState.isActive ? 'Завершить смену' : 'Начать смену'}</span>
-        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md border border-white/30">▶</div>
+        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md border border-white/30 shadow-inner">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            {appState.isActive ? <rect x="6" y="6" width="12" height="12" rx="2" /> : <path d="M8 5v14l11-7z" />}
+          </svg>
+        </div>
       </button>
 
-      {/* Панель статистики - 8 блоков */}
       <div className="grid grid-cols-2 gap-4 mb-10">
         <StatCard label="Вождение Неделя" value={formatMinsToHHMM(stats.weekMins)} sublabel="Лимит 56ч" variant="yellow" />
         <StatCard label="Работа Неделя" value={formatMinsToHHMM(stats.workWeekMins)} sublabel="(Молотки)" variant="indigo" />
