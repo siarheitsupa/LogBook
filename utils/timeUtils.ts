@@ -19,7 +19,6 @@ export const getMonday = (date: Date) => {
   return d;
 };
 
-// Получение номера недели для группировки
 const getWeekNumber = (d: Date) => {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -43,7 +42,6 @@ export const calculateLogSummary = (shifts: Shift[]) => {
   const enriched: ShiftWithRest[] = [];
   let totalDebt = 0;
 
-  // Группируем смены по неделям для анализа отдыха
   const weeklyRests: Record<string, number> = {};
 
   for (let i = 1; i < sorted.length; i++) {
@@ -94,14 +92,11 @@ export const calculateLogSummary = (shifts: Shift[]) => {
           if (weeklyRests[weekKey] === diffHours) {
             type = 'weekly_reduced';
             debt = 45 - diffHours;
-            
-            // Дедлайн: Конец текущей недели + 21 день
             const sunday = new Date(currStartTs);
             const day = sunday.getDay();
             const diffToSunday = day === 0 ? 0 : 7 - day;
             sunday.setDate(sunday.getDate() + diffToSunday);
             sunday.setHours(23, 59, 59, 999);
-            
             deadline = sunday.getTime() + (21 * 24 * 60 * 60 * 1000);
           } else {
             type = 'long_pause';
@@ -145,24 +140,19 @@ export const getStats = (shifts: Shift[]) => {
   const prevWeekStart = currentWeekStart - (7 * 24 * 60 * 60 * 1000);
 
   let weekMins = 0;
-  let workWeekMins = 0;
   let biWeekMins = 0;
   let dailyDutyMins = 0;
   let extDrivingCount = 0;
-  let extDutyCount = 0;
 
   shifts.forEach(s => {
     const shiftTimestamp = new Date(s.date).getTime();
     const driveMins = s.driveHours * 60 + s.driveMinutes;
-    const workMins = (s.workHours || 0) * 60 + (s.workMinutes || 0);
     const dutyMins = calculateShiftDurationMins(s);
 
     if (shiftTimestamp >= currentWeekStart) {
       weekMins += driveMins;
-      workWeekMins += workMins;
-      // Регламент ЕС 561/2006: ежедневное время вождения может быть продлено до 10 часов не более 2 раз в неделю.
+      // Правило ЕС 561/2006: не более 2 раз по 10 часов в неделю
       if (driveMins > 9 * 60) extDrivingCount++;
-      if (dutyMins > 13 * 60) extDutyCount++;
     }
     
     if (shiftTimestamp >= prevWeekStart) {
@@ -174,5 +164,5 @@ export const getStats = (shifts: Shift[]) => {
     }
   });
 
-  return { weekMins, workWeekMins, biWeekMins, dailyDutyMins, extDrivingCount, extDutyCount };
+  return { weekMins, biWeekMins, dailyDutyMins, extDrivingCount };
 };
