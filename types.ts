@@ -1,3 +1,10 @@
+
+export interface Break {
+  start: string; // HH:mm
+  end: string; // HH:mm
+  durationMinutes: number;
+}
+
 export interface Shift {
   id: string;
   date: string; // YYYY-MM-DD
@@ -7,6 +14,7 @@ export interface Shift {
   driveMinutes: number;
   workHours: number; // прочая работа (молотки)
   workMinutes: number; // прочая работа (молотки)
+  breaks?: Break[]; // Массив перерывов
   timestamp: number;
   startLat?: number;
   startLng?: number;
@@ -47,6 +55,7 @@ export interface RestEvent {
 export interface ShiftWithRest extends Shift {
   restBefore?: RestEvent;
   expenses?: Expense[];
+  violation?: string; // Текст нарушения для отображения
 }
 
 export interface CloudConfig {

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { CloudConfig } from '../types';
 import { storage } from '../services/storageService';
@@ -21,7 +22,7 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
 
   if (!isOpen) return null;
 
-  const fullSql = `-- 1. Таблица смен
+  const fullSql = `-- 1. Таблица смен (ОБНОВЛЕНА: добавлено поле breaks)
 CREATE TABLE IF NOT EXISTS shifts (
   id TEXT PRIMARY KEY,
   date TEXT,
@@ -31,12 +32,16 @@ CREATE TABLE IF NOT EXISTS shifts (
   drive_minutes INT,
   work_hours INT,
   work_minutes INT,
+  breaks JSONB DEFAULT '[]'::jsonb, -- Хранение перерывов
   timestamp BIGINT,
   user_id UUID REFERENCES auth.users(id) DEFAULT auth.uid(),
   start_lat FLOAT8, start_lng FLOAT8,
   end_lat FLOAT8, end_lng FLOAT8,
   is_compensated BOOLEAN DEFAULT FALSE
 );
+
+-- Если таблица уже существует, добавьте колонку:
+-- ALTER TABLE shifts ADD COLUMN IF NOT EXISTS breaks JSONB DEFAULT '[]'::jsonb;
 
 -- 2. Таблица расходов
 CREATE TABLE IF NOT EXISTS expenses (
