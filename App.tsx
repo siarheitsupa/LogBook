@@ -76,7 +76,19 @@ const App: React.FC = () => {
 
   const handleToggleCompensation = async (shiftWithRest: ShiftWithRest) => {
     const shiftToUpdate: Shift = {
-      ...shiftWithRest,
+      id: shiftWithRest.id,
+      date: shiftWithRest.date,
+      startTime: shiftWithRest.startTime,
+      endTime: shiftWithRest.endTime,
+      driveHours: shiftWithRest.driveHours,
+      driveMinutes: shiftWithRest.driveMinutes,
+      workHours: shiftWithRest.workHours || 0,
+      workMinutes: shiftWithRest.workMinutes || 0,
+      timestamp: shiftWithRest.timestamp,
+      startLat: shiftWithRest.startLat,
+      startLng: shiftWithRest.startLng,
+      endLat: shiftWithRest.endLat,
+      endLng: shiftWithRest.endLng,
       isCompensated: !shiftWithRest.isCompensated
     };
     await storage.saveShift(shiftToUpdate);
@@ -138,46 +150,49 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto p-4 space-y-6">
-        {/* Statistics Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+      <main className="max-w-4xl mx-auto p-4 space-y-6">
+        {/* Statistics Grid - Все 5 карточек на месте */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           <StatCard label="Неделя" value={formatMinsToHHMM(stats.weekMins)} variant="blue" sublabel="Вождение" />
           <StatCard label="2 Недели" value={formatMinsToHHMM(stats.biWeekMins)} variant="purple" sublabel="Вождение" />
           <StatCard label="Долг" value={`${Math.ceil(enrichedData.totalDebt)}ч`} variant="rose" sublabel="Отдых" />
-          {/* Возвращена и исправлена карточка 10ч */}
+          {/* Исправлено на 0/2 согласно ЕС 561/2006 */}
           <StatCard label="10ч доступно" value={`${stats.extDrivingCount}/2`} variant="yellow" sublabel="На этой неделе" />
           <StatCard label="Сегодня" value={formatMinsToHHMM(stats.dailyDutyMins)} variant="emerald" sublabel="Смена" />
         </div>
 
-        {/* AI Assistant */}
-        <div className="liquid-glass p-6 rounded-[2.5rem] border-blue-100/50">
+        {/* AI Assistant - Восстановлен визуальный стиль */}
+        <div className="liquid-glass p-6 rounded-[2.5rem] border-blue-100/50 shadow-xl shadow-blue-50/50">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">AI Анализ (561/2006)</h3>
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-2 h-4 bg-blue-600 rounded-full animate-pulse"></span>
+              AI Анализ (561/2006)
+            </h3>
             <button 
               onClick={handleAiAnalysis} 
               disabled={isAiLoading || shifts.length === 0}
-              className="px-5 py-2.5 bg-slate-900 text-white text-[10px] font-black uppercase rounded-xl active:scale-95 transition-all shadow-xl shadow-slate-200"
+              className="px-6 py-2.5 bg-slate-900 text-white text-[10px] font-black uppercase rounded-2xl active:scale-95 transition-all shadow-xl shadow-slate-200 disabled:opacity-50"
             >
               {isAiLoading ? 'Думаю...' : 'Запустить'}
             </button>
           </div>
           {aiAnalysis ? (
-            <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 text-[12px] font-medium leading-relaxed text-slate-700 animate-in fade-in slide-in-from-top-1">
+            <div className="p-5 bg-blue-50/40 rounded-[2rem] border border-blue-100 text-[12px] font-medium leading-relaxed text-slate-700 animate-in fade-in slide-in-from-top-1">
               {aiAnalysis}
             </div>
           ) : (
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center py-2 opacity-50">
-              Нажмите "Запустить" для проверки нарушений
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center py-4 opacity-50">
+              Нажмите "Запустить" для мгновенной проверки на нарушения
             </p>
           )}
         </div>
 
-        <div className="flex p-1 bg-slate-100 rounded-2xl">
+        <div className="flex p-1.5 bg-slate-100 rounded-[2rem]">
           {(['list', 'stats', 'map'] as const).map(m => (
             <button 
               key={m}
               onClick={() => setViewMode(m)}
-              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${viewMode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all ${viewMode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
             >
               {m === 'list' ? 'Лента' : m === 'stats' ? 'Дашборд' : 'Карта'}
             </button>
@@ -198,8 +213,11 @@ const App: React.FC = () => {
                 />
               ))
             ) : (
-              <div className="text-center py-20 bg-white/50 rounded-[3rem] border border-dashed border-slate-200">
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Нет записей</p>
+              <div className="text-center py-24 bg-white/50 rounded-[4rem] border border-dashed border-slate-200">
+                <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+                </div>
+                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Журнал пуст</p>
               </div>
             )}
           </div>
@@ -211,9 +229,9 @@ const App: React.FC = () => {
 
       <button 
         onClick={() => { setEditingShift(null); setIsModalOpen(true); }}
-        className="fixed bottom-8 right-8 w-16 h-16 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-all z-40"
+        className="fixed bottom-8 right-8 w-18 h-18 bg-blue-600 text-white rounded-full shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] flex items-center justify-center active:scale-90 hover:scale-105 transition-all z-40 border-4 border-white"
       >
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
       </button>

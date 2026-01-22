@@ -147,7 +147,6 @@ export const getStats = (shifts: Shift[]) => {
   shifts.forEach(s => {
     const shiftTimestamp = new Date(s.date).getTime();
     const driveMins = s.driveHours * 60 + s.driveMinutes;
-    const dutyMins = calculateShiftDurationMins(s);
 
     if (shiftTimestamp >= currentWeekStart) {
       weekMins += driveMins;
@@ -160,7 +159,7 @@ export const getStats = (shifts: Shift[]) => {
     }
 
     if (shiftTimestamp >= todayStart) {
-      dailyDutyMins += dutyMins;
+      dailyDutyMins += calculateShiftDurationMins(s);
     }
   });
 
