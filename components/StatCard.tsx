@@ -1,42 +1,39 @@
-
-import React from 'react';
+import React, { useMemo } from 'react';
 
 interface StatCardProps {
   label: string;
   value: string;
   sublabel?: string;
-  variant: 'yellow' | 'orange' | 'green' | 'blue' | 'indigo' | 'purple';
+  variant: 'yellow' | 'green' | 'blue' | 'purple' | 'orange' | 'indigo' | 'rose' | 'emerald';
 }
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, sublabel, variant }) => {
-  const styles = {
-    yellow: 'bg-amber-50 text-amber-900 border-amber-100',
-    orange: 'bg-orange-50 text-orange-900 border-orange-100',
-    green: 'bg-emerald-50 text-emerald-900 border-emerald-100',
-    blue: 'bg-blue-50 text-blue-900 border-blue-100',
-    indigo: 'bg-indigo-50 text-indigo-900 border-indigo-100',
-    purple: 'bg-purple-50 text-purple-900 border-purple-100',
-  };
+  const animationDelay = useMemo(() => `${(Math.random() * -5).toFixed(2)}s`, []);
 
-  const labelColors = {
-    yellow: 'text-amber-700/60',
-    orange: 'text-orange-700/60',
-    green: 'text-emerald-700/60',
-    blue: 'text-blue-700/60',
-    indigo: 'text-indigo-700/60',
-    purple: 'text-purple-700/60',
+  const styles = {
+    yellow: 'bg-amber-400/5 text-amber-900 border-amber-100/50 shadow-amber-100/10',
+    green: 'bg-emerald-400/5 text-emerald-900 border-emerald-100/50 shadow-emerald-100/10',
+    blue: 'bg-blue-400/5 text-blue-900 border-blue-100/50 shadow-blue-100/10',
+    purple: 'bg-purple-400/5 text-purple-900 border-purple-100/50 shadow-purple-100/10',
+    orange: 'bg-orange-400/5 text-orange-900 border-orange-100/50 shadow-orange-100/10',
+    indigo: 'bg-indigo-400/5 text-indigo-900 border-indigo-100/50 shadow-indigo-100/10',
+    rose: 'bg-rose-400/5 text-rose-900 border-rose-100/50 shadow-rose-100/10',
+    emerald: 'bg-emerald-500/10 text-emerald-900 border-emerald-200/50 shadow-emerald-100/10',
   };
 
   return (
-    <div className={`p-6 rounded-[2.5rem] border shadow-sm flex flex-col items-center justify-center text-center transition-all active:scale-95 ${styles[variant]}`}>
-      <span className="text-3xl font-black mb-1 tracking-tighter tabular-nums">
+    <div 
+      className={`p-4 rounded-[2rem] border shadow-lg flex flex-col items-center justify-center text-center transition-all hover:scale-[1.02] active:scale-95 animate-float backdrop-blur-md ${styles[variant]}`}
+      style={{ animationDelay }}
+    >
+      <span className="text-xl font-black mb-1 tracking-tighter tabular-nums text-slate-800">
         {value}
       </span>
-      <span className={`text-[10px] font-black leading-none uppercase tracking-widest mb-1 ${labelColors[variant]}`}>
+      <span className="text-[9px] font-black leading-tight opacity-50 uppercase tracking-widest px-1 mb-1.5 h-6 flex items-center">
         {label}
       </span>
       {sublabel && (
-        <span className="text-[9px] font-bold opacity-30 uppercase tracking-widest">
+        <span className="text-[8px] font-black bg-white/80 text-slate-400 px-2 py-0.5 rounded-full border border-white/40 whitespace-nowrap">
           {sublabel}
         </span>
       )}
