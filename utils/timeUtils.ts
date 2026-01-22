@@ -1,3 +1,4 @@
+
 import { Shift, RestEvent, ShiftWithRest } from '../types';
 
 export const pad = (n: number) => n.toString().padStart(2, '0');
@@ -36,6 +37,44 @@ export const calculateShiftDurationMins = (shift: Shift): number => {
     diff += 24 * 60 * 60 * 1000;
   }
   return diff / (1000 * 60);
+};
+
+export interface WeekGroupData {
+  weekStart: number; // timestamp понедельника
+  weekEnd: number;   // timestamp воскресенья
+  totalDriveMins: number;
+  shifts: ShiftWithRest[];
+  isCurrentWeek: boolean;
+}
+
+export const groupShiftsByWeek = (shifts: ShiftWithRest[]): WeekGroupData[] => {
+  const groups: Record<number, WeekGroupData> = {};
+  const currentMonday = getMonday(new Date()).getTime();
+
+  shifts.forEach(shift => {
+    const date = new Date(shift.date);
+    const monday = getMonday(date).getTime();
+
+    if (!groups[monday]) {
+      const sunday = new Date(monday);
+      sunday.setDate(sunday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+
+      groups[monday] = {
+        weekStart: monday,
+        weekEnd: sunday.getTime(),
+        totalDriveMins: 0,
+        shifts: [],
+        isCurrentWeek: monday === currentMonday
+      };
+    }
+
+    groups[monday].shifts.push(shift);
+    groups[monday].totalDriveMins += (shift.driveHours * 60) + shift.driveMinutes;
+  });
+
+  // Превращаем в массив и сортируем от новых к старым
+  return Object.values(groups).sort((a, b) => b.weekStart - a.weekStart);
 };
 
 export const calculateLogSummary = (shifts: Shift[]) => {

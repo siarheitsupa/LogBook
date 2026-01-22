@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Shift, AppState, CloudConfig, Expense, ShiftWithRest } from './types';
 import { storage } from './services/storageService';
 import { analyzeLogs } from './services/geminiService';
-import { formatMinsToHHMM, getStats, calculateLogSummary, pad, getMonday } from './utils/timeUtils';
+import { formatMinsToHHMM, getStats, calculateLogSummary, pad, getMonday, groupShiftsByWeek } from './utils/timeUtils';
 import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
 import ExpensesModal from './components/ExpensesModal';
@@ -11,6 +11,7 @@ import TimelineItem from './components/TimelineItem';
 import Dashboard from './components/Dashboard';
 import CloudSettingsModal from './components/CloudSettingsModal';
 import AuthScreen from './components/AuthScreen';
+import WeekGroup from './components/WeekGroup';
 import { Session } from '@supabase/supabase-js';
 
 const App: React.FC = () => {
@@ -87,6 +88,9 @@ const App: React.FC = () => {
       expenses: expenses.filter(e => e.shiftId === s.id)
     }));
   }, [shifts, expenses]);
+
+  // Группировка смен по неделям
+  const groupedShifts = useMemo(() => groupShiftsByWeek(enrichedShifts), [enrichedShifts]);
 
   const { totalDebt } = useMemo(() => calculateLogSummary(shifts), [shifts]);
   const stats = useMemo(() => getStats(shifts), [shifts]);
@@ -224,10 +228,9 @@ const App: React.FC = () => {
         <StatCard label="Вождение Неделя" value={formatMinsToHHMM(stats.weekMins)} sublabel="Лимит 56ч" variant="yellow" />
         <StatCard label="Работа Неделя" value={formatMinsToHHMM(stats.workWeekMins)} sublabel="(Молотки)" variant="indigo" />
         <StatCard label="Вождение 2 нед" value={formatMinsToHHMM(stats.biWeekMins)} sublabel="Лимит 90ч" variant="green" />
-        <StatCard label="10ч доступно" value={`${stats.extDrivingCount}/2`} sublabel="На этой неделе" variant="blue" />
+        <StatCard label="10ч доступно" value={`${Math.max(0, 2 - stats.extDrivingCount)}/2`} sublabel="На этой неделе" variant="blue" />
         <StatCard label="Долг отдыха" value={`${Math.ceil(totalDebt)}ч`} sublabel="К возврату" variant="rose" />
         <StatCard label="Траты неделя" value={`${expenses.filter(e => e.currency === 'EUR' && new Date(e.timestamp) >= getMonday(new Date())).reduce((a,b)=>a+b.amount,0)} €`} sublabel="В евро" variant="orange" />
-        {/* Замененная карточка: вместо количества смен показываем доступные девятки */}
         <StatCard label="9ч Отдых" value={`${Math.max(0, 3 - reducedRestsUsed)}/3`} sublabel="Доступно" variant="purple" />
         <StatCard label="Остаток вожд" value={formatMinsToHHMM(Math.max(0, 56*60 - stats.weekMins))} sublabel="До лимита" variant="emerald" />
       </div>
@@ -284,8 +287,20 @@ const App: React.FC = () => {
         </div>
 
         {viewMode === 'list' ? (
-          enrichedShifts.map((s, idx) => (
-            <TimelineItem key={s.id} shift={s} onEdit={setEditingShift} onDelete={deleteShift} onAddExpense={setActiveShiftForExpense} onToggleCompensation={() => {}} isInitiallyExpanded={idx === 0} />
+          groupedShifts.map(group => (
+            <WeekGroup key={group.weekStart} group={group}>
+              {group.shifts.map((s) => (
+                <TimelineItem 
+                  key={s.id} 
+                  shift={s} 
+                  onEdit={setEditingShift} 
+                  onDelete={deleteShift} 
+                  onAddExpense={setActiveShiftForExpense} 
+                  onToggleCompensation={() => {}} 
+                  isInitiallyExpanded={false}
+                />
+              ))}
+            </WeekGroup>
           ))
         ) : (
           <Dashboard shifts={enrichedShifts} />
