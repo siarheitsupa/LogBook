@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shift, AppState, CloudConfig, Expense, ShiftWithRest } from './types';
 import { storage } from './services/storageService';
+import { analyzeLogs } from './services/geminiService';
 import { formatMinsToHHMM, getStats, calculateLogSummary, pad, getMonday } from './utils/timeUtils';
 import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
@@ -25,6 +27,10 @@ const App: React.FC = () => {
   const [now, setNow] = useState(Date.now());
   const [configUpdateTrigger, setConfigUpdateTrigger] = useState(0);
   const [viewMode, setViewMode] = useState<'list' | 'stats'>('list');
+  
+  // AI State
+  const [aiResult, setAiResult] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -135,6 +141,14 @@ const App: React.FC = () => {
     }
   };
 
+  const handleAiAnalyze = async () => {
+    if (shifts.length === 0) return;
+    setIsAiLoading(true);
+    const res = await analyzeLogs(shifts);
+    setAiResult(res);
+    setIsAiLoading(false);
+  };
+
   if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="w-10 h-10 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div></div>;
   if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-black mb-6">DriverLog Cloud</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button><CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={() => setConfigUpdateTrigger(t => t+1)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} /></div>;
   if (!session) return <AuthScreen />;
@@ -155,7 +169,6 @@ const App: React.FC = () => {
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 opacity-60">Professional Edition</span>
           </div>
           <div className="flex items-center gap-2 ml-2">
-            {/* Вместо шестеренки просто мигающая зеленая точка */}
             <button 
               onClick={() => setIsCloudModalOpen(true)} 
               className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100/50 transition-colors"
@@ -199,7 +212,7 @@ const App: React.FC = () => {
         </div>
       </button>
 
-      <div className="grid grid-cols-2 gap-4 mb-10">
+      <div className="grid grid-cols-2 gap-4 mb-8">
         <StatCard label="Вождение Неделя" value={formatMinsToHHMM(stats.weekMins)} sublabel="Лимит 56ч" variant="yellow" />
         <StatCard label="Работа Неделя" value={formatMinsToHHMM(stats.workWeekMins)} sublabel="(Молотки)" variant="indigo" />
         <StatCard label="Вождение 2 нед" value={formatMinsToHHMM(stats.biWeekMins)} sublabel="Лимит 90ч" variant="green" />
@@ -208,6 +221,48 @@ const App: React.FC = () => {
         <StatCard label="Траты неделя" value={`${expenses.filter(e => e.currency === 'EUR' && new Date(e.timestamp) >= getMonday(new Date())).reduce((a,b)=>a+b.amount,0)} €`} sublabel="В евро" variant="orange" />
         <StatCard label="Смен на нед" value={`${enrichedShifts.filter(s => new Date(s.date) >= getMonday(new Date())).length}`} sublabel="Всего" variant="purple" />
         <StatCard label="Остаток вожд" value={formatMinsToHHMM(Math.max(0, 56*60 - stats.weekMins))} sublabel="До лимита" variant="emerald" />
+      </div>
+
+      {/* AI Assistant Block */}
+      <div className="mb-10 px-1">
+        {!aiResult ? (
+          <button
+            onClick={handleAiAnalyze}
+            disabled={isAiLoading || shifts.length === 0}
+            className="w-full py-4 bg-gradient-to-br from-indigo-600 to-violet-700 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 active:scale-95 transition-all flex items-center justify-center gap-3 relative overflow-hidden group"
+          >
+             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+             {isAiLoading ? (
+               <span className="animate-pulse">Анализ логов...</span>
+             ) : (
+               <>
+                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                 <span>AI Ассистент (Проверка нарушений)</span>
+               </>
+             )}
+          </button>
+        ) : (
+          <div className="liquid-glass p-6 rounded-[2rem] border border-indigo-100 relative animate-in fade-in zoom-in duration-300 shadow-xl">
+             <button 
+               onClick={() => setAiResult(null)} 
+               className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-white/50 rounded-full text-slate-400 hover:text-slate-600 hover:bg-white transition-all"
+             >
+               ✕
+             </button>
+             <div className="flex items-center gap-3 mb-4">
+               <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl shadow-sm">
+                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+               </div>
+               <div>
+                 <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">AI Отчет</h3>
+                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gemini 3 Flash</p>
+               </div>
+             </div>
+             <div className="prose prose-sm prose-slate leading-relaxed text-slate-600 whitespace-pre-line font-medium">
+               {aiResult}
+             </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
