@@ -143,6 +143,21 @@ const App: React.FC = () => {
     setIsLoading(false);
   };
 
+  const toggleCompensation = async (shift: Shift) => {
+    setIsLoading(true);
+    try {
+      // Инвертируем статус компенсации
+      const updatedShift: Shift = { ...shift, isCompensated: !shift.isCompensated };
+      await storage.saveShift(updatedShift);
+      const shiftsData = await storage.getShifts();
+      setShifts(shiftsData);
+    } catch (e: any) {
+      alert(`Ошибка обновления: ${e.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const deleteShift = async (id: string) => {
     if (window.confirm('Удалить?')) {
       setIsLoading(true);
@@ -296,7 +311,7 @@ const App: React.FC = () => {
                   onEdit={setEditingShift} 
                   onDelete={deleteShift} 
                   onAddExpense={setActiveShiftForExpense} 
-                  onToggleCompensation={() => {}} 
+                  onToggleCompensation={toggleCompensation} 
                   isInitiallyExpanded={false}
                 />
               ))}

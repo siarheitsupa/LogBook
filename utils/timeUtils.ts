@@ -129,6 +129,7 @@ export const calculateLogSummary = (shifts: Shift[]) => {
 
         if (diffHours >= 45) {
           type = 'regular';
+          debt = 0;
         } else if (diffHours >= 24) {
           if (weeklyRests[weekKey] === diffHours) {
             type = 'weekly_reduced';
@@ -148,9 +149,11 @@ export const calculateLogSummary = (shifts: Shift[]) => {
           }
         } else if (diffHours >= 11) {
           type = 'regular';
+          debt = 0;
         } else {
           type = 'reduced';
-          debt = 11 - diffHours;
+          // ВАЖНОЕ ИСПРАВЛЕНИЕ: Сокращенный ежедневный отдых (9-11ч) НЕ создает долг.
+          debt = 0; 
         }
 
         if (!curr.isCompensated) {
