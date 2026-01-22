@@ -57,7 +57,7 @@ export const calculateLogSummary = (shifts: Shift[]) => {
       if (diffHours >= 9) {
         const h = Math.floor(diffHours);
         const m = Math.round((diffHours - h) * 60);
-        let type: any = 'regular';
+        let type: 'regular' | 'reduced' | 'weekly_reduced' | 'long_pause' = 'regular';
         let debt = 0;
 
         if (diffHours >= 45) type = 'regular';

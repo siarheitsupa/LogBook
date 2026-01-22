@@ -78,16 +78,16 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-24 font-sans text-slate-900 px-4 pt-6">
-      {/* Header Capsule */}
+      {/* Header Capsule - Exactly as in screenshot */}
       <div className="max-w-md mx-auto mb-10">
         <div className="bg-white rounded-full py-3 px-6 shadow-xl shadow-slate-200/50 flex justify-between items-center border border-slate-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#0f172a] rounded-full flex items-center justify-center text-white shadow-lg">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>
+            <div className="w-11 h-11 bg-[#0f172a] rounded-full flex items-center justify-center text-white shadow-lg">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>
             </div>
             <div>
               <h1 className="text-sm font-black text-slate-900 leading-none">DriverLog Pro</h1>
-              <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mt-1">PROFESSIONAL EDITION</p>
+              <p className="text-[8px] font-black text-slate-300 uppercase tracking-[0.1em] mt-1">PROFESSIONAL EDITION</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -98,37 +98,37 @@ const App: React.FC = () => {
       </div>
 
       <main className="max-w-md mx-auto space-y-8">
-        {/* Rest Timer Card */}
-        <div className="bg-white rounded-[3.5rem] p-10 shadow-2xl shadow-slate-200/40 text-center border border-slate-50 relative overflow-hidden">
-          <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] mb-4">ОТДЫХ</div>
-          <div className="text-[5.5rem] font-black tracking-tighter tabular-nums text-[#1e293b] leading-none mb-10">
+        {/* Rest Timer Card - Professional Look */}
+        <div className="bg-white rounded-[3.5rem] p-10 shadow-2xl shadow-slate-200/40 text-center border border-slate-50 relative overflow-hidden animate-in fade-in duration-700">
+          <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] mb-4 opacity-70">ОТДЫХ</div>
+          <div className="text-[6rem] font-black tracking-tighter tabular-nums text-[#1e293b] leading-none mb-10">
             {restTimer}
           </div>
           
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-[#f43f5e] p-6 rounded-[2.5rem] text-white shadow-xl shadow-rose-100 flex flex-col items-center justify-center">
+            <div className="bg-[#f43f5e] p-6 rounded-[2.8rem] text-white shadow-xl shadow-rose-200/50 flex flex-col items-center justify-center transition-transform active:scale-95">
               <div className="text-[9px] font-black uppercase tracking-widest opacity-80 mb-1">9 ЧАСОВ</div>
               <div className="text-2xl font-black tabular-nums">00:00</div>
             </div>
-            <div className="bg-[#10b981] p-6 rounded-[2.5rem] text-white shadow-xl shadow-emerald-100 flex flex-col items-center justify-center">
+            <div className="bg-[#10b981] p-6 rounded-[2.8rem] text-white shadow-xl shadow-emerald-200/50 flex flex-col items-center justify-center transition-transform active:scale-95">
               <div className="text-[9px] font-black uppercase tracking-widest opacity-80 mb-1">11 ЧАСОВ</div>
               <div className="text-2xl font-black tabular-nums">00:00</div>
             </div>
           </div>
         </div>
 
-        {/* Start Shift Button */}
+        {/* Start Shift Button - Big Emerald Pill */}
         <button 
           onClick={() => { setEditingShift(null); setIsModalOpen(true); }}
-          className="w-full bg-[#10b981] text-white rounded-full py-8 px-10 flex justify-between items-center shadow-2xl shadow-emerald-200 active:scale-[0.98] transition-all group"
+          className="w-full bg-[#10b981] text-white rounded-full py-8 px-10 flex justify-between items-center shadow-2xl shadow-emerald-200/60 active:scale-[0.97] transition-all group"
         >
-          <span className="text-2xl font-black uppercase tracking-tight">НАЧАТЬ СМЕНУ</span>
-          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center group-active:scale-90 transition-all">
+          <span className="text-2xl font-black uppercase tracking-tight ml-4">НАЧАТЬ СМЕНУ</span>
+          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center group-active:scale-90 transition-all border border-white/10">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="ml-1"><path d="M8 5v14l11-7z"/></svg>
           </div>
         </button>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - Exactly as in screenshot colors/labels */}
         <div className="grid grid-cols-2 gap-4">
           <StatCard label="ВОЖДЕНИЕ НЕДЕЛЯ" value={formatMinsToHHMM(stats.weekMins)} variant="yellow" sublabel="Лимит 56ч" />
           <StatCard label="РАБОТА НЕДЕЛЯ" value={formatMinsToHHMM(stats.workWeekMins)} variant="blue" sublabel="(Молотки)" />
@@ -138,18 +138,18 @@ const App: React.FC = () => {
           <StatCard label="ТРАТЫ НЕДЕЛЯ" value={`${expenses.length > 0 ? '15 €' : '0 €'}`} variant="orange" sublabel="В евро" />
         </div>
 
-        {/* History */}
+        {/* History / Dashboard Toggle */}
         <div className="pt-4 space-y-6">
           <div className="flex justify-between items-center px-2">
             <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">ИСТОРИЯ ЛОГОВ</h2>
-            <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-100 flex gap-1">
-              <button onClick={() => setViewMode('list')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${viewMode === 'list' ? 'bg-[#0f172a] text-white shadow-lg' : 'text-slate-400'}`}>ЛОГ</button>
-              <button onClick={() => setViewMode('stats')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${viewMode === 'stats' ? 'bg-[#0f172a] text-white shadow-lg' : 'text-slate-400'}`}>DASHBOARD</button>
+            <div className="bg-white p-1 rounded-2xl shadow-md border border-slate-100 flex gap-1">
+              <button onClick={() => setViewMode('list')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-[#0f172a] text-white shadow-lg' : 'text-slate-400'}`}>ЛОГ</button>
+              <button onClick={() => setViewMode('stats')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'stats' ? 'bg-[#0f172a] text-white shadow-lg' : 'text-slate-400'}`}>DASHBOARD</button>
             </div>
           </div>
 
           {viewMode === 'list' ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {enrichedData.shifts.map(s => (
                 <TimelineItem 
                   key={s.id} 
