@@ -91,6 +91,14 @@ const App: React.FC = () => {
   const { totalDebt } = useMemo(() => calculateLogSummary(shifts), [shifts]);
   const stats = useMemo(() => getStats(shifts), [shifts]);
 
+  // Подсчет использованных сокращенных отдыхов (9ч) на текущей неделе
+  const reducedRestsUsed = useMemo(() => {
+    const monday = getMonday(new Date());
+    return enrichedShifts.filter(s => 
+      new Date(s.date) >= monday && s.restBefore?.type === 'reduced'
+    ).length;
+  }, [enrichedShifts]);
+
   const restInfo = useMemo(() => {
     if (appState.isActive && appState.startTime) {
       const elapsedMins = (now - appState.startTime) / 60000;
@@ -219,7 +227,8 @@ const App: React.FC = () => {
         <StatCard label="10ч доступно" value={`${stats.extDrivingCount}/2`} sublabel="На этой неделе" variant="blue" />
         <StatCard label="Долг отдыха" value={`${Math.ceil(totalDebt)}ч`} sublabel="К возврату" variant="rose" />
         <StatCard label="Траты неделя" value={`${expenses.filter(e => e.currency === 'EUR' && new Date(e.timestamp) >= getMonday(new Date())).reduce((a,b)=>a+b.amount,0)} €`} sublabel="В евро" variant="orange" />
-        <StatCard label="Смен на нед" value={`${enrichedShifts.filter(s => new Date(s.date) >= getMonday(new Date())).length}`} sublabel="Всего" variant="purple" />
+        {/* Замененная карточка: вместо количества смен показываем доступные девятки */}
+        <StatCard label="9ч Отдых" value={`${Math.max(0, 3 - reducedRestsUsed)}/3`} sublabel="Доступно" variant="purple" />
         <StatCard label="Остаток вожд" value={formatMinsToHHMM(Math.max(0, 56*60 - stats.weekMins))} sublabel="До лимита" variant="emerald" />
       </div>
 
