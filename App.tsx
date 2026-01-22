@@ -107,7 +107,7 @@ const App: React.FC = () => {
     
     setIsLoading(true);
     const finishSave = async (lat?: number, lng?: number) => {
-      const shiftWithGeo: Shift = { ...newShift, startLat: appState.startLat, startLng: appState.startLng, endLat: lat || newShift.endLat, endLng: lng || newShift.endLat };
+      const shiftWithGeo: Shift = { ...newShift, startLat: appState.startLat, startLng: appState.startLng, endLat: lat || newShift.endLat, endLng: lng || newShift.endLng };
       try {
         await storage.saveShift(shiftWithGeo);
         const updatedData = await storage.getShifts();
@@ -150,7 +150,7 @@ const App: React.FC = () => {
     <div className="max-w-xl mx-auto min-h-screen pb-24 px-4 pt-8 bg-slate-50/50">
       {/* Шапка с мигающей точкой настроек и индикатором активности */}
       <header className="flex flex-col items-center mb-8 relative">
-        <div className="flex items-center gap-3 liquid-glass p-2.5 pr-4 pl-4 rounded-full shadow-lg">
+        <div className="liquid-glass flex items-center gap-3 p-2.5 pr-4 pl-4 rounded-full shadow-xl border-white/60 backdrop-blur-xl">
           <div className="w-11 h-11 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-lg overflow-hidden relative">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>
             {appState.isActive && (
@@ -176,12 +176,15 @@ const App: React.FC = () => {
       </header>
  
       {/* Центральный таймер с насыщенной цветовой схемой */}
-      <div className="liquid-glass rounded-[3.5rem] p-8 mb-8 text-center shadow-xl border-white relative overflow-hidden">
-        <div className="flex items-center justify-center gap-2 mb-4">
+      <div className="liquid-glass rounded-[3.5rem] p-8 mb-8 text-center shadow-2xl border-white/60 backdrop-blur-xl relative overflow-hidden">
+        {/* Эффект градиентного свечения */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-white/10 to-transparent pointer-events-none" />
+        
+        <div className="flex items-center justify-center gap-2 mb-4 relative z-10">
           <span className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">{restInfo.label}</span>
         </div>
-        <h1 className="text-7xl font-black text-slate-900 mb-8 tabular-nums tracking-tighter">{restInfo.time}</h1>
-        <div className="grid grid-cols-2 gap-4">
+        <h1 className="text-7xl font-black text-slate-900 mb-8 tabular-nums tracking-tighter relative z-10">{restInfo.time}</h1>
+        <div className="grid grid-cols-2 gap-4 relative z-10">
           <div className={`p-5 rounded-[2.2rem] transition-all duration-500 flex flex-col items-center justify-center shadow-md ${restInfo.isRest && restInfo.mins >= 540 ? 'bg-rose-500 text-white shadow-rose-200' : 'bg-rose-100 text-rose-600'}`}>
             <span className="text-[10px] font-black uppercase block mb-1 opacity-70">9 ЧАСОВ</span>
             <span className="text-2xl font-black">{restInfo.isRest ? formatMinsToHHMM(Math.max(0, 540 - restInfo.mins)) : '09:00'}</span>
@@ -193,86 +196,95 @@ const App: React.FC = () => {
         </div>
       </div>
  
+      {/* Кнопка начала/завершения смены с Liquid Glass */}
       <button 
         onClick={() => appState.isActive ? setIsModalOpen(true) : navigator.geolocation.getCurrentPosition(p => { setAppState({ isActive: true, startTime: Date.now(), startLat: p.coords.latitude, startLng: p.coords.longitude }); storage.saveState({ isActive: true, startTime: Date.now(), startLat: p.coords.latitude, startLng: p.coords.longitude }); })}
-        className={`w-full py-7 px-8 rounded-full flex items-center justify-between text-2xl font-black text-white shadow-2xl transition-all mb-10 overflow-hidden relative group ${appState.isActive ? 'bg-gradient-to-r from-rose-500 to-rose-600' : 'bg-gradient-to-r from-emerald-500 to-emerald-600'}`}
+        className={`liquid-glass w-full py-7 px-8 rounded-full flex items-center justify-between text-2xl font-black text-white shadow-2xl transition-all mb-10 overflow-hidden relative group border-white/40 backdrop-blur-xl ${appState.isActive ? 'bg-gradient-to-r from-rose-500 to-rose-600' : 'bg-gradient-to-r from-emerald-500 to-emerald-600'}`}
       >
-        <div className="shimmer-liquid opacity-20"></div>
-        <span className="uppercase tracking-tight pl-4">{appState.isActive ? 'Завершить смену' : 'Начать смену'}</span>
-        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md border border-white/30 shadow-inner">
+        {/* Эффект shimmer */}
+        <div className="absolute inset-0 bg-gradient-to-r from-white/30 via-white/10 to-white/30 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out pointer-events-none"></div>
+        <span className="uppercase tracking-tight pl-4 relative z-10">{appState.isActive ? 'Завершить смену' : 'Начать смену'}</span>
+        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md border border-white/30 shadow-inner relative z-10">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             {appState.isActive ? <rect x="6" y="6" width="12" height="12" rx="2" /> : <path d="M8 5v14l11-7z" />}
           </svg>
         </div>
       </button>
  
-      <div className="grid grid-cols-2 gap-4 mb-10">
-        {/* Вождение Неделя - цвет зависит от близости к лимиту */}
-        <StatCard 
-          label="Вождение Неделя" 
-          value={formatMinsToHHMM(stats.weekMins)} 
-          sublabel="Лимит 56ч" 
-          variant={stats.weekMins >= 55 * 60 ? 'rose' : stats.weekMins >= 50 * 60 ? 'yellow' : 'blue'} 
-        />
+      {/* Блок карточек статистики */}
+      <div className="liquid-glass rounded-[2.5rem] p-5 mb-10 shadow-xl border-white/60 backdrop-blur-xl relative overflow-hidden">
+        {/* Эффект градиентного свечения */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent pointer-events-none" />
         
-        <StatCard
-          label="Работа Неделя"
-          value={formatMinsToHHMM(stats.workWeekMins)}
-          sublabel="(Молотки)"
-          variant="indigo"
-        />
-        
-        {/* Вождение 2 нед - цвет зависит от близости к лимиту */}
-        <StatCard 
-          label="Вождение 2 нед" 
-          value={formatMinsToHHMM(stats.biWeekMins)} 
-          sublabel="Лимит 90ч" 
-          variant={stats.biWeekMins >= 88 * 60 ? 'rose' : stats.biWeekMins >= 80 * 60 ? 'yellow' : 'green'} 
-        />
-        
-        {/* 10ч смены - цвет зависит от использования */}
-        <StatCard 
-          label="10ч доступно" 
-          value={`${stats.extDrivingCount}/3`} 
-          sublabel={stats.extDrivingCount >= 3 ? '❌ ЛИМИТ ИСЧЕРПАН' : 'На этой неделе'} 
-          variant={stats.extDrivingCount >= 3 ? 'rose' : stats.extDrivingCount >= 2 ? 'yellow' : 'blue'} 
-        />
-        
-        {/* Долг отдыха - красный если есть долг */}
-        <StatCard 
-          label="Долг отдыха" 
-          value={`${Math.ceil(totalDebt)}ч`} 
-          sublabel="К возврату" 
-          variant={totalDebt > 0 ? 'rose' : 'emerald'} 
-        />
-        
-        <StatCard 
-          label="Траты неделя" 
-          value={`${expenses.filter(e => e.currency === 'EUR' && new Date(e.timestamp) >= getMonday(new Date())).reduce((a,b)=>a+b.amount,0)} €`} 
-          sublabel="В евро" 
-          variant="orange" 
-        />
-        
-        <StatCard 
-          label="Смен на нед" 
-          value={`${enrichedShifts.filter(s => new Date(s.date) >= getMonday(new Date())).length}`} 
-          sublabel="Всего" 
-          variant="purple" 
-        />
-        
-        {/* Остаток вождения - цвет зависит от того, сколько осталось */}
-        <StatCard 
-          label="Остаток вожд" 
-          value={formatMinsToHHMM(Math.max(0, 56*60 - stats.weekMins))} 
-          sublabel="До лимита" 
-          variant={56*60 - stats.weekMins <= 60 ? 'rose' : 56*60 - stats.weekMins <= 6*60 ? 'yellow' : 'emerald'} 
-        />
+        <div className="grid grid-cols-2 gap-3 relative z-10">
+          {/* Вождение Неделя - цвет зависит от близости к лимиту */}
+          <StatCard 
+            label="Вождение Неделя" 
+            value={formatMinsToHHMM(stats.weekMins)} 
+            sublabel="Лимит 56ч" 
+            variant={stats.weekMins >= 55 * 60 ? 'rose' : stats.weekMins >= 50 * 60 ? 'yellow' : 'blue'} 
+          />
+          
+          <StatCard
+            label="Работа Неделя"
+            value={formatMinsToHHMM(stats.workWeekMins)}
+            sublabel="(Молотки)"
+            variant="indigo"
+          />
+          
+          {/* Вождение 2 нед - цвет зависит от близости к лимиту */}
+          <StatCard 
+            label="Вождение 2 нед" 
+            value={formatMinsToHHMM(stats.biWeekMins)} 
+            sublabel="Лимит 90ч" 
+            variant={stats.biWeekMins >= 88 * 60 ? 'rose' : stats.biWeekMins >= 80 * 60 ? 'yellow' : 'green'} 
+          />
+          
+          {/* 10ч смены - цвет зависит от использования */}
+          <StatCard 
+            label="10ч доступно" 
+            value={`${stats.extDrivingCount}/3`} 
+            sublabel={stats.extDrivingCount >= 3 ? '❌ ЛИМИТ ИСЧЕРПАН' : 'На этой неделе'} 
+            variant={stats.extDrivingCount >= 3 ? 'rose' : stats.extDrivingCount >= 2 ? 'yellow' : 'blue'} 
+          />
+          
+          {/* Долг отдыха - красный если есть долг */}
+          <StatCard 
+            label="Долг отдыха" 
+            value={`${Math.ceil(totalDebt)}ч`} 
+            sublabel="К возврату" 
+            variant={totalDebt > 0 ? 'rose' : 'emerald'} 
+          />
+          
+          <StatCard 
+            label="Траты неделя" 
+            value={`${expenses.filter(e => e.currency === 'EUR' && new Date(e.timestamp) >= getMonday(new Date())).reduce((a,b)=>a+b.amount,0)} €`} 
+            sublabel="В евро" 
+            variant="orange" 
+          />
+          
+          <StatCard 
+            label="Смен на нед" 
+            value={`${enrichedShifts.filter(s => new Date(s.date) >= getMonday(new Date())).length}`} 
+            sublabel="Всего" 
+            variant="purple" 
+          />
+          
+          {/* Остаток вождения - цвет зависит от того, сколько осталось */}
+          <StatCard 
+            label="Остаток вожд" 
+            value={formatMinsToHHMM(Math.max(0, 56*60 - stats.weekMins))} 
+            sublabel="До лимита" 
+            variant={56*60 - stats.weekMins <= 60 ? 'rose' : 56*60 - stats.weekMins <= 6*60 ? 'yellow' : 'emerald'} 
+          />
+        </div>
       </div>
  
+      {/* История логов */}
       <div className="space-y-4">
         <div className="flex items-center justify-between px-2 mb-6">
           <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">История логов</h3>
-          <div className="flex p-1 bg-white/50 rounded-2xl border shadow-sm">
+          <div className="liquid-glass flex p-1 rounded-2xl shadow-lg border-white/60 backdrop-blur-xl">
             <button onClick={() => setViewMode('list')} className={`px-5 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${viewMode === 'list' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Лог</button>
             <button onClick={() => setViewMode('stats')} className={`px-5 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${viewMode === 'stats' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Dashboard</button>
           </div>
