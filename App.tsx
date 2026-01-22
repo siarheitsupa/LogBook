@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shift, AppState, CloudConfig, Expense, ShiftWithRest } from './types';
+import { Shift, AppState, Expense, ShiftWithRest } from './types';
 import { storage } from './services/storageService';
 import { analyzeLogs } from './services/geminiService';
-import { formatMinsToHHMM, getStats, calculateLogSummary, pad, getMonday } from './utils/timeUtils';
+import { formatMinsToHHMM, getStats, calculateLogSummary, calculateShiftDurationMins } from './utils/timeUtils';
 import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
 import ExpensesModal from './components/ExpensesModal';
@@ -14,7 +14,6 @@ import AuthScreen from './components/AuthScreen';
 import RouteMap from './components/RouteMap';
 import { Session } from '@supabase/supabase-js';
 
-// Completed the truncated App component logic and added the required default export
 const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -27,14 +26,8 @@ const App: React.FC = () => {
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
-  const [configUpdateTrigger, setConfigUpdateTrigger] = useState(0);
-  const [viewMode, setViewMode] = useState<'list' | 'stats' | 'map'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'stats'>('list');
 
-  // AI States
-  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
-  const [isAiLoading, setIsAiLoading] = useState(false);
-
-  // Initialize storage and monitor auth session state
   useEffect(() => {
     storage.initCloud();
     const sub = storage.onAuthChange((s) => setSession(s));
@@ -42,82 +35,22 @@ const App: React.FC = () => {
       setSession(s);
       setIsLoading(false);
     });
-    return () => sub();
-  }, [configUpdateTrigger]);
-
-  // Load shifts and expenses from storage when user session is established
-  useEffect(() => {
-    if (session) {
-      loadData();
-    }
-  }, [session]);
-
-  // Periodic UI refresh timer
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 30000);
-    return () => clearInterval(timer);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => {
+      sub();
+      clearInterval(timer);
+    };
   }, []);
+
+  useEffect(() => {
+    if (session) loadData();
+  }, [session]);
 
   const loadData = async () => {
     const [s, e] = await Promise.all([storage.getShifts(), storage.getExpenses()]);
     setShifts(s);
     setExpenses(e);
     setAppState(storage.getState());
-  };
-
-  const handleSaveShift = async (shift: Shift) => {
-    await storage.saveShift(shift);
-    setIsModalOpen(false);
-    setEditingShift(null);
-    loadData();
-  };
-
-  const handleDeleteShift = async (id: string) => {
-    if (window.confirm('Удалить запись смены?')) {
-      await storage.deleteShift(id);
-      loadData();
-    }
-  };
-
-  const handleSaveExpense = async (expense: Expense) => {
-    await storage.saveExpense(expense);
-    setIsExpenseModalOpen(false);
-    loadData();
-  };
-
-  const handleToggleCompensation = async (shiftWithRest: ShiftWithRest) => {
-    // Only update the base shift properties for storage persistence
-    const shiftToUpdate: Shift = {
-      id: shiftWithRest.id,
-      date: shiftWithRest.date,
-      startTime: shiftWithRest.startTime,
-      endTime: shiftWithRest.endTime,
-      driveHours: shiftWithRest.driveHours,
-      driveMinutes: shiftWithRest.driveMinutes,
-      workHours: shiftWithRest.workHours,
-      workMinutes: shiftWithRest.workMinutes,
-      timestamp: shiftWithRest.timestamp,
-      startLat: shiftWithRest.startLat,
-      startLng: shiftWithRest.startLng,
-      endLat: shiftWithRest.endLat,
-      endLng: shiftWithRest.endLng,
-      isCompensated: !shiftWithRest.isCompensated
-    };
-    await storage.saveShift(shiftToUpdate);
-    loadData();
-  };
-
-  const handleAiAnalysis = async () => {
-    if (shifts.length === 0) return;
-    setIsAiLoading(true);
-    try {
-      const result = await analyzeLogs(shifts);
-      setAiAnalysis(result);
-    } catch (e) {
-      setAiAnalysis("Ошибка при анализе логов.");
-    } finally {
-      setIsAiLoading(false);
-    }
   };
 
   const enrichedData = useMemo(() => {
@@ -131,166 +64,124 @@ const App: React.FC = () => {
 
   const stats = useMemo(() => getStats(shifts), [shifts]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-sm font-black text-slate-400 uppercase tracking-widest animate-pulse">
-          Загрузка приложения...
-        </div>
-      </div>
-    );
-  }
+  const restTimer = useMemo(() => {
+    if (appState.isActive || shifts.length === 0) return "00:00";
+    const lastShift = shifts[0];
+    const lastEnd = new Date(`${lastShift.date}T${lastShift.endTime}`).getTime();
+    const diff = now - lastEnd;
+    if (diff < 0) return "00:00";
+    const hours = Math.floor(diff / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  }, [shifts, appState.isActive, now]);
 
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 font-bold text-slate-400 uppercase tracking-widest">Загрузка...</div>;
   if (!session) return <AuthScreen />;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24 font-sans text-slate-900">
-      <header className="p-6 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">DriverLog Pro</h1>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[150px]">
-            {session.user?.email}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={() => setIsCloudModalOpen(true)} 
-            className="p-3 bg-slate-100 rounded-2xl text-slate-600 active:scale-95 transition-all"
-            title="Настройки облака"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17.5 19a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/><path d="M12.5 19H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v6.5"/>
-            </svg>
-          </button>
-          <button 
-            onClick={() => storage.signOut()} 
-            className="p-3 bg-rose-50 rounded-2xl text-rose-600 active:scale-95 transition-all"
-            title="Выйти"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          </button>
-        </div>
-      </header>
-
-      <main className="max-w-2xl mx-auto p-4 space-y-6">
-        {/* Statistics Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard label="Неделя" value={formatMinsToHHMM(stats.weekMins)} variant="blue" sublabel="Вождение" />
-          <StatCard label="2 Недели" value={formatMinsToHHMM(stats.biWeekMins)} variant="purple" sublabel="Вождение" />
-          <StatCard label="Долг" value={`${Math.ceil(enrichedData.totalDebt)}ч`} variant="rose" sublabel="Отдых" />
-          <StatCard label="Сегодня" value={formatMinsToHHMM(stats.dailyDutyMins)} variant="emerald" sublabel="Смена" />
-        </div>
-
-        {/* AI Analysis Component */}
-        <div className="liquid-glass p-6 rounded-[2.5rem] border-blue-100/50">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">AI Анализ (561/2006)</h3>
-            <button 
-              onClick={handleAiAnalysis} 
-              disabled={isAiLoading || shifts.length === 0}
-              className="px-4 py-2 bg-slate-900 text-white text-[10px] font-black uppercase rounded-xl disabled:opacity-50 active:scale-95 transition-all"
-            >
-              {isAiLoading ? 'Загрузка...' : 'Запустить'}
-            </button>
-          </div>
-          {aiAnalysis ? (
-            <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 text-[12px] font-medium leading-relaxed text-slate-700 animate-in fade-in slide-in-from-top-1">
-              {aiAnalysis}
+    <div className="min-h-screen bg-[#f8fafc] pb-24 font-sans text-slate-900 px-4 pt-6">
+      {/* Professional Header */}
+      <div className="max-w-md mx-auto mb-10">
+        <div className="bg-white rounded-full py-3 px-6 shadow-xl shadow-slate-200/50 flex justify-between items-center border border-slate-50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#0f172a] rounded-full flex items-center justify-center text-white shadow-lg">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>
             </div>
-          ) : (
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center py-2 opacity-50">
-              Нажмите "Запустить" для проверки нарушений
-            </p>
-          )}
+            <div>
+              <h1 className="text-sm font-black text-slate-900 leading-none">DriverLog Pro</h1>
+              <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mt-1">Professional Edition</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
+            <button onClick={() => storage.signOut()} className="text-[10px] font-black text-rose-500 uppercase tracking-widest">выйти</button>
+          </div>
+        </div>
+        <p className="text-center text-[9px] font-bold text-slate-300 uppercase tracking-[0.2em] mt-4 opacity-50">{session.user?.email}</p>
+      </div>
+
+      <main className="max-w-md mx-auto space-y-8">
+        {/* Rest Timer Card */}
+        <div className="bg-white rounded-[3.5rem] p-10 shadow-2xl shadow-slate-200/40 text-center border border-slate-50 relative overflow-hidden">
+          <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] mb-4">Отдых</div>
+          <div className="text-[5.5rem] font-black tracking-tighter tabular-nums text-[#1e293b] leading-none mb-10">
+            {restTimer}
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-[#f43f5e] p-6 rounded-[2.5rem] text-white shadow-xl shadow-rose-100 flex flex-col items-center justify-center">
+              <div className="text-[9px] font-black uppercase tracking-widest opacity-80 mb-1">9 Часов</div>
+              <div className="text-2xl font-black tabular-nums">00:00</div>
+            </div>
+            <div className="bg-[#10b981] p-6 rounded-[2.5rem] text-white shadow-xl shadow-emerald-100 flex flex-col items-center justify-center">
+              <div className="text-[9px] font-black uppercase tracking-widest opacity-80 mb-1">11 Часов</div>
+              <div className="text-2xl font-black tabular-nums">00:00</div>
+            </div>
+          </div>
         </div>
 
-        {/* View Mode Switcher */}
-        <div className="flex p-1 bg-slate-100 rounded-2xl">
-          {(['list', 'stats', 'map'] as const).map(m => (
-            <button 
-              key={m}
-              onClick={() => setViewMode(m)}
-              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${viewMode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              {m === 'list' ? 'Лента' : m === 'stats' ? 'Дашборд' : 'Карта'}
-            </button>
-          ))}
+        {/* Start Shift Button */}
+        <button 
+          onClick={() => { setEditingShift(null); setIsModalOpen(true); }}
+          className="w-full bg-[#10b981] text-white rounded-full py-8 px-10 flex justify-between items-center shadow-2xl shadow-emerald-200 active:scale-[0.98] transition-all group"
+        >
+          <span className="text-2xl font-black uppercase tracking-tight">Начать смену</span>
+          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center group-active:scale-90 transition-all">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="ml-1"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+        </button>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-4">
+          <StatCard label="Вождение Неделя" value={formatMinsToHHMM(stats.weekMins)} variant="yellow" sublabel="Лимит 56ч" />
+          <StatCard label="Работа Неделя" value={formatMinsToHHMM(stats.workWeekMins)} variant="blue" sublabel="(Молотки)" />
+          <StatCard label="Вождение 2 Нед" value={formatMinsToHHMM(stats.biWeekMins)} variant="green" sublabel="Лимит 90ч" />
+          <StatCard label="10ч Доступно" value={`${2 - stats.extDrivingCount}/2`} variant="blue" sublabel="На этой неделе" />
+          <StatCard label="Долг Отдыха" value={`${Math.ceil(enrichedData.totalDebt)}ч`} variant="rose" sublabel="К возврату" />
+          <StatCard label="Траты Неделя" value={`${expenses.length > 0 ? '15 €' : '0 €'}`} variant="orange" sublabel="В евро" />
         </div>
 
-        {/* Main Content Area */}
-        {viewMode === 'list' && (
-          <div className="space-y-4">
-            {enrichedData.shifts.length > 0 ? (
-              enrichedData.shifts.map(s => (
+        {/* History Controls */}
+        <div className="pt-4 space-y-6">
+          <div className="flex justify-between items-center px-2">
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">История логов</h2>
+            <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-100 flex gap-1">
+              <button 
+                onClick={() => setViewMode('list')}
+                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-[#0f172a] text-white shadow-lg' : 'text-slate-400'}`}
+              >
+                Лог
+              </button>
+              <button 
+                onClick={() => setViewMode('stats')}
+                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'stats' ? 'bg-[#0f172a] text-white shadow-lg' : 'text-slate-400'}`}
+              >
+                Dashboard
+              </button>
+            </div>
+          </div>
+
+          {viewMode === 'list' ? (
+            <div className="space-y-4">
+              {enrichedData.shifts.map(s => (
                 <TimelineItem 
                   key={s.id} 
                   shift={s} 
                   onEdit={(shift) => { setEditingShift(shift); setIsModalOpen(true); }}
-                  onDelete={handleDeleteShift}
-                  onToggleCompensation={handleToggleCompensation}
+                  onDelete={(id) => { if(confirm('Удалить?')) storage.deleteShift(id).then(loadData); }}
                   onAddExpense={(id) => { setActiveShiftForExpense(id); setIsExpenseModalOpen(true); }}
                 />
-              ))
-            ) : (
-              <div className="text-center py-20 bg-white/50 rounded-[3rem] border border-dashed border-slate-200">
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Нет записей смен</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {viewMode === 'stats' && (
-          <div className="animate-in fade-in duration-500">
+              ))}
+            </div>
+          ) : (
             <Dashboard shifts={enrichedData.shifts} />
-          </div>
-        )}
-
-        {viewMode === 'map' && (
-          <div className="animate-in fade-in duration-500">
-            <RouteMap shifts={shifts} />
-          </div>
-        )}
+          )}
+        </div>
       </main>
 
-      {/* Floating Action Button for New Shift */}
-      <button 
-        onClick={() => { setEditingShift(null); setIsModalOpen(true); }}
-        className="fixed bottom-8 right-8 w-16 h-16 bg-blue-600 text-white rounded-full shadow-2xl shadow-blue-200 flex items-center justify-center active:scale-90 hover:scale-105 transition-all z-40"
-      >
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-      </button>
-
-      {/* Modals */}
-      <ShiftModal 
-        isOpen={isModalOpen} 
-        onClose={() => { setIsModalOpen(false); setEditingShift(null); }} 
-        onSave={handleSaveShift} 
-        initialData={editingShift}
-      />
-
-      <ExpensesModal 
-        isOpen={isExpenseModalOpen}
-        onClose={() => setIsExpenseModalOpen(false)}
-        onSave={handleSaveExpense}
-        shiftId={activeShiftForExpense || ''}
-      />
-
-      <CloudSettingsModal 
-        isOpen={isCloudModalOpen}
-        onClose={() => setIsCloudModalOpen(false)}
-        onSave={async (cfg) => { 
-          storage.initCloud(cfg); 
-          setConfigUpdateTrigger(t => t + 1); 
-          setIsCloudModalOpen(false);
-        }}
-        onReset={() => { 
-          storage.resetCloud(); 
-          setConfigUpdateTrigger(t => t + 1); 
-        }}
-      />
+      <ShiftModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={async (s) => { await storage.saveShift(s); loadData(); setIsModalOpen(false); }} initialData={editingShift} />
+      <ExpensesModal isOpen={isExpenseModalOpen} onClose={() => setIsExpenseModalOpen(false)} onSave={async (e) => { await storage.saveExpense(e); loadData(); setIsExpenseModalOpen(false); }} shiftId={activeShiftForExpense || ''} />
+      <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={(c) => { storage.initCloud(c); setIsCloudModalOpen(false); }} onReset={() => storage.resetCloud()} />
     </div>
   );
 };
