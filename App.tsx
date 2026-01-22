@@ -216,7 +216,7 @@ const App: React.FC = () => {
         <StatCard label="Вождение Неделя" value={formatMinsToHHMM(stats.weekMins)} sublabel="Лимит 56ч" variant="yellow" />
         <StatCard label="Работа Неделя" value={formatMinsToHHMM(stats.workWeekMins)} sublabel="(Молотки)" variant="indigo" />
         <StatCard label="Вождение 2 нед" value={formatMinsToHHMM(stats.biWeekMins)} sublabel="Лимит 90ч" variant="green" />
-        <StatCard label="10ч доступно" value={`${stats.extDrivingCount}/3`} sublabel="На этой неделе" variant="blue" />
+        <StatCard label="10ч доступно" value={`${stats.extDrivingCount}/2`} sublabel="На этой неделе" variant="blue" />
         <StatCard label="Долг отдыха" value={`${Math.ceil(totalDebt)}ч`} sublabel="К возврату" variant="rose" />
         <StatCard label="Траты неделя" value={`${expenses.filter(e => e.currency === 'EUR' && new Date(e.timestamp) >= getMonday(new Date())).reduce((a,b)=>a+b.amount,0)} €`} sublabel="В евро" variant="orange" />
         <StatCard label="Смен на нед" value={`${enrichedShifts.filter(s => new Date(s.date) >= getMonday(new Date())).length}`} sublabel="Всего" variant="purple" />
