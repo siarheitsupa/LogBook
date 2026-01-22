@@ -1,38 +1,31 @@
+
+// Интерфейс для хранения информации о паузах внутри смены
+export interface Break {
+  durationMinutes: number;
+}
+
 export interface Shift {
   id: string;
-  date: string; // YYYY-MM-DD
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
+  date: string;
+  startTime: string;
+  endTime: string;
   driveHours: number;
   driveMinutes: number;
-  workHours: number; // прочая работа (молотки)
-  workMinutes: number; // прочая работа (молотки)
+  workHours: number;
+  workMinutes: number;
   timestamp: number;
+  isCompensated?: boolean;
+  // Дополнительные поля для расширенной функциональности (паузы и геолокация)
+  breaks?: Break[];
   startLat?: number;
   startLng?: number;
   endLat?: number;
   endLng?: number;
-  isCompensated?: boolean; // Флаг: компенсирован ли сокращенный отдых ПЕРЕД этой сменой
-}
-
-export type ExpenseCategory = 'Parking' | 'Customs' | 'Fuel' | 'Wash' | 'Toll' | 'Food' | 'Other';
-export type Currency = 'EUR' | 'PLN' | 'BYN' | 'HUF' | 'USD';
-
-export interface Expense {
-  id: string;
-  shiftId: string;
-  category: ExpenseCategory;
-  amount: number;
-  currency: Currency;
-  timestamp: number;
-  description?: string;
 }
 
 export interface AppState {
   isActive: boolean;
   startTime: number | null;
-  startLat?: number;
-  startLng?: number;
 }
 
 export interface RestEvent {
@@ -46,11 +39,24 @@ export interface RestEvent {
 
 export interface ShiftWithRest extends Shift {
   restBefore?: RestEvent;
-  expenses?: Expense[];
 }
 
+// Конфигурация для ручного подключения к облаку Supabase
 export interface CloudConfig {
   url: string;
   key: string;
-  geminiKey?: string;
+}
+
+// Типы для модуля управления расходами
+export type ExpenseCategory = 'Parking' | 'Customs' | 'Fuel' | 'Wash' | 'Toll' | 'Food' | 'Other';
+export type Currency = 'EUR' | 'PLN' | 'BYN' | 'HUF' | 'USD';
+
+export interface Expense {
+  id: string;
+  shiftId: string;
+  category: ExpenseCategory;
+  amount: number;
+  currency: Currency;
+  timestamp: number;
+  description?: string;
 }
