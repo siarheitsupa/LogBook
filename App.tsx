@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shift, AppState, Expense, ShiftWithRest } from './types';
 import { storage } from './services/storageService';
-import { analyzeLogs } from './services/geminiService';
 import { formatMinsToHHMM, getStats, calculateLogSummary, calculateShiftDurationMins } from './utils/timeUtils';
 import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
@@ -11,7 +10,6 @@ import TimelineItem from './components/TimelineItem';
 import Dashboard from './components/Dashboard';
 import CloudSettingsModal from './components/CloudSettingsModal';
 import AuthScreen from './components/AuthScreen';
-import RouteMap from './components/RouteMap';
 import { Session } from '@supabase/supabase-js';
 
 const App: React.FC = () => {
@@ -80,7 +78,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-24 font-sans text-slate-900 px-4 pt-6">
-      {/* Professional Header */}
+      {/* Header Capsule */}
       <div className="max-w-md mx-auto mb-10">
         <div className="bg-white rounded-full py-3 px-6 shadow-xl shadow-slate-200/50 flex justify-between items-center border border-slate-50">
           <div className="flex items-center gap-3">
@@ -89,7 +87,7 @@ const App: React.FC = () => {
             </div>
             <div>
               <h1 className="text-sm font-black text-slate-900 leading-none">DriverLog Pro</h1>
-              <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mt-1">Professional Edition</p>
+              <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mt-1">PROFESSIONAL EDITION</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -97,24 +95,23 @@ const App: React.FC = () => {
             <button onClick={() => storage.signOut()} className="text-[10px] font-black text-rose-500 uppercase tracking-widest">выйти</button>
           </div>
         </div>
-        <p className="text-center text-[9px] font-bold text-slate-300 uppercase tracking-[0.2em] mt-4 opacity-50">{session.user?.email}</p>
       </div>
 
       <main className="max-w-md mx-auto space-y-8">
         {/* Rest Timer Card */}
         <div className="bg-white rounded-[3.5rem] p-10 shadow-2xl shadow-slate-200/40 text-center border border-slate-50 relative overflow-hidden">
-          <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] mb-4">Отдых</div>
+          <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] mb-4">ОТДЫХ</div>
           <div className="text-[5.5rem] font-black tracking-tighter tabular-nums text-[#1e293b] leading-none mb-10">
             {restTimer}
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-[#f43f5e] p-6 rounded-[2.5rem] text-white shadow-xl shadow-rose-100 flex flex-col items-center justify-center">
-              <div className="text-[9px] font-black uppercase tracking-widest opacity-80 mb-1">9 Часов</div>
+              <div className="text-[9px] font-black uppercase tracking-widest opacity-80 mb-1">9 ЧАСОВ</div>
               <div className="text-2xl font-black tabular-nums">00:00</div>
             </div>
             <div className="bg-[#10b981] p-6 rounded-[2.5rem] text-white shadow-xl shadow-emerald-100 flex flex-col items-center justify-center">
-              <div className="text-[9px] font-black uppercase tracking-widest opacity-80 mb-1">11 Часов</div>
+              <div className="text-[9px] font-black uppercase tracking-widest opacity-80 mb-1">11 ЧАСОВ</div>
               <div className="text-2xl font-black tabular-nums">00:00</div>
             </div>
           </div>
@@ -125,7 +122,7 @@ const App: React.FC = () => {
           onClick={() => { setEditingShift(null); setIsModalOpen(true); }}
           className="w-full bg-[#10b981] text-white rounded-full py-8 px-10 flex justify-between items-center shadow-2xl shadow-emerald-200 active:scale-[0.98] transition-all group"
         >
-          <span className="text-2xl font-black uppercase tracking-tight">Начать смену</span>
+          <span className="text-2xl font-black uppercase tracking-tight">НАЧАТЬ СМЕНУ</span>
           <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center group-active:scale-90 transition-all">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="ml-1"><path d="M8 5v14l11-7z"/></svg>
           </div>
@@ -133,31 +130,21 @@ const App: React.FC = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-4">
-          <StatCard label="Вождение Неделя" value={formatMinsToHHMM(stats.weekMins)} variant="yellow" sublabel="Лимит 56ч" />
-          <StatCard label="Работа Неделя" value={formatMinsToHHMM(stats.workWeekMins)} variant="blue" sublabel="(Молотки)" />
-          <StatCard label="Вождение 2 Нед" value={formatMinsToHHMM(stats.biWeekMins)} variant="green" sublabel="Лимит 90ч" />
-          <StatCard label="10ч Доступно" value={`${2 - stats.extDrivingCount}/2`} variant="blue" sublabel="На этой неделе" />
-          <StatCard label="Долг Отдыха" value={`${Math.ceil(enrichedData.totalDebt)}ч`} variant="rose" sublabel="К возврату" />
-          <StatCard label="Траты Неделя" value={`${expenses.length > 0 ? '15 €' : '0 €'}`} variant="orange" sublabel="В евро" />
+          <StatCard label="ВОЖДЕНИЕ НЕДЕЛЯ" value={formatMinsToHHMM(stats.weekMins)} variant="yellow" sublabel="Лимит 56ч" />
+          <StatCard label="РАБОТА НЕДЕЛЯ" value={formatMinsToHHMM(stats.workWeekMins)} variant="blue" sublabel="(Молотки)" />
+          <StatCard label="ВОЖДЕНИЕ 2 НЕД" value={formatMinsToHHMM(stats.biWeekMins)} variant="green" sublabel="Лимит 90ч" />
+          <StatCard label="10ч ДОСТУПНО" value={`${3 - stats.extDrivingCount}/3`} variant="blue" sublabel="На этой неделе" />
+          <StatCard label="ДОЛГ ОТДЫХА" value={`${Math.ceil(enrichedData.totalDebt)}ч`} variant="rose" sublabel="К возврату" />
+          <StatCard label="ТРАТЫ НЕДЕЛЯ" value={`${expenses.length > 0 ? '15 €' : '0 €'}`} variant="orange" sublabel="В евро" />
         </div>
 
-        {/* History Controls */}
+        {/* History */}
         <div className="pt-4 space-y-6">
           <div className="flex justify-between items-center px-2">
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">История логов</h2>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">ИСТОРИЯ ЛОГОВ</h2>
             <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-100 flex gap-1">
-              <button 
-                onClick={() => setViewMode('list')}
-                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-[#0f172a] text-white shadow-lg' : 'text-slate-400'}`}
-              >
-                Лог
-              </button>
-              <button 
-                onClick={() => setViewMode('stats')}
-                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'stats' ? 'bg-[#0f172a] text-white shadow-lg' : 'text-slate-400'}`}
-              >
-                Dashboard
-              </button>
+              <button onClick={() => setViewMode('list')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${viewMode === 'list' ? 'bg-[#0f172a] text-white shadow-lg' : 'text-slate-400'}`}>ЛОГ</button>
+              <button onClick={() => setViewMode('stats')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${viewMode === 'stats' ? 'bg-[#0f172a] text-white shadow-lg' : 'text-slate-400'}`}>DASHBOARD</button>
             </div>
           </div>
 
