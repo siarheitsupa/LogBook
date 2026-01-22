@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shift, AppState, CloudConfig, Expense, ShiftWithRest } from './types';
 import { storage } from './services/storageService';
-import { formatMinsToHHMM, getStats, calculateLogSummary, pad, getMonday } from './utils/timeUtils';
+import { formatMinsToHHMM, getStats, calculateLogSummary, pad, getMonday, validateShift } from './utils/timeUtils';
 import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
 import ExpensesModal from './components/ExpensesModal';
@@ -10,7 +10,7 @@ import Dashboard from './components/Dashboard';
 import CloudSettingsModal from './components/CloudSettingsModal';
 import AuthScreen from './components/AuthScreen';
 import { Session } from '@supabase/supabase-js';
-
+ 
 const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -25,12 +25,12 @@ const App: React.FC = () => {
   const [now, setNow] = useState(Date.now());
   const [configUpdateTrigger, setConfigUpdateTrigger] = useState(0);
   const [viewMode, setViewMode] = useState<'list' | 'stats'>('list');
-
+ 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
-
+ 
   useEffect(() => {
     const loadInit = async () => {
       setIsLoading(true);
@@ -66,14 +66,14 @@ const App: React.FC = () => {
     };
     loadInit();
   }, [configUpdateTrigger]);
-
+ 
   useEffect(() => {
     if (session) {
       storage.getShifts().then(setShifts);
       storage.getExpenses().then(setExpenses);
     }
   }, [session]);
-
+ 
   const enrichedShifts: ShiftWithRest[] = useMemo(() => {
     const { shifts: summaryShifts } = calculateLogSummary(shifts);
     return summaryShifts.map(s => ({
@@ -81,10 +81,10 @@ const App: React.FC = () => {
       expenses: expenses.filter(e => e.shiftId === s.id)
     }));
   }, [shifts, expenses]);
-
+ 
   const { totalDebt } = useMemo(() => calculateLogSummary(shifts), [shifts]);
   const stats = useMemo(() => getStats(shifts), [shifts]);
-
+ 
   const restInfo = useMemo(() => {
     if (appState.isActive && appState.startTime) {
       const elapsedMins = (now - appState.startTime) / 60000;
@@ -96,11 +96,18 @@ const App: React.FC = () => {
     const restMins = (now - lastEndTs) / 60000;
     return { label: 'ОТДЫХ', time: formatMinsToHHMM(restMins > 0 ? restMins : 0), isRest: true, mins: restMins > 0 ? restMins : 0 };
   }, [appState, enrichedShifts, now]);
-
+ 
   const handleSaveShift = async (newShift: Shift) => {
+    // === ВАЛИДАЦИЯ ПЕРЕД СОХРАНЕНИЕМ ===
+    const validation = validateShift(newShift, shifts);
+    if (!validation.valid) {
+      alert(validation.error);
+      return;
+    }
+    
     setIsLoading(true);
     const finishSave = async (lat?: number, lng?: number) => {
-      const shiftWithGeo: Shift = { ...newShift, startLat: appState.startLat, startLng: appState.startLng, endLat: lat || newShift.endLat, endLng: lng || newShift.endLng };
+      const shiftWithGeo: Shift = { ...newShift, startLat: appState.startLat, startLng: appState.startLng, endLat: lat || newShift.endLat, endLng: lng || newShift.endLat };
       try {
         await storage.saveShift(shiftWithGeo);
         const updatedData = await storage.getShifts();
@@ -115,7 +122,7 @@ const App: React.FC = () => {
     };
     if (editingShift) await finishSave(); else navigator.geolocation.getCurrentPosition((p) => finishSave(p.coords.latitude, p.coords.longitude), () => finishSave(), { timeout: 2000 });
   };
-
+ 
   const handleSaveExpense = async (expense: Expense) => {
     setIsLoading(true);
     await storage.saveExpense(expense);
@@ -124,7 +131,7 @@ const App: React.FC = () => {
     setIsExpenseModalOpen(false);
     setIsLoading(false);
   };
-
+ 
   const deleteShift = async (id: string) => {
     if (window.confirm('Удалить?')) {
       setIsLoading(true);
@@ -134,11 +141,11 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   };
-
+ 
   if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="w-10 h-10 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div></div>;
   if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-black mb-6">DriverLog Cloud</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button><CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={() => setConfigUpdateTrigger(t => t+1)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} /></div>;
   if (!session) return <AuthScreen />;
-
+ 
   return (
     <div className="max-w-xl mx-auto min-h-screen pb-24 px-4 pt-8 bg-slate-50/50">
       {/* Шапка с мигающей точкой настроек и индикатором активности */}
@@ -167,7 +174,7 @@ const App: React.FC = () => {
           </div>
         </div>
       </header>
-
+ 
       {/* Центральный таймер с насыщенной цветовой схемой */}
       <div className="liquid-glass rounded-[3.5rem] p-8 mb-8 text-center shadow-xl border-white relative overflow-hidden">
         <div className="flex items-center justify-center gap-2 mb-4">
@@ -185,7 +192,7 @@ const App: React.FC = () => {
           </div>
         </div>
       </div>
-
+ 
       <button 
         onClick={() => appState.isActive ? setIsModalOpen(true) : navigator.geolocation.getCurrentPosition(p => { setAppState({ isActive: true, startTime: Date.now(), startLat: p.coords.latitude, startLng: p.coords.longitude }); storage.saveState({ isActive: true, startTime: Date.now(), startLat: p.coords.latitude, startLng: p.coords.longitude }); })}
         className={`w-full py-7 px-8 rounded-full flex items-center justify-between text-2xl font-black text-white shadow-2xl transition-all mb-10 overflow-hidden relative group ${appState.isActive ? 'bg-gradient-to-r from-rose-500 to-rose-600' : 'bg-gradient-to-r from-emerald-500 to-emerald-600'}`}
@@ -198,18 +205,70 @@ const App: React.FC = () => {
           </svg>
         </div>
       </button>
-
+ 
       <div className="grid grid-cols-2 gap-4 mb-10">
-        <StatCard label="Вождение Неделя" value={formatMinsToHHMM(stats.weekMins)} sublabel="Лимит 56ч" variant="yellow" />
-        <StatCard label="Работа Неделя" value={formatMinsToHHMM(stats.workWeekMins)} sublabel="(Молотки)" variant="indigo" />
-        <StatCard label="Вождение 2 нед" value={formatMinsToHHMM(stats.biWeekMins)} sublabel="Лимит 90ч" variant="green" />
-        <StatCard label="10ч доступно" value={`${stats.extDrivingCount}/3`} sublabel="На этой неделе" variant="blue" />
-        <StatCard label="Долг отдыха" value={`${Math.ceil(totalDebt)}ч`} sublabel="К возврату" variant="rose" />
-        <StatCard label="Траты неделя" value={`${expenses.filter(e => e.currency === 'EUR' && new Date(e.timestamp) >= getMonday(new Date())).reduce((a,b)=>a+b.amount,0)} €`} sublabel="В евро" variant="orange" />
-        <StatCard label="Смен на нед" value={`${enrichedShifts.filter(s => new Date(s.date) >= getMonday(new Date())).length}`} sublabel="Всего" variant="purple" />
-        <StatCard label="Остаток вожд" value={formatMinsToHHMM(Math.max(0, 56*60 - stats.weekMins))} sublabel="До лимита" variant="emerald" />
+        {/* Вождение Неделя - цвет зависит от близости к лимиту */}
+        <StatCard 
+          label="Вождение Неделя" 
+          value={formatMinsToHHMM(stats.weekMins)} 
+          sublabel="Лимит 56ч" 
+          variant={stats.weekMins >= 55 * 60 ? 'rose' : stats.weekMins >= 50 * 60 ? 'yellow' : 'blue'} 
+        />
+        
+        <StatCard
+          label="Работа Неделя"
+          value={formatMinsToHHMM(stats.workWeekMins)}
+          sublabel="(Молотки)"
+          variant="indigo"
+        />
+        
+        {/* Вождение 2 нед - цвет зависит от близости к лимиту */}
+        <StatCard 
+          label="Вождение 2 нед" 
+          value={formatMinsToHHMM(stats.biWeekMins)} 
+          sublabel="Лимит 90ч" 
+          variant={stats.biWeekMins >= 88 * 60 ? 'rose' : stats.biWeekMins >= 80 * 60 ? 'yellow' : 'green'} 
+        />
+        
+        {/* 10ч смены - цвет зависит от использования */}
+        <StatCard 
+          label="10ч доступно" 
+          value={`${stats.extDrivingCount}/3`} 
+          sublabel={stats.extDrivingCount >= 3 ? '❌ ЛИМИТ ИСЧЕРПАН' : 'На этой неделе'} 
+          variant={stats.extDrivingCount >= 3 ? 'rose' : stats.extDrivingCount >= 2 ? 'yellow' : 'blue'} 
+        />
+        
+        {/* Долг отдыха - красный если есть долг */}
+        <StatCard 
+          label="Долг отдыха" 
+          value={`${Math.ceil(totalDebt)}ч`} 
+          sublabel="К возврату" 
+          variant={totalDebt > 0 ? 'rose' : 'emerald'} 
+        />
+        
+        <StatCard 
+          label="Траты неделя" 
+          value={`${expenses.filter(e => e.currency === 'EUR' && new Date(e.timestamp) >= getMonday(new Date())).reduce((a,b)=>a+b.amount,0)} €`} 
+          sublabel="В евро" 
+          variant="orange" 
+        />
+        
+        <StatCard 
+          label="Смен на нед" 
+          value={`${enrichedShifts.filter(s => new Date(s.date) >= getMonday(new Date())).length}`} 
+          sublabel="Всего" 
+          variant="purple" 
+        />
+        
+        {/* Остаток вождения - цвет зависит от того, сколько осталось */}
+        <StatCard 
+          label="Остаток вожд" 
+          value={formatMinsToHHMM(Math.max(0, 56*60 - stats.weekMins))} 
+          sublabel="До лимита" 
+          variant={56*60 - stats.weekMins <= 60 ? 'rose' : 56*60 - stats.weekMins <= 6*60 ? 'yellow' : 'emerald'} 
+        />
       </div>
-
+ 
       <div className="space-y-4">
         <div className="flex items-center justify-between px-2 mb-6">
           <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">История логов</h3>
@@ -218,7 +277,7 @@ const App: React.FC = () => {
             <button onClick={() => setViewMode('stats')} className={`px-5 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${viewMode === 'stats' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Dashboard</button>
           </div>
         </div>
-
+ 
         {viewMode === 'list' ? (
           enrichedShifts.map((s, idx) => (
             <TimelineItem key={s.id} shift={s} onEdit={setEditingShift} onDelete={deleteShift} onAddExpense={setActiveShiftForExpense} onToggleCompensation={() => {}} isInitiallyExpanded={idx === 0} />
@@ -227,12 +286,12 @@ const App: React.FC = () => {
           <Dashboard shifts={enrichedShifts} />
         )}
       </div>
-
+ 
       <ShiftModal isOpen={isModalOpen || !!editingShift} onClose={() => { setIsModalOpen(false); setEditingShift(null); }} onSave={handleSaveShift} initialData={editingShift} />
       {activeShiftForExpense && <ExpensesModal isOpen={!!activeShiftForExpense} onClose={() => setActiveShiftForExpense(null)} onSave={handleSaveExpense} shiftId={activeShiftForExpense} />}
       <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={() => setConfigUpdateTrigger(t => t+1)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} />
     </div>
   );
 };
-
+ 
 export default App;
