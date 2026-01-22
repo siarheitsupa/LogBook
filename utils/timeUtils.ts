@@ -160,6 +160,7 @@ export const getStats = (shifts: Shift[]) => {
     if (shiftTimestamp >= currentWeekStart) {
       weekMins += driveMins;
       workWeekMins += workMins;
+      // Регламент ЕС 561/2006: ежедневное время вождения может быть продлено до 10 часов не более 2 раз в неделю.
       if (driveMins > 9 * 60) extDrivingCount++;
       if (dutyMins > 13 * 60) extDutyCount++;
     }

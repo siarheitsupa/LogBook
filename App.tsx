@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shift, AppState, CloudConfig, Expense, ShiftWithRest } from './types';
 import { storage } from './services/storageService';
+import { analyzeLogs } from './services/geminiService';
 import { formatMinsToHHMM, getStats, calculateLogSummary, pad, getMonday } from './utils/timeUtils';
 import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
@@ -9,8 +11,10 @@ import TimelineItem from './components/TimelineItem';
 import Dashboard from './components/Dashboard';
 import CloudSettingsModal from './components/CloudSettingsModal';
 import AuthScreen from './components/AuthScreen';
+import RouteMap from './components/RouteMap';
 import { Session } from '@supabase/supabase-js';
 
+// Completed the truncated App component logic and added the required default export
 const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -24,213 +28,269 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
   const [configUpdateTrigger, setConfigUpdateTrigger] = useState(0);
-  const [viewMode, setViewMode] = useState<'list' | 'stats'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'stats' | 'map'>('list');
 
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // AI States
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
+  // Initialize storage and monitor auth session state
   useEffect(() => {
-    const loadInit = async () => {
-      setIsLoading(true);
-      const isConfigured = storage.initCloud();
-      if (isConfigured) {
-        const currentSession = await storage.getSession();
-        if (currentSession) {
-          try {
-            const { data: { user }, error } = await storage.getUser(); 
-            if (error || !user) {
-              await storage.signOut();
-              setSession(null);
-            } else {
-              setSession(currentSession);
-              const [shiftsData, expensesData] = await Promise.all([
-                storage.getShifts(),
-                storage.getExpenses()
-              ]);
-              setShifts(shiftsData);
-              setExpenses(expensesData);
-            }
-          } catch (e) {
-            console.error("Session recovery failed", e);
-          }
-        }
-      }
-      const unsubscribe = storage.onAuthChange((newSession) => {
-        setSession(newSession);
-      });
-      setAppState(storage.getState());
+    storage.initCloud();
+    const sub = storage.onAuthChange((s) => setSession(s));
+    storage.getSession().then(s => {
+      setSession(s);
       setIsLoading(false);
-      return unsubscribe;
-    };
-    loadInit();
+    });
+    return () => sub();
   }, [configUpdateTrigger]);
 
+  // Load shifts and expenses from storage when user session is established
   useEffect(() => {
     if (session) {
-      storage.getShifts().then(setShifts);
-      storage.getExpenses().then(setExpenses);
+      loadData();
     }
   }, [session]);
 
-  const enrichedShifts: ShiftWithRest[] = useMemo(() => {
-    const { shifts: summaryShifts } = calculateLogSummary(shifts);
-    return summaryShifts.map(s => ({
-      ...s,
-      expenses: expenses.filter(e => e.shiftId === s.id)
-    }));
-  }, [shifts, expenses]);
+  // Periodic UI refresh timer
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const { totalDebt } = useMemo(() => calculateLogSummary(shifts), [shifts]);
-  const stats = useMemo(() => getStats(shifts), [shifts]);
+  const loadData = async () => {
+    const [s, e] = await Promise.all([storage.getShifts(), storage.getExpenses()]);
+    setShifts(s);
+    setExpenses(e);
+    setAppState(storage.getState());
+  };
 
-  const restInfo = useMemo(() => {
-    if (appState.isActive && appState.startTime) {
-      const elapsedMins = (now - appState.startTime) / 60000;
-      return { label: 'СМЕНА', time: formatMinsToHHMM(elapsedMins), isRest: false };
+  const handleSaveShift = async (shift: Shift) => {
+    await storage.saveShift(shift);
+    setIsModalOpen(false);
+    setEditingShift(null);
+    loadData();
+  };
+
+  const handleDeleteShift = async (id: string) => {
+    if (window.confirm('Удалить запись смены?')) {
+      await storage.deleteShift(id);
+      loadData();
     }
-    const lastShift = enrichedShifts[0];
-    if (!lastShift) return { label: 'ОТДЫХ', time: '00:00', isRest: true, mins: 0 };
-    const lastEndTs = new Date(`${lastShift.date}T${lastShift.endTime}`).getTime();
-    const restMins = (now - lastEndTs) / 60000;
-    return { label: 'ОТДЫХ', time: formatMinsToHHMM(restMins > 0 ? restMins : 0), isRest: true, mins: restMins > 0 ? restMins : 0 };
-  }, [appState, enrichedShifts, now]);
-
-  const handleSaveShift = async (newShift: Shift) => {
-    setIsLoading(true);
-    const finishSave = async (lat?: number, lng?: number) => {
-      const shiftWithGeo: Shift = { ...newShift, startLat: appState.startLat, startLng: appState.startLng, endLat: lat || newShift.endLat, endLng: lng || newShift.endLng };
-      try {
-        await storage.saveShift(shiftWithGeo);
-        const updatedData = await storage.getShifts();
-        setShifts(updatedData);
-        if (!editingShift) {
-          setAppState({ isActive: false, startTime: null });
-          storage.clearState();
-        }
-        setIsModalOpen(false);
-        setEditingShift(null);
-      } catch (e: any) { alert(`Ошибка: ${e.message}`); } finally { setIsLoading(false); }
-    };
-    if (editingShift) await finishSave(); else navigator.geolocation.getCurrentPosition((p) => finishSave(p.coords.latitude, p.coords.longitude), () => finishSave(), { timeout: 2000 });
   };
 
   const handleSaveExpense = async (expense: Expense) => {
-    setIsLoading(true);
     await storage.saveExpense(expense);
-    const updated = await storage.getExpenses();
-    setExpenses(updated);
     setIsExpenseModalOpen(false);
-    setIsLoading(false);
+    loadData();
   };
 
-  const deleteShift = async (id: string) => {
-    if (window.confirm('Удалить?')) {
-      setIsLoading(true);
-      await storage.deleteShift(id);
-      const updated = await storage.getShifts();
-      setShifts(updated);
-      setIsLoading(false);
+  const handleToggleCompensation = async (shiftWithRest: ShiftWithRest) => {
+    // Only update the base shift properties for storage persistence
+    const shiftToUpdate: Shift = {
+      id: shiftWithRest.id,
+      date: shiftWithRest.date,
+      startTime: shiftWithRest.startTime,
+      endTime: shiftWithRest.endTime,
+      driveHours: shiftWithRest.driveHours,
+      driveMinutes: shiftWithRest.driveMinutes,
+      workHours: shiftWithRest.workHours,
+      workMinutes: shiftWithRest.workMinutes,
+      timestamp: shiftWithRest.timestamp,
+      startLat: shiftWithRest.startLat,
+      startLng: shiftWithRest.startLng,
+      endLat: shiftWithRest.endLat,
+      endLng: shiftWithRest.endLng,
+      isCompensated: !shiftWithRest.isCompensated
+    };
+    await storage.saveShift(shiftToUpdate);
+    loadData();
+  };
+
+  const handleAiAnalysis = async () => {
+    if (shifts.length === 0) return;
+    setIsAiLoading(true);
+    try {
+      const result = await analyzeLogs(shifts);
+      setAiAnalysis(result);
+    } catch (e) {
+      setAiAnalysis("Ошибка при анализе логов.");
+    } finally {
+      setIsAiLoading(false);
     }
   };
 
-  if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="w-10 h-10 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div></div>;
-  if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-black mb-6">DriverLog Cloud</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button><CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={() => setConfigUpdateTrigger(t => t+1)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} /></div>;
+  const enrichedData = useMemo(() => {
+    const summary = calculateLogSummary(shifts);
+    const shiftsWithExpenses = summary.shifts.map(s => ({
+      ...s,
+      expenses: expenses.filter(e => e.shiftId === s.id)
+    }));
+    return { ...summary, shifts: shiftsWithExpenses };
+  }, [shifts, expenses]);
+
+  const stats = useMemo(() => getStats(shifts), [shifts]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-sm font-black text-slate-400 uppercase tracking-widest animate-pulse">
+          Загрузка приложения...
+        </div>
+      </div>
+    );
+  }
+
   if (!session) return <AuthScreen />;
 
   return (
-    <div className="max-w-xl mx-auto min-h-screen pb-24 px-4 pt-8 bg-slate-50/50">
-      {/* Шапка с мигающей точкой настроек и индикатором активности */}
-      <header className="flex flex-col items-center mb-8 relative">
-        <div className="flex items-center gap-3 liquid-glass p-2.5 pr-4 pl-4 rounded-full shadow-lg">
-          <div className="w-11 h-11 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-lg overflow-hidden relative">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>
-            {appState.isActive && (
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-900 animate-pulse"></span>
-            )}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-black tracking-tight text-slate-800 leading-none">DriverLog Pro</span>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 opacity-60">Professional Edition</span>
-          </div>
-          <div className="flex items-center gap-2 ml-2">
-            {/* Вместо шестеренки просто мигающая зеленая точка */}
-            <button 
-              onClick={() => setIsCloudModalOpen(true)} 
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100/50 transition-colors"
-              title="Настройки облака"
-            >
-              <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
-            </button>
-            <button onClick={() => storage.signOut()} className="text-[9px] font-black uppercase text-rose-500 px-2 py-2 rounded-xl active:bg-rose-50">Выйти</button>
-          </div>
+    <div className="min-h-screen bg-slate-50 pb-24 font-sans text-slate-900">
+      <header className="p-6 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">DriverLog Pro</h1>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[150px]">
+            {session.user?.email}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setIsCloudModalOpen(true)} 
+            className="p-3 bg-slate-100 rounded-2xl text-slate-600 active:scale-95 transition-all"
+            title="Настройки облака"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17.5 19a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/><path d="M12.5 19H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v6.5"/>
+            </svg>
+          </button>
+          <button 
+            onClick={() => storage.signOut()} 
+            className="p-3 bg-rose-50 rounded-2xl text-rose-600 active:scale-95 transition-all"
+            title="Выйти"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
         </div>
       </header>
 
-      {/* Центральный таймер с насыщенной цветовой схемой */}
-      <div className="liquid-glass rounded-[3.5rem] p-8 mb-8 text-center shadow-xl border-white relative overflow-hidden">
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <span className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">{restInfo.label}</span>
+      <main className="max-w-2xl mx-auto p-4 space-y-6">
+        {/* Statistics Overview */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <StatCard label="Неделя" value={formatMinsToHHMM(stats.weekMins)} variant="blue" sublabel="Вождение" />
+          <StatCard label="2 Недели" value={formatMinsToHHMM(stats.biWeekMins)} variant="purple" sublabel="Вождение" />
+          <StatCard label="Долг" value={`${Math.ceil(enrichedData.totalDebt)}ч`} variant="rose" sublabel="Отдых" />
+          <StatCard label="Сегодня" value={formatMinsToHHMM(stats.dailyDutyMins)} variant="emerald" sublabel="Смена" />
         </div>
-        <h1 className="text-7xl font-black text-slate-900 mb-8 tabular-nums tracking-tighter">{restInfo.time}</h1>
-        <div className="grid grid-cols-2 gap-4">
-          <div className={`p-5 rounded-[2.2rem] transition-all duration-500 flex flex-col items-center justify-center shadow-md ${restInfo.isRest && restInfo.mins >= 540 ? 'bg-rose-500 text-white shadow-rose-200' : 'bg-rose-100 text-rose-600'}`}>
-            <span className="text-[10px] font-black uppercase block mb-1 opacity-70">9 ЧАСОВ</span>
-            <span className="text-2xl font-black">{restInfo.isRest ? formatMinsToHHMM(Math.max(0, 540 - restInfo.mins)) : '09:00'}</span>
-          </div>
-          <div className={`p-5 rounded-[2.2rem] transition-all duration-500 flex flex-col items-center justify-center shadow-md ${restInfo.isRest && restInfo.mins >= 660 ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-emerald-100 text-emerald-700'}`}>
-            <span className="text-[10px] font-black uppercase block mb-1 opacity-70">11 ЧАСОВ</span>
-            <span className="text-2xl font-black">{restInfo.isRest ? formatMinsToHHMM(Math.max(0, 660 - restInfo.mins)) : '11:00'}</span>
-          </div>
-        </div>
-      </div>
 
-      <button 
-        onClick={() => appState.isActive ? setIsModalOpen(true) : navigator.geolocation.getCurrentPosition(p => { setAppState({ isActive: true, startTime: Date.now(), startLat: p.coords.latitude, startLng: p.coords.longitude }); storage.saveState({ isActive: true, startTime: Date.now(), startLat: p.coords.latitude, startLng: p.coords.longitude }); })}
-        className={`w-full py-7 px-8 rounded-full flex items-center justify-between text-2xl font-black text-white shadow-2xl transition-all mb-10 overflow-hidden relative group ${appState.isActive ? 'bg-gradient-to-r from-rose-500 to-rose-600' : 'bg-gradient-to-r from-emerald-500 to-emerald-600'}`}
-      >
-        <div className="shimmer-liquid opacity-20"></div>
-        <span className="uppercase tracking-tight pl-4">{appState.isActive ? 'Завершить смену' : 'Начать смену'}</span>
-        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md border border-white/30 shadow-inner">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            {appState.isActive ? <rect x="6" y="6" width="12" height="12" rx="2" /> : <path d="M8 5v14l11-7z" />}
-          </svg>
+        {/* AI Analysis Component */}
+        <div className="liquid-glass p-6 rounded-[2.5rem] border-blue-100/50">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">AI Анализ (561/2006)</h3>
+            <button 
+              onClick={handleAiAnalysis} 
+              disabled={isAiLoading || shifts.length === 0}
+              className="px-4 py-2 bg-slate-900 text-white text-[10px] font-black uppercase rounded-xl disabled:opacity-50 active:scale-95 transition-all"
+            >
+              {isAiLoading ? 'Загрузка...' : 'Запустить'}
+            </button>
+          </div>
+          {aiAnalysis ? (
+            <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 text-[12px] font-medium leading-relaxed text-slate-700 animate-in fade-in slide-in-from-top-1">
+              {aiAnalysis}
+            </div>
+          ) : (
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center py-2 opacity-50">
+              Нажмите "Запустить" для проверки нарушений
+            </p>
+          )}
         </div>
+
+        {/* View Mode Switcher */}
+        <div className="flex p-1 bg-slate-100 rounded-2xl">
+          {(['list', 'stats', 'map'] as const).map(m => (
+            <button 
+              key={m}
+              onClick={() => setViewMode(m)}
+              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${viewMode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              {m === 'list' ? 'Лента' : m === 'stats' ? 'Дашборд' : 'Карта'}
+            </button>
+          ))}
+        </div>
+
+        {/* Main Content Area */}
+        {viewMode === 'list' && (
+          <div className="space-y-4">
+            {enrichedData.shifts.length > 0 ? (
+              enrichedData.shifts.map(s => (
+                <TimelineItem 
+                  key={s.id} 
+                  shift={s} 
+                  onEdit={(shift) => { setEditingShift(shift); setIsModalOpen(true); }}
+                  onDelete={handleDeleteShift}
+                  onToggleCompensation={handleToggleCompensation}
+                  onAddExpense={(id) => { setActiveShiftForExpense(id); setIsExpenseModalOpen(true); }}
+                />
+              ))
+            ) : (
+              <div className="text-center py-20 bg-white/50 rounded-[3rem] border border-dashed border-slate-200">
+                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Нет записей смен</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {viewMode === 'stats' && (
+          <div className="animate-in fade-in duration-500">
+            <Dashboard shifts={enrichedData.shifts} />
+          </div>
+        )}
+
+        {viewMode === 'map' && (
+          <div className="animate-in fade-in duration-500">
+            <RouteMap shifts={shifts} />
+          </div>
+        )}
+      </main>
+
+      {/* Floating Action Button for New Shift */}
+      <button 
+        onClick={() => { setEditingShift(null); setIsModalOpen(true); }}
+        className="fixed bottom-8 right-8 w-16 h-16 bg-blue-600 text-white rounded-full shadow-2xl shadow-blue-200 flex items-center justify-center active:scale-90 hover:scale-105 transition-all z-40"
+      >
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
       </button>
 
-      <div className="grid grid-cols-2 gap-4 mb-10">
-        <StatCard label="Вождение Неделя" value={formatMinsToHHMM(stats.weekMins)} sublabel="Лимит 56ч" variant="yellow" />
-        <StatCard label="Работа Неделя" value={formatMinsToHHMM(stats.workWeekMins)} sublabel="(Молотки)" variant="indigo" />
-        <StatCard label="Вождение 2 нед" value={formatMinsToHHMM(stats.biWeekMins)} sublabel="Лимит 90ч" variant="green" />
-        <StatCard label="10ч доступно" value={`${stats.extDrivingCount}/3`} sublabel="На этой неделе" variant="blue" />
-        <StatCard label="Долг отдыха" value={`${Math.ceil(totalDebt)}ч`} sublabel="К возврату" variant="rose" />
-        <StatCard label="Траты неделя" value={`${expenses.filter(e => e.currency === 'EUR' && new Date(e.timestamp) >= getMonday(new Date())).reduce((a,b)=>a+b.amount,0)} €`} sublabel="В евро" variant="orange" />
-        <StatCard label="Смен на нед" value={`${enrichedShifts.filter(s => new Date(s.date) >= getMonday(new Date())).length}`} sublabel="Всего" variant="purple" />
-        <StatCard label="Остаток вожд" value={formatMinsToHHMM(Math.max(0, 56*60 - stats.weekMins))} sublabel="До лимита" variant="emerald" />
-      </div>
+      {/* Modals */}
+      <ShiftModal 
+        isOpen={isModalOpen} 
+        onClose={() => { setIsModalOpen(false); setEditingShift(null); }} 
+        onSave={handleSaveShift} 
+        initialData={editingShift}
+      />
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between px-2 mb-6">
-          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">История логов</h3>
-          <div className="flex p-1 bg-white/50 rounded-2xl border shadow-sm">
-            <button onClick={() => setViewMode('list')} className={`px-5 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${viewMode === 'list' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Лог</button>
-            <button onClick={() => setViewMode('stats')} className={`px-5 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${viewMode === 'stats' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Dashboard</button>
-          </div>
-        </div>
+      <ExpensesModal 
+        isOpen={isExpenseModalOpen}
+        onClose={() => setIsExpenseModalOpen(false)}
+        onSave={handleSaveExpense}
+        shiftId={activeShiftForExpense || ''}
+      />
 
-        {viewMode === 'list' ? (
-          enrichedShifts.map((s, idx) => (
-            <TimelineItem key={s.id} shift={s} onEdit={setEditingShift} onDelete={deleteShift} onAddExpense={setActiveShiftForExpense} onToggleCompensation={() => {}} isInitiallyExpanded={idx === 0} />
-          ))
-        ) : (
-          <Dashboard shifts={enrichedShifts} />
-        )}
-      </div>
-
-      <ShiftModal isOpen={isModalOpen || !!editingShift} onClose={() => { setIsModalOpen(false); setEditingShift(null); }} onSave={handleSaveShift} initialData={editingShift} />
-      {activeShiftForExpense && <ExpensesModal isOpen={!!activeShiftForExpense} onClose={() => setActiveShiftForExpense(null)} onSave={handleSaveExpense} shiftId={activeShiftForExpense} />}
-      <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={() => setConfigUpdateTrigger(t => t+1)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} />
+      <CloudSettingsModal 
+        isOpen={isCloudModalOpen}
+        onClose={() => setIsCloudModalOpen(false)}
+        onSave={async (cfg) => { 
+          storage.initCloud(cfg); 
+          setConfigUpdateTrigger(t => t + 1); 
+          setIsCloudModalOpen(false);
+        }}
+        onReset={() => { 
+          storage.resetCloud(); 
+          setConfigUpdateTrigger(t => t + 1); 
+        }}
+      />
     </div>
   );
 };
