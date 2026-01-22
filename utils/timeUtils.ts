@@ -1,3 +1,4 @@
+
 import { Shift, RestEvent, ShiftWithRest } from '../types';
 
 export const pad = (n: number) => n.toString().padStart(2, '0');

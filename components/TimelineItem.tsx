@@ -16,7 +16,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete }) 
   return (
     <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 transition-all">
       <div className="flex justify-between items-center" onClick={() => setIsExpanded(!isExpanded)}>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <div className="text-lg font-black text-slate-800 tracking-tight">
             {new Date(shift.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
           </div>
@@ -27,10 +27,10 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete }) 
         
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <div className="text-blue-600 font-black text-sm tracking-tight">
+            <div className="text-blue-600 font-black text-sm tracking-tight leading-none mb-0.5">
               Руль: {shift.driveHours}ч {shift.driveMinutes}м
             </div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               СМЕНА: {formatMinsToHHMM(duration)}
             </div>
           </div>

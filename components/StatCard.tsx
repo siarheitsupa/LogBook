@@ -19,12 +19,12 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sublabel, variant }) 
   };
 
   const labelColors = {
-    yellow: 'text-amber-700',
-    orange: 'text-orange-700',
-    green: 'text-emerald-700',
-    blue: 'text-blue-700',
-    indigo: 'text-indigo-700',
-    purple: 'text-purple-700',
+    yellow: 'text-amber-700/60',
+    orange: 'text-orange-700/60',
+    green: 'text-emerald-700/60',
+    blue: 'text-blue-700/60',
+    indigo: 'text-indigo-700/60',
+    purple: 'text-purple-700/60',
   };
 
   return (
@@ -32,11 +32,11 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sublabel, variant }) 
       <span className="text-3xl font-black mb-1 tracking-tighter tabular-nums">
         {value}
       </span>
-      <span className={`text-[10px] font-black leading-tight uppercase tracking-widest mb-1 ${labelColors[variant]}`}>
+      <span className={`text-[10px] font-black leading-none uppercase tracking-widest mb-1 ${labelColors[variant]}`}>
         {label}
       </span>
       {sublabel && (
-        <span className="text-[9px] font-bold opacity-40 uppercase tracking-widest">
+        <span className="text-[9px] font-bold opacity-30 uppercase tracking-widest">
           {sublabel}
         </span>
       )}
