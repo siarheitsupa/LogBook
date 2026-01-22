@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Shift, Break } from '../types';
+import { Shift } from '../types';
 
 interface ShiftModalProps {
   isOpen: boolean;
@@ -25,17 +24,10 @@ const WorkIcon = () => (
   </svg>
 );
 
-const BreakIcon = () => (
-   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1 inline-block mb-0.5">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M10 15V9" />
-      <path d="M14 15V9" />
-   </svg>
-);
-
 const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initialData, defaultStartTime }) => {
   const [date, setDate] = useState('');
   
+  // Раздельные состояния для времени начала и конца
   const [startH, setStartH] = useState('08');
   const [startM, setStartM] = useState('00');
   const [endH, setEndH] = useState('18');
@@ -45,13 +37,6 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
   const [driveM, setDriveM] = useState('0');
   const [workH, setWorkH] = useState('0');
   const [workM, setWorkM] = useState('0');
-
-  const [breaks, setBreaks] = useState<Break[]>([]);
-  const [breakStartH, setBreakStartH] = useState('');
-  const [breakStartM, setBreakStartM] = useState('');
-  const [breakEndH, setBreakEndH] = useState('');
-  const [breakEndM, setBreakEndM] = useState('');
-  const [showBreakInput, setShowBreakInput] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -67,7 +52,6 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         setDriveM(initialData.driveMinutes.toString());
         setWorkH((initialData.workHours || 0).toString());
         setWorkM((initialData.workMinutes || 0).toString());
-        setBreaks(initialData.breaks || []);
       } else {
         const now = new Date();
         setDate(now.toISOString().split('T')[0]);
@@ -85,35 +69,9 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         setDriveM('0');
         setWorkH('0');
         setWorkM('0');
-        setBreaks([]);
       }
-      setShowBreakInput(false);
     }
   }, [initialData, isOpen, defaultStartTime]);
-
-  const addBreak = () => {
-    if (!breakStartH || !breakStartM || !breakEndH || !breakEndM) return;
-    
-    const startMin = parseInt(breakStartH) * 60 + parseInt(breakStartM);
-    const endMin = parseInt(breakEndH) * 60 + parseInt(breakEndM);
-    
-    let duration = endMin - startMin;
-    if (duration < 0) duration += 24 * 60; // Переход через полночь
-
-    const newBreak: Break = {
-      start: `${breakStartH.padStart(2, '0')}:${breakStartM.padStart(2, '0')}`,
-      end: `${breakEndH.padStart(2, '0')}:${breakEndM.padStart(2, '0')}`,
-      durationMinutes: duration
-    };
-
-    setBreaks([...breaks, newBreak].sort((a, b) => a.start.localeCompare(b.start)));
-    setBreakStartH(''); setBreakStartM(''); setBreakEndH(''); setBreakEndM('');
-    setShowBreakInput(false);
-  };
-
-  const removeBreak = (index: number) => {
-    setBreaks(breaks.filter((_, i) => i !== index));
-  };
 
   if (!isOpen) return null;
 
@@ -128,7 +86,6 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
       driveMinutes: parseInt(driveM) || 0,
       workHours: parseInt(workH) || 0,
       workMinutes: parseInt(workM) || 0,
-      breaks: breaks,
       timestamp: new Date(`${date}T${startH.padStart(2, '0')}:${startM.padStart(2, '0')}`).getTime()
     };
     onSave(shift);
@@ -138,7 +95,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm safe-p-bottom">
       <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl animate-in fade-in zoom-in duration-200 flex flex-col max-h-[92dvh] overflow-hidden">
         <div className="p-5 sm:p-6 overflow-y-auto">
-          <h3 className="text-xl font-black text-center mb-6 text-slate-800">ЗАПИСЬ СМЕНЫ</h3>
+          <h3 className="text-xl font-black text-center mb-6 text-slate-800">Запись смены</h3>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Дата</label>
@@ -266,61 +223,19 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
               </div>
             </div>
 
-            {/* Секция перерывов */}
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-               <div className="flex justify-between items-center mb-3">
-                 <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                   <BreakIcon /> Перерывы (45 мин)
-                 </label>
-                 {!showBreakInput && (
-                   <button type="button" onClick={() => setShowBreakInput(true)} className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-1 rounded-lg hover:bg-blue-100">+ Добавить</button>
-                 )}
-               </div>
-
-               {showBreakInput && (
-                  <div className="flex items-center gap-2 mb-3 animate-in fade-in slide-in-from-top-1">
-                     <div className="flex-1 bg-white p-1 rounded-xl border border-slate-200 flex items-center justify-center">
-                        <input className="w-8 text-center font-bold text-xs outline-none" placeholder="ЧЧ" value={breakStartH} onChange={e => setBreakStartH(e.target.value)} maxLength={2} />
-                        :
-                        <input className="w-8 text-center font-bold text-xs outline-none" placeholder="ММ" value={breakStartM} onChange={e => setBreakStartM(e.target.value)} maxLength={2} />
-                     </div>
-                     <span className="text-slate-300">-</span>
-                     <div className="flex-1 bg-white p-1 rounded-xl border border-slate-200 flex items-center justify-center">
-                        <input className="w-8 text-center font-bold text-xs outline-none" placeholder="ЧЧ" value={breakEndH} onChange={e => setBreakEndH(e.target.value)} maxLength={2} />
-                        :
-                        <input className="w-8 text-center font-bold text-xs outline-none" placeholder="ММ" value={breakEndM} onChange={e => setBreakEndM(e.target.value)} maxLength={2} />
-                     </div>
-                     <button type="button" onClick={addBreak} className="bg-emerald-500 text-white rounded-xl w-8 h-8 flex items-center justify-center font-bold">✓</button>
-                  </div>
-               )}
-
-               <div className="space-y-2">
-                 {breaks.length === 0 && !showBreakInput && <div className="text-center text-[10px] text-slate-300 font-bold uppercase py-2">Нет перерывов</div>}
-                 {breaks.map((b, i) => (
-                   <div key={i} className="flex justify-between items-center bg-white p-2 rounded-xl border border-slate-100 shadow-sm">
-                      <span className="text-xs font-bold text-slate-700 ml-2">{b.start} — {b.end}</span>
-                      <div className="flex items-center gap-3">
-                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{b.durationMinutes} мин</span>
-                         <button type="button" onClick={() => removeBreak(i)} className="text-rose-400 hover:text-rose-600 font-bold px-2">✕</button>
-                      </div>
-                   </div>
-                 ))}
-               </div>
-            </div>
-
             <div className="flex gap-3 pt-3">
               <button 
                 type="button" 
                 onClick={onClose}
                 className="flex-1 py-4 font-black text-slate-400 bg-slate-50 rounded-2xl active:bg-slate-100 transition-all text-xs uppercase tracking-widest"
               >
-                ОТМЕНА
+                Отмена
               </button>
               <button 
                 type="submit" 
                 className="flex-1 py-4 font-black text-white bg-blue-600 rounded-2xl active:scale-[0.98] shadow-xl shadow-blue-100 transition-all text-xs uppercase tracking-widest"
               >
-                СОХРАНИТЬ
+                Сохранить
               </button>
             </div>
           </form>

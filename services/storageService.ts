@@ -1,4 +1,3 @@
-
 import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
 import { Shift, AppState, CloudConfig, Expense } from '../types';
 
@@ -144,7 +143,6 @@ export const storage = {
             driveMinutes: Number(item.drive_minutes || 0),
             workHours: Number(item.work_hours || 0),
             workMinutes: Number(item.work_minutes || 0),
-            breaks: item.breaks || [], // Загружаем перерывы
             timestamp: Number(item.timestamp),
             startLat: item.start_lat,
             startLng: item.start_lng,
@@ -178,7 +176,6 @@ export const storage = {
         drive_minutes: shift.driveMinutes,
         work_hours: shift.workHours,
         work_minutes: shift.workMinutes,
-        breaks: shift.breaks, // Сохраняем перерывы
         timestamp: shift.timestamp,
         user_id: session.user.id,
         start_lat: shift.startLat,
