@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -14,16 +15,16 @@ interface WeeklyActivityChartProps {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="liquid-glass p-4 rounded-3xl border-white shadow-2xl animate-in zoom-in duration-200 min-w-[140px]">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 pb-1">{label}</p>
+      <div className="ios-glass p-4 rounded-3xl border-white shadow-2xl animate-in zoom-in duration-200 min-w-[140px]">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 pb-1">{label}</p>
         <div className="space-y-1.5">
           <div className="flex justify-between items-center gap-4">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Вождение</span>
-            <span className="text-sm font-black text-blue-600">{payload[0].value}ч</span>
+            <span className="text-sm font-bold text-blue-600">{payload[0].value}ч</span>
           </div>
           <div className="flex justify-between items-center gap-4">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Работа</span>
-            <span className="text-sm font-black text-orange-500">{payload[1].value}ч</span>
+            <span className="text-sm font-bold text-orange-500">{payload[1].value}ч</span>
           </div>
         </div>
       </div>
@@ -52,13 +53,13 @@ const WeeklyActivityChart: React.FC<WeeklyActivityChartProps> = ({ data }) => {
             dataKey="day" 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 800 }}
+            tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }}
             dy={10}
           />
           <YAxis 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+            tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
           />
           <Tooltip 
             content={<CustomTooltip />} 

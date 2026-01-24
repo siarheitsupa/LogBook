@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { ShiftWithRest } from '../types';
 import WeeklyActivityChart from './WeeklyActivityChart';
@@ -51,9 +52,9 @@ const Dashboard: React.FC<DashboardProps> = ({ shifts }) => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="liquid-glass rounded-[3rem] p-8 border-emerald-200/50">
+      <div className="ios-glass rounded-[3rem] p-8">
         <div className="flex flex-col mb-6">
-          <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest flex items-center gap-3">
+          <h3 className="text-lg font-bold text-slate-800 uppercase tracking-widest flex items-center gap-3">
             <span className="w-2 h-6 bg-blue-500 rounded-full"></span>
             Активность за неделю
           </h3>
@@ -64,8 +65,8 @@ const Dashboard: React.FC<DashboardProps> = ({ shifts }) => {
         <WeeklyActivityChart data={weeklyData} />
       </div>
 
-      <div className="liquid-glass rounded-[3rem] p-8 border-rose-200/50">
-        <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-3">
+      <div className="ios-glass rounded-[3rem] p-8">
+        <h3 className="text-lg font-bold text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-3">
           <span className="w-2 h-6 bg-rose-500 rounded-full"></span>
           Тренд долга по отдыху
         </h3>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -13,9 +14,9 @@ interface RestDebtChartProps {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="liquid-glass p-4 rounded-3xl border-white shadow-2xl animate-in zoom-in duration-200">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 border-b border-slate-100 pb-1">{label}</p>
-        <p className="text-sm font-black text-rose-600">
+      <div className="ios-glass p-4 rounded-3xl border-white shadow-2xl animate-in zoom-in duration-200">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 border-b border-slate-100 pb-1">{label}</p>
+        <p className="text-sm font-bold text-rose-600">
           {payload[0].value.toFixed(1)}ч к возврату
         </p>
       </div>
@@ -49,7 +50,7 @@ const RestDebtChart: React.FC<RestDebtChartProps> = ({ data }) => {
           <YAxis 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+            tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
           />
           <Tooltip 
             content={<CustomTooltip />} 

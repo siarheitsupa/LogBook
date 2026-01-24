@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Shift, ShiftWithRest } from '../types';
 import { calculateShiftDurationMins, formatMinsToHHMM } from '../utils/timeUtils';
@@ -21,7 +22,7 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ shifts, stats, userEm
       {/* Header */}
       <div className="flex justify-between items-start border-b-4 border-black pb-6 mb-8">
         <div>
-          <h1 className="text-4xl font-black uppercase tracking-tighter">DriverLog Pro</h1>
+          <h1 className="text-4xl font-bold uppercase tracking-tighter">DriverLog Pro</h1>
           <p className="text-sm font-bold mt-1">Отчет по регламенту ЕС 561/2006</p>
         </div>
         <div className="text-right">
@@ -39,11 +40,11 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ shifts, stats, userEm
           <tbody>
             <tr className="bg-gray-100">
               <td className="border border-black p-3 font-bold w-1/2">Общее время вождения</td>
-              <td className="border border-black p-3 text-xl font-black">{formatMinsToHHMM(stats.weekMins)}</td>
+              <td className="border border-black p-3 text-xl font-bold">{formatMinsToHHMM(stats.weekMins)}</td>
             </tr>
             <tr>
               <td className="border border-black p-3 font-bold">Долг по компенсации отдыха</td>
-              <td className="border border-black p-3 text-xl font-black text-red-600">{Math.ceil(stats.totalDebt)} ч</td>
+              <td className="border border-black p-3 text-xl font-bold text-red-600">{Math.ceil(stats.totalDebt)} ч</td>
             </tr>
           </tbody>
         </table>
@@ -70,7 +71,7 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ shifts, stats, userEm
                 <td className="border border-black p-2 text-center">{s.startTime}</td>
                 <td className="border border-black p-2 text-center">{s.endTime}</td>
                 <td className="border border-black p-2 text-right">{s.workHours || 0}ч {s.workMinutes || 0}м</td>
-                <td className="border border-black p-2 text-right font-black">{s.driveHours}ч {s.driveMinutes}м</td>
+                <td className="border border-black p-2 text-right font-bold">{s.driveHours}ч {s.driveMinutes}м</td>
                 <td className="border border-black p-2 text-right">{formatMinsToHHMM(calculateShiftDurationMins(s))}</td>
               </tr>
             ))}
