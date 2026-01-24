@@ -81,6 +81,7 @@ export const calculateLogSummary = (shifts: Shift[]) => {
   const sorted = [...shifts].sort((a, b) => a.timestamp - b.timestamp);
   const enriched: ShiftWithRest[] = [];
   let totalDebt = 0;
+  const now = Date.now();
 
   // Группируем смены по неделям для анализа отдыха
   const weeklyRests: Record<string, number> = {};
@@ -135,7 +136,7 @@ export const calculateLogSummary = (shifts: Shift[]) => {
             type = 'weekly_reduced';
             debt = 45 - diffHours;
             
-            // Дедлайн: Конец текущей недели + 21 день
+            // Дедлайн: Конец текущей недели + 21 день (3 недели)
             const sunday = new Date(currStartTs);
             const day = sunday.getDay();
             const diffToSunday = day === 0 ? 0 : 7 - day;
@@ -152,12 +153,15 @@ export const calculateLogSummary = (shifts: Shift[]) => {
           debt = 0;
         } else {
           type = 'reduced';
-          // ВАЖНОЕ ИСПРАВЛЕНИЕ: Сокращенный ежедневный отдых (9-11ч) НЕ создает долг.
-          debt = 0; 
+          debt = 0; // Сокращенный ежедневный отдых не требует компенсации
         }
 
-        if (!curr.isCompensated) {
-           totalDebt += debt;
+        if (!curr.isCompensated && debt > 0) {
+           // Если дедлайн установлен и еще не прошел - считаем долг
+           // Если дедлайн прошел - это уже не "долг к возврату", а старое нарушение
+           if (!deadline || deadline > now) {
+             totalDebt += debt;
+           }
         }
         
         restEvent = { 
@@ -176,7 +180,7 @@ export const calculateLogSummary = (shifts: Shift[]) => {
 
   return {
     shifts: enriched.reverse(),
-    totalDebt
+    totalDebt: Math.max(0, totalDebt) // Защита от отрицательных значений
   };
 };
 
