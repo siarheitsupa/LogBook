@@ -177,7 +177,7 @@ const App: React.FC = () => {
   };
 
   if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="w-10 h-10 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div></div>;
-  if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-black mb-6">DriverLog Cloud</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button><CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={() => setConfigUpdateTrigger(t => t+1)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} /></div>;
+  if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-bold mb-6">DriverLog Cloud</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button><CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={() => setConfigUpdateTrigger(t => t+1)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} /></div>;
   if (!session) return <AuthScreen />;
 
   return (
@@ -192,8 +192,8 @@ const App: React.FC = () => {
             )}
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-black tracking-tight text-slate-800 leading-none">DriverLog Pro</span>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 opacity-60">Professional Edition</span>
+            <span className="text-lg font-bold tracking-tight text-slate-800 leading-none">DriverLog Pro</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 opacity-60">Professional Edition</span>
           </div>
           <div className="flex items-center gap-2 ml-2">
             <button 
@@ -203,36 +203,33 @@ const App: React.FC = () => {
             >
               <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.7)]"></span>
             </button>
-            <button onClick={() => storage.signOut()} className="text-[9px] font-black uppercase text-rose-500 px-2 py-2 rounded-xl active:bg-rose-50">Выйти</button>
+            <button onClick={() => storage.signOut()} className="text-[9px] font-bold uppercase text-rose-500 px-2 py-2 rounded-xl active:bg-rose-50">Выйти</button>
           </div>
         </div>
       </header>
 
       {/* Центральный таймер в стиле iOS Liquid Glass */}
-      <div className="ios-glass rounded-[3.5rem] p-6 mb-8 text-center shadow-2xl relative overflow-hidden backdrop-blur-2xl">
+      <div className="ios-glass rounded-[3.5rem] p-6 mb-8 text-center relative overflow-hidden backdrop-blur-3xl">
         <div className="flex items-center justify-center gap-2 mb-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 opacity-80">{restInfo.label}</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 opacity-80">{restInfo.label}</span>
         </div>
-        <h1 className="text-8xl font-black text-slate-800 mb-8 tabular-nums tracking-tighter drop-shadow-sm">{restInfo.time}</h1>
+        {/* Шрифт таймера стал тоньше (font-bold вместо font-black) */}
+        <h1 className="text-8xl font-bold text-slate-800 mb-8 tabular-nums tracking-tighter drop-shadow-sm">{restInfo.time}</h1>
         
         {/* Кнопки 9/11 часов в стиле Neon Jelly */}
         <div className="grid grid-cols-2 gap-4">
           <div className={`relative h-28 rounded-[2.5rem] flex flex-col items-center justify-center vibrant-btn overflow-hidden transition-all duration-500 ${restInfo.isRest && restInfo.mins >= 540 ? 'bg-[#ff4757] text-white shadow-[0_10px_25px_rgba(255,71,87,0.4)]' : 'bg-[#ff4757] text-white'}`}>
-             {/* Gradient Overlay for shine */}
              <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent pointer-events-none"></div>
-             
-             <span className="relative z-10 text-[11px] font-black uppercase block mb-1 opacity-90 tracking-widest">9 ЧАСОВ</span>
-             <span className="relative z-10 text-3xl font-black tracking-tight drop-shadow-sm">
+             <span className="relative z-10 text-[11px] font-bold uppercase block mb-1 opacity-90 tracking-widest">9 ЧАСОВ</span>
+             <span className="relative z-10 text-3xl font-bold tracking-tight drop-shadow-sm">
                 {restInfo.isRest ? formatMinsToHHMM(Math.max(0, 540 - restInfo.mins)) : '09:00'}
              </span>
-             {/* Progress bar background logic could go here, but pure color is cleaner for this style */}
           </div>
 
           <div className={`relative h-28 rounded-[2.5rem] flex flex-col items-center justify-center vibrant-btn overflow-hidden transition-all duration-500 ${restInfo.isRest && restInfo.mins >= 660 ? 'bg-[#2ed573] text-white shadow-[0_10px_25px_rgba(46,213,115,0.4)]' : 'bg-[#00c58e] text-white'}`}>
              <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent pointer-events-none"></div>
-             
-             <span className="relative z-10 text-[11px] font-black uppercase block mb-1 opacity-90 tracking-widest">11 ЧАСОВ</span>
-             <span className="relative z-10 text-3xl font-black tracking-tight drop-shadow-sm">
+             <span className="relative z-10 text-[11px] font-bold uppercase block mb-1 opacity-90 tracking-widest">11 ЧАСОВ</span>
+             <span className="relative z-10 text-3xl font-bold tracking-tight drop-shadow-sm">
                {restInfo.isRest ? formatMinsToHHMM(Math.max(0, 660 - restInfo.mins)) : '11:00'}
              </span>
           </div>
@@ -241,7 +238,7 @@ const App: React.FC = () => {
 
       <button 
         onClick={() => appState.isActive ? setIsModalOpen(true) : navigator.geolocation.getCurrentPosition(p => { setAppState({ isActive: true, startTime: Date.now(), startLat: p.coords.latitude, startLng: p.coords.longitude }); storage.saveState({ isActive: true, startTime: Date.now(), startLat: p.coords.latitude, startLng: p.coords.longitude }); })}
-        className={`w-full py-6 px-8 rounded-full flex items-center justify-between text-xl font-black text-white shadow-2xl transition-all mb-10 overflow-hidden relative group vibrant-btn ${appState.isActive ? 'bg-slate-900' : 'bg-blue-600'}`}
+        className={`w-full py-6 px-8 rounded-full flex items-center justify-between text-xl font-bold text-white shadow-2xl transition-all mb-10 overflow-hidden relative group vibrant-btn ${appState.isActive ? 'bg-gradient-to-r from-rose-500 to-rose-600 shadow-rose-200' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-200'}`}
       >
         <div className="shimmer-liquid opacity-30"></div>
         <span className="uppercase tracking-tight pl-2 relative z-10">{appState.isActive ? 'Завершить смену' : 'Начать смену'}</span>
@@ -269,7 +266,7 @@ const App: React.FC = () => {
           <button
             onClick={handleAiAnalyze}
             disabled={isAiLoading || shifts.length === 0}
-            className="w-full py-5 bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-black rounded-3xl shadow-xl shadow-indigo-200 active:scale-95 transition-all flex items-center justify-center gap-3 relative overflow-hidden group vibrant-btn"
+            className="w-full py-5 bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-bold rounded-3xl shadow-xl shadow-indigo-200 active:scale-95 transition-all flex items-center justify-center gap-3 relative overflow-hidden group vibrant-btn"
           >
              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
              {isAiLoading ? (
@@ -294,7 +291,7 @@ const App: React.FC = () => {
                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                </div>
                <div>
-                 <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">AI Отчет</h3>
+                 <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight">AI Отчет</h3>
                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gemini 3 Flash</p>
                </div>
              </div>
@@ -307,10 +304,10 @@ const App: React.FC = () => {
 
       <div className="space-y-4">
         <div className="flex items-center justify-between px-2 mb-6">
-          <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">История логов</h3>
+          <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tighter">История логов</h3>
           <div className="flex p-1 bg-white/60 rounded-2xl border border-white/40 shadow-sm backdrop-blur-sm">
-            <button onClick={() => setViewMode('list')} className={`px-5 py-2.5 text-[10px] font-black uppercase rounded-xl transition-all ${viewMode === 'list' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}>Лог</button>
-            <button onClick={() => setViewMode('stats')} className={`px-5 py-2.5 text-[10px] font-black uppercase rounded-xl transition-all ${viewMode === 'stats' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}>Dashboard</button>
+            <button onClick={() => setViewMode('list')} className={`px-5 py-2.5 text-[10px] font-bold uppercase rounded-xl transition-all ${viewMode === 'list' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}>Лог</button>
+            <button onClick={() => setViewMode('stats')} className={`px-5 py-2.5 text-[10px] font-bold uppercase rounded-xl transition-all ${viewMode === 'stats' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}>Dashboard</button>
           </div>
         </div>
 

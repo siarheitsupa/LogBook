@@ -32,7 +32,7 @@ const WeekGroup: React.FC<WeekGroupProps> = ({ group, children }) => {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className={`w-2.5 h-2.5 rounded-full shadow-sm ${group.isCurrentWeek ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
-              <h3 className="text-base font-black text-slate-800 uppercase tracking-tight ml-1">
+              <h3 className="text-base font-bold text-slate-800 uppercase tracking-tight ml-1">
                 {formatDate(group.weekStart)} — {formatDate(group.weekEnd)}
               </h3>
             </div>

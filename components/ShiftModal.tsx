@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Shift } from '../types';
 
@@ -95,10 +96,10 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm safe-p-bottom">
       <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl animate-in fade-in zoom-in duration-200 flex flex-col max-h-[92dvh] overflow-hidden">
         <div className="p-5 sm:p-6 overflow-y-auto">
-          <h3 className="text-xl font-black text-center mb-6 text-slate-800">Запись смены</h3>
+          <h3 className="text-xl font-bold text-center mb-6 text-slate-800">Запись смены</h3>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Дата</label>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Дата</label>
               <input 
                 type="date" 
                 className="w-full p-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-center font-bold text-slate-700 focus:bg-white focus:ring-2 ring-blue-500/20 outline-none transition-all appearance-none" 
@@ -110,7 +111,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
             
             <div className="grid grid-cols-2 gap-2.5">
               <div className="min-w-0">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Начало</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Начало</label>
                 <div className="flex items-center gap-1 p-1 bg-slate-50 border border-slate-100 rounded-2xl min-w-0">
                   <input 
                     type="number" 
@@ -136,7 +137,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
                 </div>
               </div>
               <div className="min-w-0">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Конец</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Конец</label>
                 <div className="flex items-center gap-1 p-1 bg-slate-50 border border-slate-100 rounded-2xl min-w-0">
                   <input 
                     type="number" 
@@ -165,7 +166,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
 
             <div className="grid grid-cols-2 gap-2.5">
               <div className="space-y-1 min-w-0">
-                <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 truncate">
+                <label className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 truncate">
                   <DrivingIcon /> Вождение
                 </label>
                 <div className="flex items-center gap-1 p-1 bg-slate-50 border border-slate-100 rounded-2xl min-w-0">
@@ -194,7 +195,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
               </div>
               
               <div className="space-y-1 min-w-0">
-                <label className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 truncate">
+                <label className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 truncate">
                   <WorkIcon /> Работа
                 </label>
                 <div className="flex items-center gap-1 p-1 bg-slate-50 border border-slate-100 rounded-2xl min-w-0">
@@ -227,13 +228,13 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
               <button 
                 type="button" 
                 onClick={onClose}
-                className="flex-1 py-4 font-black text-slate-400 bg-slate-50 rounded-2xl active:bg-slate-100 transition-all text-xs uppercase tracking-widest"
+                className="flex-1 py-4 font-bold text-slate-400 bg-slate-50 rounded-2xl active:bg-slate-100 transition-all text-xs uppercase tracking-widest"
               >
                 Отмена
               </button>
               <button 
                 type="submit" 
-                className="flex-1 py-4 font-black text-white bg-blue-600 rounded-2xl active:scale-[0.98] shadow-xl shadow-blue-100 transition-all text-xs uppercase tracking-widest"
+                className="flex-1 py-4 font-bold text-white bg-blue-600 rounded-2xl active:scale-[0.98] shadow-xl shadow-blue-100 transition-all text-xs uppercase tracking-widest"
               >
                 Сохранить
               </button>

@@ -27,14 +27,14 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sublabel, variant }) 
       className={`p-5 rounded-[2.2rem] flex flex-col items-center justify-center text-center transition-all hover:scale-[1.02] active:scale-95 animate-float ios-glass ${styles[variant]}`}
       style={{ animationDelay }}
     >
-      <span className="text-2xl font-black mb-1 tracking-tighter tabular-nums text-slate-800">
+      <span className="text-2xl font-bold mb-1 tracking-tighter tabular-nums text-slate-800">
         {value}
       </span>
-      <span className="text-[10px] font-black leading-tight opacity-50 uppercase tracking-widest px-1 mb-2 h-5 flex items-center">
+      <span className="text-[10px] font-bold leading-tight opacity-50 uppercase tracking-widest px-1 mb-2 h-5 flex items-center">
         {label}
       </span>
       {sublabel && (
-        <span className="text-[9px] font-black bg-white/60 text-slate-500 px-3 py-1 rounded-full whitespace-nowrap backdrop-blur-sm">
+        <span className="text-[9px] font-bold bg-white/60 text-slate-500 px-3 py-1 rounded-full whitespace-nowrap backdrop-blur-sm">
           {sublabel}
         </span>
       )}

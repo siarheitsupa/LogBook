@@ -13,14 +13,14 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
         body {
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
-            /* Более глубокий и "чистый" фон для контраста со стеклом */
-            background: #f2f6fa;
+            /* Более мягкий фон, чтобы стекло выглядело объемнее */
+            background: #eef2f6;
             background-image: 
                 radial-gradient(at 0% 0%, hsla(253,16%,7%,0) 0, hsla(253,16%,7%,0) 50%), 
                 radial-gradient(at 50% 0%, hsla(225,39%,30%,0) 0, hsla(225,39%,30%,0) 50%), 
@@ -30,44 +30,40 @@
             padding-bottom: env(safe-area-inset-bottom);
         }
 
-        /* iOS 26 Liquid Glass Effect */
+        /* iOS 26 "Live" Liquid Glass Effect */
         .ios-glass {
-            background: rgba(255, 255, 255, 0.75);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.8);
+            /* Градиентная прозрачность для объема */
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.45) 100%);
+            /* Сильный блюр и насыщенность для "живого" эффекта */
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            /* Тонкая обводка */
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            /* Внутреннее свечение и внешняя тень */
             box-shadow: 
-                0 4px 6px -1px rgba(0, 0, 0, 0.02),
-                0 2px 4px -1px rgba(0, 0, 0, 0.02),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-        }
-
-        .ios-glass-dark {
-             background: rgba(30, 41, 59, 0.7);
-             backdrop-filter: blur(20px) saturate(180%);
-             -webkit-backdrop-filter: blur(20px) saturate(180%);
-             border: 1px solid rgba(255, 255, 255, 0.1);
-             color: white;
+                0 10px 40px -10px rgba(0, 0, 0, 0.08),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+                inset 0 1px 20px 0 rgba(255, 255, 255, 0.4);
         }
 
         /* Specific Gradient Orbs for background depth */
         .bg-orb {
             position: fixed;
             border-radius: 50%;
-            filter: blur(80px);
+            filter: blur(90px);
             z-index: -1;
-            opacity: 0.6;
         }
 
         /* Vibrancy Button Styles */
         .vibrant-btn {
             position: relative;
             overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.15);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 10px 25px -8px rgba(0,0,0,0.2);
         }
         .vibrant-btn:active {
-            transform: scale(0.96);
+            transform: scale(0.97);
+            box-shadow: 0 5px 15px -5px rgba(0,0,0,0.2);
         }
         
         /* Shimmer Effect */
@@ -85,10 +81,10 @@
           background: linear-gradient(
             90deg,
             transparent,
-            rgba(255, 255, 255, 0.2),
+            rgba(255, 255, 255, 0.25),
             transparent
           );
-          animation: shimmer 3s infinite linear;
+          animation: shimmer 2.5s infinite linear;
           pointer-events: none;
         }
 
@@ -116,11 +112,11 @@
 }
 </script>
 </head>
-<body class="text-slate-800 antialiased selection:bg-rose-500 selection:text-white">
+<body class="text-slate-700 antialiased selection:bg-rose-500 selection:text-white">
     <!-- Ambient Background Orbs -->
-    <div class="bg-orb bg-blue-300 w-96 h-96 top-[-100px] left-[-100px]"></div>
-    <div class="bg-orb bg-rose-200 w-80 h-80 bottom-[-50px] right-[-50px]"></div>
-    <div class="bg-orb bg-emerald-100 w-64 h-64 top-[40%] left-[30%] opacity-40"></div>
+    <div class="bg-orb bg-indigo-300 w-[500px] h-[500px] top-[-100px] left-[-150px] opacity-40"></div>
+    <div class="bg-orb bg-rose-200 w-[400px] h-[400px] bottom-[-50px] right-[-100px] opacity-50"></div>
+    <div class="bg-orb bg-emerald-100 w-80 h-80 top-[30%] left-[20%] opacity-30"></div>
 
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>

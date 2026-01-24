@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { CloudConfig } from '../types';
 import { storage } from '../services/storageService';
@@ -65,7 +66,7 @@ CREATE POLICY "Users can manage their own expenses" ON expenses FOR ALL USING (a
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
       <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Облако и Данные</h3>
+          <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Облако и Данные</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
         </div>
         
@@ -96,7 +97,7 @@ CREATE POLICY "Users can manage their own expenses" ON expenses FOR ALL USING (a
           <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
             <button 
               onClick={() => setShowSql(!showSql)} 
-              className="text-[10px] font-black text-amber-700 uppercase flex items-center justify-between w-full"
+              className="text-[10px] font-bold text-amber-700 uppercase flex items-center justify-between w-full"
             >
               Инструкция SQL (Настройка базы) {showSql ? '↑' : '↓'}
             </button>

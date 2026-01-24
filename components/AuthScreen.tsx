@@ -54,7 +54,7 @@ const AuthScreen: React.FC = () => {
               <polyline points="22,6 12,13 2,6"></polyline>
             </svg>
           </div>
-          <h2 className="text-2xl font-black text-slate-900 mb-4">Подтвердите Email</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Подтвердите Email</h2>
           <p className="text-slate-500 text-sm leading-relaxed mb-8">
             Мы отправили ссылку для подтверждения на <span className="font-bold text-slate-800">{email}</span>. 
             Пожалуйста, перейдите по ней, чтобы активировать аккаунт.
@@ -79,7 +79,7 @@ const AuthScreen: React.FC = () => {
               <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/>
             </svg>
           </div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">DriverLog Pro</h2>
+          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">DriverLog Pro</h2>
           <p className="text-slate-500 mt-2 font-medium">Для работы необходимо войти в аккаунт</p>
         </div>
 
