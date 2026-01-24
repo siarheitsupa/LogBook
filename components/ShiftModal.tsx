@@ -8,6 +8,7 @@ interface ShiftModalProps {
   onSave: (shift: Shift) => void;
   initialData?: Shift | null;
   defaultStartTime?: string;
+  defaultDate?: string;
 }
 
 const DrivingIcon = () => (
@@ -25,7 +26,7 @@ const WorkIcon = () => (
   </svg>
 );
 
-const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initialData, defaultStartTime }) => {
+const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initialData, defaultStartTime, defaultDate }) => {
   const [date, setDate] = useState('');
   
   // Раздельные состояния для времени начала и конца
@@ -55,7 +56,15 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         setWorkM((initialData.workMinutes || 0).toString());
       } else {
         const now = new Date();
-        setDate(now.toISOString().split('T')[0]);
+        
+        // Установка даты: либо переданная (дата начала смены), либо текущая
+        if (defaultDate) {
+          setDate(defaultDate);
+        } else {
+          setDate(now.toISOString().split('T')[0]);
+        }
+
+        // Установка времени начала
         if (defaultStartTime) {
           const [sh, sm] = defaultStartTime.split(':');
           setStartH(sh);
@@ -64,15 +73,18 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
           setStartH('08');
           setStartM('00');
         }
+
+        // Время конца - всегда текущее время
         setEndH(now.getHours().toString().padStart(2, '0'));
         setEndM(now.getMinutes().toString().padStart(2, '0'));
+        
         setDriveH('0');
         setDriveM('0');
         setWorkH('0');
         setWorkM('0');
       }
     }
-  }, [initialData, isOpen, defaultStartTime]);
+  }, [initialData, isOpen, defaultStartTime, defaultDate]);
 
   if (!isOpen) return null;
 

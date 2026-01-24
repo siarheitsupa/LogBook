@@ -192,6 +192,22 @@ const App: React.FC = () => {
 
     html2pdf().set(opt).from(element).save();
   };
+  
+  // Вычисляем дефолтные значения для модального окна на основе времени начала смены
+  const getModalDefaults = () => {
+    if (appState.isActive && appState.startTime) {
+      const d = new Date(appState.startTime);
+      const h = d.getHours().toString().padStart(2, '0');
+      const m = d.getMinutes().toString().padStart(2, '0');
+      return {
+        defaultDate: d.toISOString().split('T')[0],
+        defaultStartTime: `${h}:${m}`
+      };
+    }
+    return {};
+  };
+
+  const { defaultDate, defaultStartTime } = getModalDefaults();
 
   if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="w-10 h-10 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div></div>;
   if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-bold mb-6">DriverLog Cloud</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button><CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={() => setConfigUpdateTrigger(t => t+1)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} /></div>;
@@ -361,7 +377,14 @@ const App: React.FC = () => {
         )}
       </div>
 
-      <ShiftModal isOpen={isModalOpen || !!editingShift} onClose={() => { setIsModalOpen(false); setEditingShift(null); }} onSave={handleSaveShift} initialData={editingShift} />
+      <ShiftModal 
+        isOpen={isModalOpen || !!editingShift} 
+        onClose={() => { setIsModalOpen(false); setEditingShift(null); }} 
+        onSave={handleSaveShift} 
+        initialData={editingShift}
+        defaultDate={defaultDate}
+        defaultStartTime={defaultStartTime}
+      />
       {activeShiftForExpense && <ExpensesModal isOpen={!!activeShiftForExpense} onClose={() => setActiveShiftForExpense(null)} onSave={handleSaveExpense} shiftId={activeShiftForExpense} />}
       <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={() => setConfigUpdateTrigger(t => t+1)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} />
       
