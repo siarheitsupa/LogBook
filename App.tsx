@@ -12,7 +12,9 @@ import Dashboard from './components/Dashboard';
 import CloudSettingsModal from './components/CloudSettingsModal';
 import AuthScreen from './components/AuthScreen';
 import WeekGroup from './components/WeekGroup';
+import PrintableReport from './components/PrintableReport';
 import { Session } from '@supabase/supabase-js';
+import html2pdf from 'html2pdf.js';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -176,6 +178,21 @@ const App: React.FC = () => {
     setIsAiLoading(false);
   };
 
+  const handleDownloadReport = () => {
+    const element = document.getElementById('pdf-report');
+    if (!element) return;
+    
+    const opt = {
+      margin: 0,
+      filename: `DriverLog_${new Date().toLocaleDateString('ru-RU').replace(/\./g, '-')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save();
+  };
+
   if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="w-10 h-10 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div></div>;
   if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-bold mb-6">DriverLog Cloud</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button><CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={() => setConfigUpdateTrigger(t => t+1)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} /></div>;
   if (!session) return <AuthScreen />;
@@ -213,7 +230,6 @@ const App: React.FC = () => {
         <div className="flex items-center justify-center gap-2 mb-2">
           <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 opacity-80">{restInfo.label}</span>
         </div>
-        {/* Шрифт таймера стал тоньше (font-bold вместо font-black) */}
         <h1 className="text-8xl font-bold text-slate-800 mb-8 tabular-nums tracking-tighter drop-shadow-sm">{restInfo.time}</h1>
         
         {/* Кнопки 9/11 часов в стиле Neon Jelly */}
@@ -305,9 +321,22 @@ const App: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between px-2 mb-6">
           <h3 className="text-2xl font-bold text-slate-800 uppercase tracking-tighter">История логов</h3>
-          <div className="flex p-1 bg-white/60 rounded-2xl border border-white/40 shadow-sm backdrop-blur-sm">
-            <button onClick={() => setViewMode('list')} className={`px-5 py-2.5 text-[10px] font-bold uppercase rounded-xl transition-all ${viewMode === 'list' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}>Лог</button>
-            <button onClick={() => setViewMode('stats')} className={`px-5 py-2.5 text-[10px] font-bold uppercase rounded-xl transition-all ${viewMode === 'stats' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}>Dashboard</button>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={handleDownloadReport}
+              className="w-10 h-10 flex items-center justify-center bg-white/60 rounded-2xl border border-white/40 shadow-sm backdrop-blur-sm text-slate-600 hover:bg-white/80 active:scale-95 transition-all"
+              title="Скачать PDF отчет"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+            </button>
+            <div className="flex p-1 bg-white/60 rounded-2xl border border-white/40 shadow-sm backdrop-blur-sm">
+              <button onClick={() => setViewMode('list')} className={`px-5 py-2.5 text-[10px] font-bold uppercase rounded-xl transition-all ${viewMode === 'list' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}>Лог</button>
+              <button onClick={() => setViewMode('stats')} className={`px-5 py-2.5 text-[10px] font-bold uppercase rounded-xl transition-all ${viewMode === 'stats' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}>Dashboard</button>
+            </div>
           </div>
         </div>
 
@@ -335,6 +364,11 @@ const App: React.FC = () => {
       <ShiftModal isOpen={isModalOpen || !!editingShift} onClose={() => { setIsModalOpen(false); setEditingShift(null); }} onSave={handleSaveShift} initialData={editingShift} />
       {activeShiftForExpense && <ExpensesModal isOpen={!!activeShiftForExpense} onClose={() => setActiveShiftForExpense(null)} onSave={handleSaveExpense} shiftId={activeShiftForExpense} />}
       <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={() => setConfigUpdateTrigger(t => t+1)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} />
+      
+      {/* Скрытый компонент для генерации PDF */}
+      <div className="absolute left-[-9999px] top-0">
+        <PrintableReport shifts={enrichedShifts} stats={{...stats, totalDebt}} userEmail={session?.user?.email || 'Driver'} />
+      </div>
     </div>
   );
 };
