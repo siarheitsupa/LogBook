@@ -181,10 +181,10 @@ const App: React.FC = () => {
   if (!session) return <AuthScreen />;
 
   return (
-    <div className="max-w-xl mx-auto min-h-screen pb-24 px-4 pt-8 bg-slate-50/50">
+    <div className="max-w-xl mx-auto min-h-screen pb-24 px-4 pt-8">
       {/* Шапка с мигающей точкой настроек и индикатором активности */}
       <header className="flex flex-col items-center mb-8 relative">
-        <div className="flex items-center gap-3 liquid-glass p-2.5 pr-4 pl-4 rounded-full shadow-lg">
+        <div className="flex items-center gap-3 ios-glass p-2.5 pr-4 pl-4 rounded-full shadow-lg">
           <div className="w-11 h-11 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-lg overflow-hidden relative">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>
             {appState.isActive && (
@@ -208,31 +208,44 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Центральный таймер с насыщенной цветовой схемой */}
-      <div className="liquid-glass rounded-[3.5rem] p-8 mb-8 text-center shadow-xl border-white relative overflow-hidden">
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <span className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">{restInfo.label}</span>
+      {/* Центральный таймер в стиле iOS Liquid Glass */}
+      <div className="ios-glass rounded-[3.5rem] p-6 mb-8 text-center shadow-2xl relative overflow-hidden backdrop-blur-2xl">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 opacity-80">{restInfo.label}</span>
         </div>
-        <h1 className="text-7xl font-black text-slate-900 mb-8 tabular-nums tracking-tighter">{restInfo.time}</h1>
+        <h1 className="text-8xl font-black text-slate-800 mb-8 tabular-nums tracking-tighter drop-shadow-sm">{restInfo.time}</h1>
+        
+        {/* Кнопки 9/11 часов в стиле Neon Jelly */}
         <div className="grid grid-cols-2 gap-4">
-          <div className={`p-5 rounded-[2.2rem] transition-all duration-500 flex flex-col items-center justify-center shadow-md ${restInfo.isRest && restInfo.mins >= 540 ? 'bg-rose-500 text-white shadow-rose-200' : 'bg-rose-100 text-rose-600'}`}>
-            <span className="text-[10px] font-black uppercase block mb-1 opacity-70">9 ЧАСОВ</span>
-            <span className="text-2xl font-black">{restInfo.isRest ? formatMinsToHHMM(Math.max(0, 540 - restInfo.mins)) : '09:00'}</span>
+          <div className={`relative h-28 rounded-[2.5rem] flex flex-col items-center justify-center vibrant-btn overflow-hidden transition-all duration-500 ${restInfo.isRest && restInfo.mins >= 540 ? 'bg-[#ff4757] text-white shadow-[0_10px_25px_rgba(255,71,87,0.4)]' : 'bg-[#ff4757] text-white'}`}>
+             {/* Gradient Overlay for shine */}
+             <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent pointer-events-none"></div>
+             
+             <span className="relative z-10 text-[11px] font-black uppercase block mb-1 opacity-90 tracking-widest">9 ЧАСОВ</span>
+             <span className="relative z-10 text-3xl font-black tracking-tight drop-shadow-sm">
+                {restInfo.isRest ? formatMinsToHHMM(Math.max(0, 540 - restInfo.mins)) : '09:00'}
+             </span>
+             {/* Progress bar background logic could go here, but pure color is cleaner for this style */}
           </div>
-          <div className={`p-5 rounded-[2.2rem] transition-all duration-500 flex flex-col items-center justify-center shadow-md ${restInfo.isRest && restInfo.mins >= 660 ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-emerald-100 text-emerald-700'}`}>
-            <span className="text-[10px] font-black uppercase block mb-1 opacity-70">11 ЧАСОВ</span>
-            <span className="text-2xl font-black">{restInfo.isRest ? formatMinsToHHMM(Math.max(0, 660 - restInfo.mins)) : '11:00'}</span>
+
+          <div className={`relative h-28 rounded-[2.5rem] flex flex-col items-center justify-center vibrant-btn overflow-hidden transition-all duration-500 ${restInfo.isRest && restInfo.mins >= 660 ? 'bg-[#2ed573] text-white shadow-[0_10px_25px_rgba(46,213,115,0.4)]' : 'bg-[#00c58e] text-white'}`}>
+             <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent pointer-events-none"></div>
+             
+             <span className="relative z-10 text-[11px] font-black uppercase block mb-1 opacity-90 tracking-widest">11 ЧАСОВ</span>
+             <span className="relative z-10 text-3xl font-black tracking-tight drop-shadow-sm">
+               {restInfo.isRest ? formatMinsToHHMM(Math.max(0, 660 - restInfo.mins)) : '11:00'}
+             </span>
           </div>
         </div>
       </div>
 
       <button 
         onClick={() => appState.isActive ? setIsModalOpen(true) : navigator.geolocation.getCurrentPosition(p => { setAppState({ isActive: true, startTime: Date.now(), startLat: p.coords.latitude, startLng: p.coords.longitude }); storage.saveState({ isActive: true, startTime: Date.now(), startLat: p.coords.latitude, startLng: p.coords.longitude }); })}
-        className={`w-full py-7 px-8 rounded-full flex items-center justify-between text-2xl font-black text-white shadow-2xl transition-all mb-10 overflow-hidden relative group ${appState.isActive ? 'bg-gradient-to-r from-rose-500 to-rose-600' : 'bg-gradient-to-r from-emerald-500 to-emerald-600'}`}
+        className={`w-full py-6 px-8 rounded-full flex items-center justify-between text-xl font-black text-white shadow-2xl transition-all mb-10 overflow-hidden relative group vibrant-btn ${appState.isActive ? 'bg-slate-900' : 'bg-blue-600'}`}
       >
-        <div className="shimmer-liquid opacity-20"></div>
-        <span className="uppercase tracking-tight pl-4">{appState.isActive ? 'Завершить смену' : 'Начать смену'}</span>
-        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md border border-white/30 shadow-inner">
+        <div className="shimmer-liquid opacity-30"></div>
+        <span className="uppercase tracking-tight pl-2 relative z-10">{appState.isActive ? 'Завершить смену' : 'Начать смену'}</span>
+        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md border border-white/30 relative z-10">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             {appState.isActive ? <rect x="6" y="6" width="12" height="12" rx="2" /> : <path d="M8 5v14l11-7z" />}
           </svg>
@@ -256,32 +269,32 @@ const App: React.FC = () => {
           <button
             onClick={handleAiAnalyze}
             disabled={isAiLoading || shifts.length === 0}
-            className="w-full py-4 bg-gradient-to-br from-indigo-600 to-violet-700 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 active:scale-95 transition-all flex items-center justify-center gap-3 relative overflow-hidden group"
+            className="w-full py-5 bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-black rounded-3xl shadow-xl shadow-indigo-200 active:scale-95 transition-all flex items-center justify-center gap-3 relative overflow-hidden group vibrant-btn"
           >
              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
              {isAiLoading ? (
                <span className="animate-pulse">Анализ логов...</span>
              ) : (
                <>
-                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                  <span>AI Ассистент (Проверка нарушений)</span>
                </>
              )}
           </button>
         ) : (
-          <div className="liquid-glass p-6 rounded-[2rem] border border-indigo-100 relative animate-in fade-in zoom-in duration-300 shadow-xl">
+          <div className="ios-glass p-6 rounded-[2.5rem] relative animate-in fade-in zoom-in duration-300 shadow-xl">
              <button 
                onClick={() => setAiResult(null)} 
-               className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-white/50 rounded-full text-slate-400 hover:text-slate-600 hover:bg-white transition-all"
+               className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 hover:bg-white transition-all"
              >
                ✕
              </button>
              <div className="flex items-center gap-3 mb-4">
-               <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl shadow-sm">
-                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+               <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl shadow-sm">
+                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                </div>
                <div>
-                 <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">AI Отчет</h3>
+                 <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">AI Отчет</h3>
                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gemini 3 Flash</p>
                </div>
              </div>
@@ -294,10 +307,10 @@ const App: React.FC = () => {
 
       <div className="space-y-4">
         <div className="flex items-center justify-between px-2 mb-6">
-          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">История логов</h3>
-          <div className="flex p-1 bg-white/50 rounded-2xl border shadow-sm">
-            <button onClick={() => setViewMode('list')} className={`px-5 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${viewMode === 'list' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Лог</button>
-            <button onClick={() => setViewMode('stats')} className={`px-5 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${viewMode === 'stats' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Dashboard</button>
+          <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">История логов</h3>
+          <div className="flex p-1 bg-white/60 rounded-2xl border border-white/40 shadow-sm backdrop-blur-sm">
+            <button onClick={() => setViewMode('list')} className={`px-5 py-2.5 text-[10px] font-black uppercase rounded-xl transition-all ${viewMode === 'list' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}>Лог</button>
+            <button onClick={() => setViewMode('stats')} className={`px-5 py-2.5 text-[10px] font-black uppercase rounded-xl transition-all ${viewMode === 'stats' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}>Dashboard</button>
           </div>
         </div>
 

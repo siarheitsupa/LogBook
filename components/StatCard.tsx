@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 
 interface StatCardProps {
@@ -11,29 +12,29 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sublabel, variant }) 
   const animationDelay = useMemo(() => `${(Math.random() * -5).toFixed(2)}s`, []);
 
   const styles = {
-    yellow: 'bg-amber-400/5 text-amber-900 border-amber-100/50 shadow-amber-100/10',
-    green: 'bg-emerald-400/5 text-emerald-900 border-emerald-100/50 shadow-emerald-100/10',
-    blue: 'bg-blue-400/5 text-blue-900 border-blue-100/50 shadow-blue-100/10',
-    purple: 'bg-purple-400/5 text-purple-900 border-purple-100/50 shadow-purple-100/10',
-    orange: 'bg-orange-400/5 text-orange-900 border-orange-100/50 shadow-orange-100/10',
-    indigo: 'bg-indigo-400/5 text-indigo-900 border-indigo-100/50 shadow-indigo-100/10',
-    rose: 'bg-rose-400/5 text-rose-900 border-rose-100/50 shadow-rose-100/10',
-    emerald: 'bg-emerald-500/10 text-emerald-900 border-emerald-200/50 shadow-emerald-100/10',
+    yellow: 'bg-amber-100/40 text-amber-900',
+    green: 'bg-emerald-100/40 text-emerald-900',
+    blue: 'bg-blue-100/40 text-blue-900',
+    purple: 'bg-purple-100/40 text-purple-900',
+    orange: 'bg-orange-100/40 text-orange-900',
+    indigo: 'bg-indigo-100/40 text-indigo-900',
+    rose: 'bg-rose-100/40 text-rose-900',
+    emerald: 'bg-emerald-100/40 text-emerald-900',
   };
 
   return (
     <div 
-      className={`p-4 rounded-[2rem] border shadow-lg flex flex-col items-center justify-center text-center transition-all hover:scale-[1.02] active:scale-95 animate-float backdrop-blur-md ${styles[variant]}`}
+      className={`p-5 rounded-[2.2rem] flex flex-col items-center justify-center text-center transition-all hover:scale-[1.02] active:scale-95 animate-float ios-glass ${styles[variant]}`}
       style={{ animationDelay }}
     >
-      <span className="text-xl font-black mb-1 tracking-tighter tabular-nums text-slate-800">
+      <span className="text-2xl font-black mb-1 tracking-tighter tabular-nums text-slate-800">
         {value}
       </span>
-      <span className="text-[9px] font-black leading-tight opacity-50 uppercase tracking-widest px-1 mb-1.5 h-6 flex items-center">
+      <span className="text-[10px] font-black leading-tight opacity-50 uppercase tracking-widest px-1 mb-2 h-5 flex items-center">
         {label}
       </span>
       {sublabel && (
-        <span className="text-[8px] font-black bg-white/80 text-slate-400 px-2 py-0.5 rounded-full border border-white/40 whitespace-nowrap">
+        <span className="text-[9px] font-black bg-white/60 text-slate-500 px-3 py-1 rounded-full whitespace-nowrap backdrop-blur-sm">
           {sublabel}
         </span>
       )}

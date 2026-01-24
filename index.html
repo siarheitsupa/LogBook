@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -7,78 +8,94 @@
     
     <!-- PWA & Mobile Support -->
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#10b981">
+    <meta name="theme-color" content="#f8fafc">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
         body {
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
-            background: radial-gradient(circle at top right, #f8fafc, #eff6ff);
+            /* Более глубокий и "чистый" фон для контраста со стеклом */
+            background: #f2f6fa;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,0) 0, hsla(253,16%,7%,0) 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,0) 0, hsla(225,39%,30%,0) 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,0) 0, hsla(339,49%,30%,0) 50%);
             min-height: 100vh;
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
         }
+
+        /* iOS 26 Liquid Glass Effect */
+        .ios-glass {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 
+                0 4px 6px -1px rgba(0, 0, 0, 0.02),
+                0 2px 4px -1px rgba(0, 0, 0, 0.02),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+        }
+
+        .ios-glass-dark {
+             background: rgba(30, 41, 59, 0.7);
+             backdrop-filter: blur(20px) saturate(180%);
+             -webkit-backdrop-filter: blur(20px) saturate(180%);
+             border: 1px solid rgba(255, 255, 255, 0.1);
+             color: white;
+        }
+
+        /* Specific Gradient Orbs for background depth */
+        .bg-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        /* Vibrancy Button Styles */
+        .vibrant-btn {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.15);
+        }
+        .vibrant-btn:active {
+            transform: scale(0.96);
+        }
         
-        .liquid-glass {
-          background: rgba(255, 255, 255, 0.45);
-          backdrop-filter: blur(30px) saturate(200%) brightness(1.05);
-          -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(1.05);
-          border: 1px solid rgba(255, 255, 255, 0.6);
-          border-top: 1.5px solid rgba(255, 255, 255, 0.8);
-          box-shadow: 
-            0 15px 35px -5px rgba(0, 0, 0, 0.05),
-            0 5px 15px -3px rgba(0, 0, 0, 0.03),
-            inset 0 0 20px rgba(255, 255, 255, 0.3);
-        }
-
-        @keyframes liquid-moon {
-          0% { filter: drop-shadow(0 0 5px rgba(244, 63, 94, 0.3)); transform: scale(1) rotate(-5deg); }
-          50% { filter: drop-shadow(0 0 15px rgba(244, 63, 94, 0.6)); transform: scale(1.08) rotate(5deg); }
-          100% { filter: drop-shadow(0 0 5px rgba(244, 63, 94, 0.3)); transform: scale(1) rotate(-5deg); }
-        }
-
-        @keyframes float {
-          0% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-10px) rotate(1deg); }
-          100% { transform: translateY(0px) rotate(0deg); }
-        }
-
+        /* Shimmer Effect */
         @keyframes shimmer {
           0% { transform: translateX(-150%) skewX(-20deg); }
           100% { transform: translateX(150%) skewX(-20deg); }
         }
-
-        .animate-liquid-moon { animation: liquid-moon 4s infinite ease-in-out; color: #f43f5e; }
-        .animate-float { animation: float 6s infinite ease-in-out; }
         
         .shimmer-liquid {
           position: absolute;
           top: 0;
           left: 0;
-          width: 50%;
+          width: 70%;
           height: 100%;
           background: linear-gradient(
             90deg,
             transparent,
-            rgba(255, 255, 255, 0.4),
+            rgba(255, 255, 255, 0.2),
             transparent
           );
           animation: shimmer 3s infinite linear;
           pointer-events: none;
         }
 
-        .jelly-button {
-          transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-          box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4), inset 0 -4px 6px rgba(0, 0, 0, 0.1), inset 0 4px 6px rgba(255, 255, 255, 0.3);
-        }
-        .jelly-button:active { transform: scale(0.94); }
-
         .leaflet-container { background: transparent !important; border-radius: 3rem; }
+        
+        /* Smooth Scrollbar */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
     </style>
 <script type="importmap">
 {
@@ -99,7 +116,12 @@
 }
 </script>
 </head>
-<body class="text-slate-900">
+<body class="text-slate-800 antialiased selection:bg-rose-500 selection:text-white">
+    <!-- Ambient Background Orbs -->
+    <div class="bg-orb bg-blue-300 w-96 h-96 top-[-100px] left-[-100px]"></div>
+    <div class="bg-orb bg-rose-200 w-80 h-80 bottom-[-50px] right-[-50px]"></div>
+    <div class="bg-orb bg-emerald-100 w-64 h-64 top-[40%] left-[30%] opacity-40"></div>
+
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>
