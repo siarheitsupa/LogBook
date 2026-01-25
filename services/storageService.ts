@@ -11,14 +11,14 @@ const CLOUD_CONFIG_KEY = 'driverlog_cloud_config_v1';
 // Вставьте сюда ваш ANON KEY. Он будет использоваться по умолчанию для всех пользователей.
 // URL я уже взял из вашего скриншота.
 const DEFAULT_URL = 'https://onxpylvydjyhlvsaacur.supabase.co';
-const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ueHB5bHZ5ZGp5aGx2c2FhY3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1NDY1OTksImV4cCI6MjA4MzEyMjU5OX0.O1nLUMSSY8VfSGdoa8u_06eKRV0B-yTodLWOMnscZFAПОЛНОСТЬЮ'; // <--- ЗАМЕНИТЕ ЭТУ СТРОКУ НА ВАШ КЛЮЧ
+const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ueHB5bHZ5ZGp5aGx2c2FhY3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1NDY1OTksImV4cCI6MjA4MzEyMjU5OX0.O1nLUMSSY8VfSGdoa8u_06eKRV0B-yTodLWOMnscZFA';
 
 let supabaseInstance: SupabaseClient | null = null;
 
 const getEnvValue = (key: 'URL' | 'KEY'): string => {
   // 1. Приоритет: Жестко заданные константы (чтобы работало у всех по ссылке)
   if (key === 'URL' && DEFAULT_URL) return DEFAULT_URL;
-  if (key === 'KEY' && DEFAULT_KEY && DEFAULT_KEY !== 'ВСТАВЬТЕ_СЮДА_ВАШ_ANON_KEY_ПОЛНОСТЬЮ') return DEFAULT_KEY;
+  if (key === 'KEY' && DEFAULT_KEY && DEFAULT_KEY !== 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ueHB5bHZ5ZGp5aGx2c2FhY3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1NDY1OTksImV4cCI6MjA4MzEyMjU5OX0.O1nLUMSSY8VfSGdoa8u_06eKRV0B-yTodLWOMnscZFA') return DEFAULT_KEY;
 
   // 2. Fallback: Переменные окружения (для локальной разработки)
   try {
