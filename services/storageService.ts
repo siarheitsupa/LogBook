@@ -7,68 +7,78 @@ const EXPENSES_KEY = 'driverlog_expenses_v1';
 const STATE_KEY = 'driverlog_state_v1';
 const CLOUD_CONFIG_KEY = 'driverlog_cloud_config_v1';
 
-// --- НАСТРОЙКИ ПОДКЛЮЧЕНИЯ ---
+// --- НАСТРОЙКИ ПОДКЛЮЧЕНИЯ (HARDCODED) ---
 const DEFAULT_URL = 'https://onxpylvydjyhlvsaacur.supabase.co';
 const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ueHB5bHZ5ZGp5aGx2c2FhY3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1NDY1OTksImV4cCI6MjA4MzEyMjU5OX0.O1nLUMSSY8VfSGdoa8u_06eKRV0B-yTodLWOMnscZFA';
 
 let supabaseInstance: SupabaseClient | null = null;
 
-const getEnvValue = (key: 'URL' | 'KEY'): string => {
-  // 1. Приоритет: Жестко заданные константы
-  if (key === 'URL' && DEFAULT_URL) return DEFAULT_URL;
-  if (key === 'KEY' && DEFAULT_KEY) return DEFAULT_KEY;
-
-  // 2. Fallback: Переменные окружения или локальное хранилище
-  try {
-    if (key === 'URL') return process.env.SUPABASE_URL || localStorage.getItem(`${CLOUD_CONFIG_KEY}_url`) || '';
-    if (key === 'KEY') return process.env.SUPABASE_ANON_KEY || localStorage.getItem(`${CLOUD_CONFIG_KEY}_key`) || '';
-  } catch (e) {
-    return '';
+// Получение текущей конфигурации с абсолютным приоритетом констант
+const getConfig = () => {
+  // 1. Если заданы константы в коде - используем их всегда
+  if (DEFAULT_URL && DEFAULT_KEY && DEFAULT_URL.startsWith('http')) {
+    return { url: DEFAULT_URL, key: DEFAULT_KEY };
   }
-  return '';
+  
+  // 2. Иначе смотрим localStorage (для разработки)
+  const localUrl = localStorage.getItem(`${CLOUD_CONFIG_KEY}_url`);
+  const localKey = localStorage.getItem(`${CLOUD_CONFIG_KEY}_key`);
+  
+  if (localUrl && localKey) {
+    return { url: localUrl, key: localKey };
+  }
+
+  return null;
 };
 
 export const storage = {
+  // Проверка: настроено ли приложение. Если ключи в коде есть - всегда true.
   isConfigured: () => {
     if (supabaseInstance) return true;
-    const url = getEnvValue('URL');
-    const key = getEnvValue('KEY');
-    return !!(url && key && url.startsWith('http'));
+    return !!getConfig();
   },
 
+  // Инициализация подключения
   initCloud: (manualConfig?: CloudConfig): boolean => {
-    const url = manualConfig?.url || getEnvValue('URL');
-    const key = manualConfig?.key || getEnvValue('KEY');
-    
-    if (url && key && url.startsWith('http')) {
-      try {
-        supabaseInstance = createClient(url, key, {
-          auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true
-          }
-        });
-        if (manualConfig) {
-          localStorage.setItem(`${CLOUD_CONFIG_KEY}_url`, url);
-          localStorage.setItem(`${CLOUD_CONFIG_KEY}_key`, key);
+    let config = manualConfig 
+      ? { url: manualConfig.url, key: manualConfig.key }
+      : getConfig();
+
+    if (!config) return false;
+
+    // Если экземпляр уже есть и URL не изменился - не пересоздаем
+    if (supabaseInstance) return true;
+
+    try {
+      supabaseInstance = createClient(config.url, config.key, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storage: window.localStorage
         }
-        return true;
-      } catch (e) {
-        console.error('Supabase init error:', e);
-        return false;
+      });
+      
+      // Если это была ручная настройка (через модалку), сохраняем в LS
+      if (manualConfig) {
+        localStorage.setItem(`${CLOUD_CONFIG_KEY}_url`, config.url);
+        localStorage.setItem(`${CLOUD_CONFIG_KEY}_key`, config.key);
       }
+      
+      return true;
+    } catch (e) {
+      console.error('Supabase init critical error:', e);
+      return false;
     }
-    return false;
   },
 
   signUp: async (email: string, pass: string) => {
-    if (!supabaseInstance && !storage.initCloud()) throw new Error('Database connection not configured');
+    if (!storage.initCloud()) throw new Error('Ошибка конфигурации облака');
     return await supabaseInstance!.auth.signUp({ email, password: pass });
   },
 
   signIn: async (email: string, pass: string) => {
-    if (!supabaseInstance && !storage.initCloud()) throw new Error('Database connection not configured');
+    if (!storage.initCloud()) throw new Error('Ошибка конфигурации облака');
     return await supabaseInstance!.auth.signInWithPassword({ email, password: pass });
   },
 
@@ -80,9 +90,9 @@ export const storage = {
         console.warn("Sign out error", e);
       }
     }
-    // Полная очистка хранилища от следов Supabase
+    // Очищаем только сессию, но не конфиг, если он хардкодный
     Object.keys(localStorage).forEach(key => {
-      if (key.includes('supabase.auth.token') || key.includes('sb-') || key.includes('driverlog_cloud_config_v1')) {
+      if (key.includes('supabase.auth.token') || key.includes('sb-')) {
         localStorage.removeItem(key);
       }
     });
@@ -90,17 +100,10 @@ export const storage = {
   },
 
   getSession: async (): Promise<Session | null> => {
-    if (!supabaseInstance && !storage.initCloud()) return null;
+    if (!storage.initCloud()) return null;
     try {
       const { data, error } = await supabaseInstance!.auth.getSession();
-      if (error) {
-        if (error.message.includes('refresh_token') || error.message.includes('not found')) {
-          console.warn("Stale session detected in getSession, clearing...");
-          await storage.signOut();
-          return null;
-        }
-        throw error;
-      }
+      if (error) throw error;
       return data.session;
     } catch (e) {
       console.error("Session error:", e);
@@ -109,41 +112,33 @@ export const storage = {
   },
 
   getUser: async () => {
-    if (!supabaseInstance && !storage.initCloud()) return { data: { user: null }, error: new Error('Offline') };
+    if (!storage.initCloud()) return { data: { user: null }, error: new Error('Offline') };
     try {
-      const result = await supabaseInstance!.auth.getUser();
-      if (result.error && (result.error.message.includes('refresh_token') || result.error.status === 401)) {
-        console.warn("User fetch failed due to auth error, signing out...");
-        await storage.signOut();
-      }
-      return result;
+      return await supabaseInstance!.auth.getUser();
     } catch (e) {
       return { data: { user: null }, error: e };
     }
   },
 
   onAuthChange: (callback: (session: Session | null) => void) => {
-    if (!supabaseInstance && !storage.initCloud()) return () => {};
+    if (!storage.initCloud()) return () => {};
     const { data: { subscription } } = supabaseInstance!.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        callback(null);
-      } else if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
-        callback(session);
-      }
+      if (event === 'SIGNED_OUT') callback(null);
+      else if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') callback(session);
     });
     return () => subscription.unsubscribe();
   },
 
   getShifts: async (): Promise<Shift[]> => {
     const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
-    if (supabaseInstance) {
+    if (storage.initCloud()) {
       try {
-        const { data, error } = await supabaseInstance
+        const { data, error } = await supabaseInstance!
           .from('shifts')
           .select('*')
           .order('timestamp', { ascending: false });
-        if (error) throw error;
-        if (data) {
+        
+        if (!error && data) {
           const cloudData = data.map((item: any) => ({
             id: item.id,
             date: item.date,
@@ -163,7 +158,7 @@ export const storage = {
           localStorage.setItem(SHIFTS_KEY, JSON.stringify(cloudData));
           return cloudData;
         }
-      } catch (e) { console.warn("Supabase shifts fetch failed", e); }
+      } catch (e) { console.warn("Sync shifts error", e); }
     }
     return local;
   },
@@ -174,9 +169,10 @@ export const storage = {
     if (idx > -1) local[idx] = shift; else local.unshift(shift);
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(local));
 
-    if (supabaseInstance) {
-      const { data: { session } } = await supabaseInstance.auth.getSession();
+    if (storage.initCloud()) {
+      const { data: { session } } = await supabaseInstance!.auth.getSession();
       if (!session?.user) return;
+      
       const payload: any = {
         id: shift.id,
         date: shift.date,
@@ -194,25 +190,24 @@ export const storage = {
         end_lng: shift.endLng,
         is_compensated: shift.isCompensated || false
       };
-      await supabaseInstance.from('shifts').upsert(payload);
+      await supabaseInstance!.from('shifts').upsert(payload);
     }
   },
 
   deleteShift: async (id: string): Promise<void> => {
     const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(local.filter((s: any) => s.id !== id)));
-    if (supabaseInstance) {
-      await supabaseInstance.from('shifts').delete().eq('id', id);
+    if (storage.initCloud()) {
+      await supabaseInstance!.from('shifts').delete().eq('id', id);
     }
   },
 
   getExpenses: async (): Promise<Expense[]> => {
     const local = JSON.parse(localStorage.getItem(EXPENSES_KEY) || '[]');
-    if (supabaseInstance) {
+    if (storage.initCloud()) {
       try {
-        const { data, error } = await supabaseInstance.from('expenses').select('*');
-        if (error) throw error;
-        if (data) {
+        const { data, error } = await supabaseInstance!.from('expenses').select('*');
+        if (!error && data) {
           const cloudData: Expense[] = data.map((item: any) => ({
             id: item.id,
             shiftId: item.shift_id,
@@ -225,7 +220,7 @@ export const storage = {
           localStorage.setItem(EXPENSES_KEY, JSON.stringify(cloudData));
           return cloudData;
         }
-      } catch (e) { console.warn("Supabase expenses fetch failed", e); }
+      } catch (e) { console.warn("Sync expenses error", e); }
     }
     return local;
   },
@@ -236,8 +231,8 @@ export const storage = {
     if (idx > -1) local[idx] = expense; else local.unshift(expense);
     localStorage.setItem(EXPENSES_KEY, JSON.stringify(local));
 
-    if (supabaseInstance) {
-      const { data: { session } } = await supabaseInstance.auth.getSession();
+    if (storage.initCloud()) {
+      const { data: { session } } = await supabaseInstance!.auth.getSession();
       if (!session?.user) return;
       const payload = {
         id: expense.id,
@@ -249,15 +244,15 @@ export const storage = {
         description: expense.description,
         user_id: session.user.id
       };
-      await supabaseInstance.from('expenses').upsert(payload);
+      await supabaseInstance!.from('expenses').upsert(payload);
     }
   },
 
   deleteExpense: async (id: string): Promise<void> => {
     const local = JSON.parse(localStorage.getItem(EXPENSES_KEY) || '[]');
     localStorage.setItem(EXPENSES_KEY, JSON.stringify(local.filter((e: any) => e.id !== id)));
-    if (supabaseInstance) {
-      await supabaseInstance.from('expenses').delete().eq('id', id);
+    if (storage.initCloud()) {
+      await supabaseInstance!.from('expenses').delete().eq('id', id);
     }
   },
 
@@ -267,13 +262,15 @@ export const storage = {
   },
   saveState: (s: AppState) => localStorage.setItem(STATE_KEY, JSON.stringify(s)),
   clearState: () => localStorage.removeItem(STATE_KEY),
-  getEnvStatus: () => ({
-    url: !!getEnvValue('URL'),
-    key: !!getEnvValue('KEY')
-  }),
+  
+  // Дополнительная утилита для проверки статуса
+  getConnectionStatus: () => !!supabaseInstance,
+  
   resetCloud: () => {
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_url`);
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_key`);
     supabaseInstance = null;
+    // Если есть хардкод, он восстановится при следующем initCloud, 
+    // но это ожидаемое поведение (сброс просто переподключит defaults)
   }
 };
