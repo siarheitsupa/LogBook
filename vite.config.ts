@@ -1,27 +1,27 @@
-import { defineConfig, loadEnv } from 'vite';
-import react from '@vitejs/plugin-react';
-import process from 'node:process';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig(({ mode }) => {
-  // Fix: Explicitly cast process to any to access cwd() method as it is sometimes missing in the TS declaration
-  const env = loadEnv(mode, (process as any).cwd(), '');
-  
-  return {
-    plugins: [react()],
-    base: '/',
-    define: {
-      'process.env.API_KEY': JSON.stringify(env.API_KEY || ''),
-      'process.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL || ''),
-      'process.env.SUPABASE_ANON_KEY': JSON.stringify(env.SUPABASE_ANON_KEY || ''),
-    },
-    build: {
-      outDir: 'dist',
-      emptyOutDir: true,
-      sourcemap: false,
-      minify: 'esbuild',
-    },
-    server: {
-      port: 3000
-    }
-  };
-});
+export default defineConfig({
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico'],
+      manifest: {
+        name: 'LogBook',
+        short_name: 'LogBook',
+        description: 'Driver work and rest logbook',
+        theme_color: '#0f172a',
+        background_color: '#0f172a',
+        display: 'standalone',
+        orientation: 'portrait',
+        start_url: '/',
+        icons: [
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' }
+        ]
+      }
+    })
+  ]
+})
