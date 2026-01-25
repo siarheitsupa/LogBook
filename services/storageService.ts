@@ -8,19 +8,17 @@ const STATE_KEY = 'driverlog_state_v1';
 const CLOUD_CONFIG_KEY = 'driverlog_cloud_config_v1';
 
 // --- НАСТРОЙКИ ПОДКЛЮЧЕНИЯ ---
-// Вставьте сюда ваш ANON KEY. Он будет использоваться по умолчанию для всех пользователей.
-// URL я уже взял из вашего скриншота.
 const DEFAULT_URL = 'https://onxpylvydjyhlvsaacur.supabase.co';
 const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ueHB5bHZ5ZGp5aGx2c2FhY3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1NDY1OTksImV4cCI6MjA4MzEyMjU5OX0.O1nLUMSSY8VfSGdoa8u_06eKRV0B-yTodLWOMnscZFA';
 
 let supabaseInstance: SupabaseClient | null = null;
 
 const getEnvValue = (key: 'URL' | 'KEY'): string => {
-  // 1. Приоритет: Жестко заданные константы (чтобы работало у всех по ссылке)
+  // 1. Приоритет: Жестко заданные константы
   if (key === 'URL' && DEFAULT_URL) return DEFAULT_URL;
-  if (key === 'KEY' && DEFAULT_KEY && DEFAULT_KEY !== 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ueHB5bHZ5ZGp5aGx2c2FhY3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1NDY1OTksImV4cCI6MjA4MzEyMjU5OX0.O1nLUMSSY8VfSGdoa8u_06eKRV0B-yTodLWOMnscZFA') return DEFAULT_KEY;
+  if (key === 'KEY' && DEFAULT_KEY) return DEFAULT_KEY;
 
-  // 2. Fallback: Переменные окружения (для локальной разработки)
+  // 2. Fallback: Переменные окружения или локальное хранилище
   try {
     if (key === 'URL') return process.env.SUPABASE_URL || localStorage.getItem(`${CLOUD_CONFIG_KEY}_url`) || '';
     if (key === 'KEY') return process.env.SUPABASE_ANON_KEY || localStorage.getItem(`${CLOUD_CONFIG_KEY}_key`) || '';
@@ -42,8 +40,7 @@ export const storage = {
     const url = manualConfig?.url || getEnvValue('URL');
     const key = manualConfig?.key || getEnvValue('KEY');
     
-    // Проверяем, не заглушка ли это
-    if (url && key && url.startsWith('http') && !key.includes('ВСТАВЬТЕ_СЮДА')) {
+    if (url && key && url.startsWith('http')) {
       try {
         supabaseInstance = createClient(url, key, {
           auth: {
