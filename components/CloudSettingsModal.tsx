@@ -114,7 +114,7 @@ CREATE POLICY "Users can manage their own expenses" ON expenses FOR ALL USING (a
 
         <div className="flex flex-col gap-2 mt-8">
           <button 
-            onClick={() => onSave({ url, key })}
+            onClick={() => onSave({ url: url.trim(), key: key.trim() })}
             className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all"
           >
             Сохранить настройки
