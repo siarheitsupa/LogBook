@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { ShiftWithRest, Shift, Currency } from '../types';
-import { calculateShiftDurationMins, formatMinsToHHMM } from '../utils/timeUtils';
+import { calculateShiftDurationMins, formatMinsToHHMM, getShiftEndDate } from '../utils/timeUtils';
 
 interface TimelineItemProps {
   shift: ShiftWithRest;
@@ -37,6 +37,10 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
   const [isExpanded, setIsExpanded] = useState(isInitiallyExpanded);
 
   const duration = calculateShiftDurationMins(shift);
+  const endDate = getShiftEndDate(shift);
+  const startDateLabel = new Date(shift.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  const endDateLabel = new Date(endDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  const isMultiDay = endDate !== shift.date;
   const isOverdue = shift.restBefore?.compensationDeadline && 
                     Date.now() > shift.restBefore.compensationDeadline && 
                     !shift.restBefore.isCompensated;
@@ -118,10 +122,10 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
         >
           <div className="flex flex-col">
             <span className="text-lg font-bold text-slate-900 tracking-tight">
-              {new Date(shift.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+              {isMultiDay ? `${startDateLabel} — ${endDateLabel}` : startDateLabel}
             </span>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest opacity-80 mt-0.5">
-              {shift.startTime} — {shift.endTime}
+              {shift.startTime} — {shift.endTime}{isMultiDay ? ` (${endDateLabel})` : ''}
             </span>
           </div>
           <div className="flex items-center gap-4">

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Shift, ShiftWithRest } from '../types';
-import { calculateShiftDurationMins, formatMinsToHHMM } from '../utils/timeUtils';
+import { calculateShiftDurationMins, formatMinsToHHMM, getShiftEndDate } from '../utils/timeUtils';
 
 interface PrintableReportProps {
   shifts: ShiftWithRest[];
@@ -15,7 +15,7 @@ interface PrintableReportProps {
 const PrintableReport: React.FC<PrintableReportProps> = ({ shifts, stats, userEmail }) => {
   const sortedShifts = [...shifts].sort((a, b) => a.timestamp - b.timestamp);
   const periodStart = sortedShifts.length > 0 ? sortedShifts[0].date : '-';
-  const periodEnd = sortedShifts.length > 0 ? sortedShifts[sortedShifts.length - 1].date : '-';
+  const periodEnd = sortedShifts.length > 0 ? getShiftEndDate(sortedShifts[sortedShifts.length - 1]) : '-';
 
   return (
     <div id="pdf-report" className="p-10 bg-white text-black font-serif" style={{ width: '210mm', minHeight: '297mm' }}>
@@ -67,7 +67,9 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ shifts, stats, userEm
           <tbody>
             {sortedShifts.map((s, idx) => (
               <tr key={s.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className="border border-black p-2 font-bold">{s.date}</td>
+                <td className="border border-black p-2 font-bold">
+                  {s.date === getShiftEndDate(s) ? s.date : `${s.date} — ${getShiftEndDate(s)}`}
+                </td>
                 <td className="border border-black p-2 text-center">{s.startTime}</td>
                 <td className="border border-black p-2 text-center">{s.endTime}</td>
                 <td className="border border-black p-2 text-right">{s.workHours || 0}ч {s.workMinutes || 0}м</td>

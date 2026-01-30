@@ -1,6 +1,7 @@
 export interface Shift {
   id: string;
-  date: string; // YYYY-MM-DD
+  date: string; // YYYY-MM-DD (дата начала смены)
+  endDate?: string; // YYYY-MM-DD (дата окончания смены)
   startTime: string; // HH:mm
   endTime: string; // HH:mm
   driveHours: number;

@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { Shift } from "../types";
-import { calculateShiftDurationMins } from "../utils/timeUtils";
+import { calculateShiftDurationMins, getShiftEndDate } from "../utils/timeUtils";
 
 export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
   try {
@@ -17,7 +17,9 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
       const m = Math.round(duration % 60);
       
       // Добавляем пометку "Начало" или "Продолжение", если AI нужно, но здесь просто дата и время
-      return `📅 ${s.date}: Вождение ${s.driveHours}ч ${s.driveMinutes}м. Смена: ${s.startTime} - ${s.endTime}.`;
+      const endDate = getShiftEndDate(s);
+      const dateLabel = s.date === endDate ? s.date : `${s.date} → ${endDate}`;
+      return `📅 ${dateLabel}: Вождение ${s.driveHours}ч ${s.driveMinutes}м. Смена: ${s.startTime} - ${s.endTime}.`;
     }).join('\n');
 
     const promptText = `

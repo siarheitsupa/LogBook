@@ -1,6 +1,7 @@
 
 import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
 import { Shift, AppState, CloudConfig, Expense } from '../types';
+import { getShiftEndDate } from '../utils/timeUtils';
 
 const SHIFTS_KEY = 'driverlog_shifts_v1';
 const EXPENSES_KEY = 'driverlog_expenses_v1';
@@ -130,7 +131,11 @@ export const storage = {
   },
 
   getShifts: async (): Promise<Shift[]> => {
-    const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
+    const local: Shift[] = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
+    const normalizedLocal = local.map((shift) => ({
+      ...shift,
+      endDate: getShiftEndDate(shift)
+    }));
     if (storage.initCloud()) {
       try {
         const { data, error } = await supabaseInstance!
@@ -139,34 +144,42 @@ export const storage = {
           .order('timestamp', { ascending: false });
         
         if (!error && data) {
-          const cloudData = data.map((item: any) => ({
-            id: item.id,
-            date: item.date,
-            startTime: item.start_time,
-            endTime: item.end_time,
-            driveHours: Number(item.drive_hours || 0),
-            driveMinutes: Number(item.drive_minutes || 0),
-            workHours: Number(item.work_hours || 0),
-            workMinutes: Number(item.work_minutes || 0),
-            timestamp: Number(item.timestamp),
-            startLat: item.start_lat,
-            startLng: item.start_lng,
-            endLat: item.end_lat,
-            endLng: item.end_lng,
-            isCompensated: item.is_compensated || false
-          }));
+          const cloudData = data.map((item: any) => {
+            const shift: Shift = {
+              id: item.id,
+              date: item.date,
+              endDate: item.end_date,
+              startTime: item.start_time,
+              endTime: item.end_time,
+              driveHours: Number(item.drive_hours || 0),
+              driveMinutes: Number(item.drive_minutes || 0),
+              workHours: Number(item.work_hours || 0),
+              workMinutes: Number(item.work_minutes || 0),
+              timestamp: Number(item.timestamp),
+              startLat: item.start_lat,
+              startLng: item.start_lng,
+              endLat: item.end_lat,
+              endLng: item.end_lng,
+              isCompensated: item.is_compensated || false
+            };
+            return {
+              ...shift,
+              endDate: getShiftEndDate(shift)
+            };
+          });
           localStorage.setItem(SHIFTS_KEY, JSON.stringify(cloudData));
           return cloudData;
         }
       } catch (e) { console.warn("Sync shifts error", e); }
     }
-    return local;
+    return normalizedLocal;
   },
 
   saveShift: async (shift: Shift): Promise<void> => {
+    const normalizedShift = { ...shift, endDate: getShiftEndDate(shift) };
     const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     const idx = local.findIndex((s: any) => s.id === shift.id);
-    if (idx > -1) local[idx] = shift; else local.unshift(shift);
+    if (idx > -1) local[idx] = normalizedShift; else local.unshift(normalizedShift);
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(local));
 
     if (storage.initCloud()) {
@@ -174,21 +187,22 @@ export const storage = {
       if (!session?.user) return;
       
       const payload: any = {
-        id: shift.id,
-        date: shift.date,
-        start_time: shift.startTime,
-        end_time: shift.endTime,
-        drive_hours: shift.driveHours,
-        drive_minutes: shift.driveMinutes,
-        work_hours: shift.workHours,
-        work_minutes: shift.workMinutes,
-        timestamp: shift.timestamp,
+        id: normalizedShift.id,
+        date: normalizedShift.date,
+        end_date: normalizedShift.endDate,
+        start_time: normalizedShift.startTime,
+        end_time: normalizedShift.endTime,
+        drive_hours: normalizedShift.driveHours,
+        drive_minutes: normalizedShift.driveMinutes,
+        work_hours: normalizedShift.workHours,
+        work_minutes: normalizedShift.workMinutes,
+        timestamp: normalizedShift.timestamp,
         user_id: session.user.id,
-        start_lat: shift.startLat,
-        start_lng: shift.startLng,
-        end_lat: shift.endLat,
-        end_lng: shift.endLng,
-        is_compensated: shift.isCompensated || false
+        start_lat: normalizedShift.startLat,
+        start_lng: normalizedShift.startLng,
+        end_lat: normalizedShift.endLat,
+        end_lng: normalizedShift.endLng,
+        is_compensated: normalizedShift.isCompensated || false
       };
       await supabaseInstance!.from('shifts').upsert(payload);
     }

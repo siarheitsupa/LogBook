@@ -26,6 +26,7 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
 CREATE TABLE IF NOT EXISTS shifts (
   id TEXT PRIMARY KEY,
   date TEXT,
+  end_date TEXT,
   start_time TEXT,
   end_time TEXT,
   drive_hours INT,
