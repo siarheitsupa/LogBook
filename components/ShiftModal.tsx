@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Shift } from '../types';
-import { formatDateInput, getShiftEndDate } from '../utils/timeUtils';
+import { formatDateInput, getShiftDailySegments, getShiftEndDate } from '../utils/timeUtils';
 
 interface ShiftModalProps {
   isOpen: boolean;
@@ -42,6 +42,10 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
   const [driveM, setDriveM] = useState('0');
   const [workH, setWorkH] = useState('0');
   const [workM, setWorkM] = useState('0');
+  const [endDriveH, setEndDriveH] = useState('0');
+  const [endDriveM, setEndDriveM] = useState('0');
+  const [endWorkH, setEndWorkH] = useState('0');
+  const [endWorkM, setEndWorkM] = useState('0');
 
   useEffect(() => {
     if (isOpen) {
@@ -54,10 +58,30 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         setStartM(sm);
         setEndH(eh);
         setEndM(em);
-        setDriveH(initialData.driveHours.toString());
-        setDriveM(initialData.driveMinutes.toString());
-        setWorkH((initialData.workHours || 0).toString());
-        setWorkM((initialData.workMinutes || 0).toString());
+        const segments = getShiftDailySegments(initialData);
+        if (segments.length > 1) {
+          const first = segments[0];
+          const restSegments = segments.slice(1);
+          const totalRestDriveMins = restSegments.reduce((sum, segment) => sum + segment.driveMins, 0);
+          const totalRestWorkMins = restSegments.reduce((sum, segment) => sum + segment.workMins, 0);
+          setDriveH(Math.floor(first.driveMins / 60).toString());
+          setDriveM(Math.round(first.driveMins % 60).toString());
+          setWorkH(Math.floor(first.workMins / 60).toString());
+          setWorkM(Math.round(first.workMins % 60).toString());
+          setEndDriveH(Math.floor(totalRestDriveMins / 60).toString());
+          setEndDriveM(Math.round(totalRestDriveMins % 60).toString());
+          setEndWorkH(Math.floor(totalRestWorkMins / 60).toString());
+          setEndWorkM(Math.round(totalRestWorkMins % 60).toString());
+        } else {
+          setDriveH(initialData.driveHours.toString());
+          setDriveM(initialData.driveMinutes.toString());
+          setWorkH((initialData.workHours || 0).toString());
+          setWorkM((initialData.workMinutes || 0).toString());
+          setEndDriveH('0');
+          setEndDriveM('0');
+          setEndWorkH('0');
+          setEndWorkM('0');
+        }
       } else {
         const now = new Date();
         
@@ -91,6 +115,10 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         setDriveM('0');
         setWorkH('0');
         setWorkM('0');
+        setEndDriveH('0');
+        setEndDriveM('0');
+        setEndWorkH('0');
+        setEndWorkM('0');
       }
     }
   }, [initialData, isOpen, defaultStartTime, defaultDate, defaultEndDate]);
@@ -103,6 +131,11 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
 
   if (!isOpen) return null;
 
+  const isMultiDay = endDate && startDate && endDate !== startDate;
+  const parseValue = (value: string) => parseInt(value) || 0;
+  const totalDriveMinutes = (parseValue(driveH) * 60 + parseValue(driveM)) + (isMultiDay ? (parseValue(endDriveH) * 60 + parseValue(endDriveM)) : 0);
+  const totalWorkMinutes = (parseValue(workH) * 60 + parseValue(workM)) + (isMultiDay ? (parseValue(endWorkH) * 60 + parseValue(endWorkM)) : 0);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const shift: Shift = {
@@ -111,10 +144,10 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
       endDate,
       startTime: `${startH.padStart(2, '0')}:${startM.padStart(2, '0')}`,
       endTime: `${endH.padStart(2, '0')}:${endM.padStart(2, '0')}`,
-      driveHours: parseInt(driveH) || 0,
-      driveMinutes: parseInt(driveM) || 0,
-      workHours: parseInt(workH) || 0,
-      workMinutes: parseInt(workM) || 0,
+      driveHours: Math.floor(totalDriveMinutes / 60),
+      driveMinutes: Math.round(totalDriveMinutes % 60),
+      workHours: Math.floor(totalWorkMinutes / 60),
+      workMinutes: Math.round(totalWorkMinutes % 60),
       timestamp: new Date(`${startDate}T${startH.padStart(2, '0')}:${startM.padStart(2, '0')}`).getTime()
     };
     onSave(shift);
@@ -208,7 +241,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
             <div className="grid grid-cols-2 gap-2.5">
               <div className="space-y-1 min-w-0">
                 <label className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 truncate">
-                  <DrivingIcon /> Вождение
+                  <DrivingIcon /> Вождение {isMultiDay ? '(дата начала)' : ''}
                 </label>
                 <div className="flex items-center gap-1 p-1 bg-slate-50 border border-slate-100 rounded-2xl min-w-0">
                   <input 
@@ -237,7 +270,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
               
               <div className="space-y-1 min-w-0">
                 <label className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 truncate">
-                  <WorkIcon /> Работа
+                  <WorkIcon /> Работа {isMultiDay ? '(дата начала)' : ''}
                 </label>
                 <div className="flex items-center gap-1 p-1 bg-slate-50 border border-slate-100 rounded-2xl min-w-0">
                   <input 
@@ -264,6 +297,68 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
                 </div>
               </div>
             </div>
+
+            {isMultiDay && (
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="space-y-1 min-w-0">
+                  <label className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 truncate">
+                    <DrivingIcon /> Вождение (дата конца)
+                  </label>
+                  <div className="flex items-center gap-1 p-1 bg-slate-50 border border-slate-100 rounded-2xl min-w-0">
+                    <input 
+                      type="number" 
+                      placeholder="ЧЧ" 
+                      className="w-full py-2 bg-transparent text-center font-bold text-slate-700 outline-none min-w-0 appearance-none" 
+                      value={endDriveH} 
+                      onChange={e => setEndDriveH(e.target.value)}
+                      min="0" max="24"
+                      inputMode="numeric"
+                      required 
+                    />
+                    <span className="font-bold text-slate-300">:</span>
+                    <input 
+                      type="number" 
+                      placeholder="ММ" 
+                      className="w-full py-2 bg-transparent text-center font-bold text-slate-700 outline-none min-w-0 appearance-none" 
+                      value={endDriveM} 
+                      onChange={e => setEndDriveM(e.target.value)}
+                      min="0" max="59"
+                      inputMode="numeric"
+                      required 
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-1 min-w-0">
+                  <label className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 truncate">
+                    <WorkIcon /> Работа (дата конца)
+                  </label>
+                  <div className="flex items-center gap-1 p-1 bg-slate-50 border border-slate-100 rounded-2xl min-w-0">
+                    <input 
+                      type="number" 
+                      placeholder="ЧЧ" 
+                      className="w-full py-2 bg-transparent text-center font-bold text-slate-700 outline-none min-w-0 appearance-none" 
+                      value={endWorkH} 
+                      onChange={e => setEndWorkH(e.target.value)}
+                      min="0" max="24"
+                      inputMode="numeric"
+                      required 
+                    />
+                    <span className="font-bold text-slate-300">:</span>
+                    <input 
+                      type="number" 
+                      placeholder="ММ" 
+                      className="w-full py-2 bg-transparent text-center font-bold text-slate-700 outline-none min-w-0 appearance-none" 
+                      value={endWorkM} 
+                      onChange={e => setEndWorkM(e.target.value)}
+                      min="0" max="59"
+                      inputMode="numeric"
+                      required 
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-3 pt-3">
               <button 
