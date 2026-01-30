@@ -1,4 +1,5 @@
-import React;
+
+import React from 'react';
 import { Shift, ShiftWithRest } from '../types';
 import { calculateShiftDurationMins, formatMinsToHHMM } from '../utils/timeUtils';
 
@@ -13,7 +14,7 @@ interface PrintableReportProps {
 
 const PrintableReport: React.FC<PrintableReportProps> = ({ shifts, stats, userEmail }) => {
   const sortedShifts = [...shifts].sort((a, b) => a.timestamp - b.timestamp);
-  // Fix: Use startDate and endDate instead of date
+  
   const periodStart = sortedShifts.length > 0 ? sortedShifts[0].startDate : '-';
   const periodEnd = sortedShifts.length > 0 ? sortedShifts[sortedShifts.length - 1].endDate : '-';
 
@@ -67,7 +68,6 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ shifts, stats, userEm
           <tbody>
             {sortedShifts.map((s, idx) => (
               <tr key={s.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                {/* Fix: Use startDate instead of date */}
                 <td className="border border-black p-2 font-bold">{s.startDate}</td>
                 <td className="border border-black p-2 text-center">{s.startTime}</td>
                 <td className="border border-black p-2 text-center">{s.endTime}</td>
