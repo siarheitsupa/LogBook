@@ -7,14 +7,16 @@ export interface Shift {
   endTime: string; // HH:mm
   driveHours: number;
   driveMinutes: number;
-  workHours: number; // прочая работа (молотки)
-  workMinutes: number; // прочая работа (молотки)
+  driveHoursDay2?: number; // Вождение после 00:00 второго дня
+  driveMinutesDay2?: number;
+  workHours: number; 
+  workMinutes: number; 
   timestamp: number;
   startLat?: number;
   startLng?: number;
   endLat?: number;
   endLng?: number;
-  isCompensated?: boolean; // Флаг: компенсирован ли сокращенный отдых ПЕРЕД этой сменой
+  isCompensated?: boolean;
 }
 
 export type ExpenseCategory = 'Parking' | 'Customs' | 'Fuel' | 'Wash' | 'Toll' | 'Food' | 'Other';

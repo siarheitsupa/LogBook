@@ -22,14 +22,17 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
 
   if (!isOpen) return null;
 
-  const fullSql = `-- 1. Таблица смен
+  const fullSql = `-- 1. Таблица смен (Обновленная)
 CREATE TABLE IF NOT EXISTS shifts (
   id TEXT PRIMARY KEY,
   date TEXT,
+  end_date TEXT,
   start_time TEXT,
   end_time TEXT,
   drive_hours INT,
   drive_minutes INT,
+  drive_hours_day2 INT DEFAULT 0,
+  drive_minutes_day2 INT DEFAULT 0,
   work_hours INT,
   work_minutes INT,
   timestamp BIGINT,
@@ -38,6 +41,11 @@ CREATE TABLE IF NOT EXISTS shifts (
   end_lat FLOAT8, end_lng FLOAT8,
   is_compensated BOOLEAN DEFAULT FALSE
 );
+
+-- Миграция если поля не существуют:
+-- ALTER TABLE shifts ADD COLUMN IF NOT EXISTS end_date TEXT;
+-- ALTER TABLE shifts ADD COLUMN IF NOT EXISTS drive_hours_day2 INT DEFAULT 0;
+-- ALTER TABLE shifts ADD COLUMN IF NOT EXISTS drive_minutes_day2 INT DEFAULT 0;
 
 -- 2. Таблица расходов
 CREATE TABLE IF NOT EXISTS expenses (
@@ -74,57 +82,27 @@ CREATE POLICY "Users can manage their own expenses" ON expenses FOR ALL USING (a
           <div className="space-y-3">
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Project URL</label>
-              <input 
-                type="text" 
-                placeholder="https://xyz.supabase.co"
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 ring-blue-500"
-                value={url}
-                onChange={e => setUrl(e.target.value)}
-              />
+              <input type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 ring-blue-500" value={url} onChange={e => setUrl(e.target.value)} />
             </div>
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Anon Key</label>
-              <input 
-                type="password" 
-                placeholder="eyJhbG..."
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 ring-blue-500"
-                value={key}
-                onChange={e => setKey(e.target.value)}
-              />
+              <input type="password" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 ring-blue-500" value={key} onChange={e => setKey(e.target.value)} />
             </div>
           </div>
           
           <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
-            <button 
-              onClick={() => setShowSql(!showSql)} 
-              className="text-[10px] font-bold text-amber-700 uppercase flex items-center justify-between w-full"
-            >
-              Инструкция SQL (Настройка базы) {showSql ? '↑' : '↓'}
-            </button>
+            <button onClick={() => setShowSql(!showSql)} className="text-[10px] font-bold text-amber-700 uppercase flex items-center justify-between w-full">SQL Инструкция {showSql ? '↑' : '↓'}</button>
             {showSql && (
               <div className="mt-3">
-                <p className="text-[9px] text-amber-800 font-bold mb-2">Выполните это в Supabase SQL Editor:</p>
-                <pre className="p-3 bg-white rounded-lg text-[8px] overflow-x-auto font-mono text-slate-700 border border-amber-200 leading-relaxed shadow-inner">
-                  {fullSql}
-                </pre>
+                <pre className="p-3 bg-white rounded-lg text-[8px] overflow-x-auto font-mono text-slate-700 border border-amber-200 leading-relaxed shadow-inner">{fullSql}</pre>
               </div>
             )}
           </div>
         </div>
 
         <div className="flex flex-col gap-2 mt-8">
-          <button 
-            onClick={() => onSave({ url: url.trim(), key: key.trim() })}
-            className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all"
-          >
-            Сохранить настройки
-          </button>
-          <button 
-            onClick={() => { onReset(); setUrl(''); setKey(''); onClose(); }}
-            className="w-full py-3 text-rose-500 font-bold text-sm hover:bg-rose-50 rounded-xl transition-colors"
-          >
-            Сбросить настройки
-          </button>
+          <button onClick={() => onSave({ url: url.trim(), key: key.trim() })} className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all">Сохранить</button>
+          <button onClick={() => { onReset(); setUrl(''); setKey(''); onClose(); }} className="w-full py-3 text-rose-500 font-bold text-sm hover:bg-rose-50 rounded-xl transition-colors">Сбросить</button>
         </div>
       </div>
     </div>
