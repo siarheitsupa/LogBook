@@ -33,10 +33,13 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
   const [startM, setStartM] = useState('00');
   const [endH, setEndH] = useState('18');
   const [endM, setEndM] = useState('00');
-  const [driveH, setDriveH] = useState('0');
-  const [driveM, setDriveM] = useState('0');
+  
+  // Поля для ввода вождения
+  const [driveH1, setDriveH1] = useState('0');
+  const [driveM1, setDriveM1] = useState('0');
   const [driveH2, setDriveH2] = useState('0');
   const [driveM2, setDriveM2] = useState('0');
+  
   const [workH, setWorkH] = useState('0');
   const [workM, setWorkM] = useState('0');
 
@@ -49,10 +52,17 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         const [eh, em] = initialData.endTime.split(':');
         setStartH(sh); setStartM(sm);
         setEndH(eh); setEndM(em);
-        setDriveH(initialData.driveHours.toString());
-        setDriveM(initialData.driveMinutes.toString());
+
+        // Расчет для раздельного ввода (День 1 = Всего - День 2)
+        const totalDriveMins = (initialData.driveHours * 60) + initialData.driveMinutes;
+        const day2DriveMins = ((initialData.driveHoursDay2 || 0) * 60) + (initialData.driveMinutesDay2 || 0);
+        const day1DriveMins = Math.max(0, totalDriveMins - day2DriveMins);
+
+        setDriveH1(Math.floor(day1DriveMins / 60).toString());
+        setDriveM1((day1DriveMins % 60).toString());
         setDriveH2((initialData.driveHoursDay2 || 0).toString());
         setDriveM2((initialData.driveMinutesDay2 || 0).toString());
+        
         setWorkH((initialData.workHours || 0).toString());
         setWorkM((initialData.workMinutes || 0).toString());
       } else {
@@ -67,7 +77,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         }
         setEndH(now.getHours().toString().padStart(2, '0'));
         setEndM(now.getMinutes().toString().padStart(2, '0'));
-        setDriveH('0'); setDriveM('0');
+        setDriveH1('0'); setDriveM1('0');
         setDriveH2('0'); setDriveM2('0');
         setWorkH('0'); setWorkM('0');
       }
@@ -85,15 +95,21 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Складываем части вождения для общего значения в БД
+    const d1Mins = (parseInt(driveH1) || 0) * 60 + (parseInt(driveM1) || 0);
+    const d2Mins = isMultiDay ? ((parseInt(driveH2) || 0) * 60 + (parseInt(driveM2) || 0)) : 0;
+    const totalDriveMins = d1Mins + d2Mins;
+
     const shift: Shift = {
       id: initialData?.id || Date.now().toString(),
       startDate, endDate,
       startTime: `${startH.padStart(2, '0')}:${startM.padStart(2, '0')}`,
       endTime: `${endH.padStart(2, '0')}:${endM.padStart(2, '0')}`,
-      driveHours: parseInt(driveH) || 0,
-      driveMinutes: parseInt(driveM) || 0,
-      driveHoursDay2: isMultiDay ? (parseInt(driveH2) || 0) : 0,
-      driveMinutesDay2: isMultiDay ? (parseInt(driveM2) || 0) : 0,
+      driveHours: Math.floor(totalDriveMins / 60),
+      driveMinutes: totalDriveMins % 60,
+      driveHoursDay2: Math.floor(d2Mins / 60),
+      driveMinutesDay2: d2Mins % 60,
       workHours: parseInt(workH) || 0,
       workMinutes: parseInt(workM) || 0,
       timestamp: new Date(`${startDate}T${startH.padStart(2, '0')}:${startM.padStart(2, '0')}`).getTime()
@@ -141,11 +157,11 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
             <div className="p-4 bg-slate-50 border border-slate-100 rounded-[2rem] space-y-4">
                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1"><DrivingIcon /> Общее вождение</label>
+                    <label className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1"><DrivingIcon /> Вождение День 1</label>
                     <div className="flex items-center gap-1 p-1 bg-white border border-slate-100 rounded-2xl">
-                      <input type="number" className="w-full py-2 bg-transparent text-center font-bold text-slate-700 outline-none" value={driveH} onChange={e => setDriveH(e.target.value)} min="0" max="24" inputMode="numeric" required />
+                      <input type="number" className="w-full py-2 bg-transparent text-center font-bold text-slate-700 outline-none" value={driveH1} onChange={e => setDriveH1(e.target.value)} min="0" max="24" inputMode="numeric" required />
                       <span className="font-bold text-slate-300">:</span>
-                      <input type="number" className="w-full py-2 bg-transparent text-center font-bold text-slate-700 outline-none" value={driveM} onChange={e => setDriveM(e.target.value)} min="0" max="59" inputMode="numeric" required />
+                      <input type="number" className="w-full py-2 bg-transparent text-center font-bold text-slate-700 outline-none" value={driveM1} onChange={e => setDriveM1(e.target.value)} min="0" max="59" inputMode="numeric" required />
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -162,11 +178,10 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
                   <div className="pt-4 border-t border-slate-200/50 animate-in slide-in-from-top-2">
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-[10px] font-bold text-amber-600 uppercase tracking-widest ml-1">
-                        Вождение во 2-й день (после 00:00)
+                        Вождение День 2 (после 00:00)
                       </label>
-                      <span className="text-[9px] font-bold text-slate-400 italic">Сплит недели</span>
                     </div>
-                    <div className="flex items-center gap-1 p-1 bg-amber-50 border border-amber-100 rounded-2xl w-1/2 mx-auto">
+                    <div className="flex items-center gap-1 p-1 bg-amber-50 border border-amber-100 rounded-2xl w-1/2">
                       <input type="number" className="w-full py-2 bg-transparent text-center font-bold text-amber-700 outline-none" value={driveH2} onChange={e => setDriveH2(e.target.value)} min="0" max="24" inputMode="numeric" />
                       <span className="font-bold text-amber-200">:</span>
                       <input type="number" className="w-full py-2 bg-transparent text-center font-bold text-amber-700 outline-none" value={driveM2} onChange={e => setDriveM2(e.target.value)} min="0" max="59" inputMode="numeric" />
