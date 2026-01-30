@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { MapContainer, TileLayer, Polyline, CircleMarker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Shift } from '../types';
+import { getShiftEndDate } from '../utils/timeUtils';
 
 interface RouteMapProps {
   shifts: Shift[];
@@ -89,7 +90,7 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
                 <Popup>
                   <div className="text-xs font-bold font-sans p-1">
                     <p className="text-slate-400 uppercase tracking-widest text-[8px] mb-1 text-center">Финиш</p>
-                    <p className="text-slate-900 whitespace-nowrap">{s.date} {s.endTime}</p>
+                    <p className="text-slate-900 whitespace-nowrap">{getShiftEndDate(s)} {s.endTime}</p>
                   </div>
                 </Popup>
               </CircleMarker>

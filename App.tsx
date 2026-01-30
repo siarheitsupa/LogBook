@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Shift, AppState, CloudConfig, Expense, ShiftWithRest } from './types';
 import { storage } from './services/storageService';
 import { analyzeLogs } from './services/geminiService';
-import { formatMinsToHHMM, getStats, calculateLogSummary, pad, getMonday, groupShiftsByWeek } from './utils/timeUtils';
+import { formatMinsToHHMM, getStats, calculateLogSummary, getMonday, formatDateInput, getShiftEndTimestamp, getShiftDailySegments } from './utils/timeUtils';
 import StatCard from './components/StatCard';
 import ShiftModal from './components/ShiftModal';
 import ExpensesModal from './components/ExpensesModal';
@@ -91,8 +91,72 @@ const App: React.FC = () => {
     }));
   }, [shifts, expenses]);
 
-  // Группировка смен по неделям
-  const groupedShifts = useMemo(() => groupShiftsByWeek(enrichedShifts), [enrichedShifts]);
+  const groupedDisplayShifts = useMemo(() => {
+    const groups: Record<number, { weekStart: number; weekEnd: number; totalDriveMins: number; entries: Array<{ key: string; shift: ShiftWithRest; display: { date: string; startTime: string; endTime: string; driveHours: number; driveMinutes: number; workHours: number; workMinutes: number; dutyMins: number; }; showRest: boolean; }>; isCurrentWeek: boolean; }> = {};
+    const currentMonday = getMonday(new Date()).getTime();
+
+    const normalizeHours = (mins: number) => {
+      const rounded = Math.round(mins);
+      const hours = Math.floor(rounded / 60);
+      const minutes = Math.round(rounded % 60);
+      if (minutes === 60) {
+        return { hours: hours + 1, minutes: 0 };
+      }
+      return { hours, minutes };
+    };
+
+    enrichedShifts.forEach((shift) => {
+      const segments = getShiftDailySegments(shift);
+      segments.forEach((segment, index) => {
+        const allocationDate = new Date(`${segment.date}T00:00:00`);
+        const monday = getMonday(allocationDate).getTime();
+
+        if (!groups[monday]) {
+          const sunday = new Date(monday);
+          sunday.setDate(sunday.getDate() + 6);
+          sunday.setHours(23, 59, 59, 999);
+          groups[monday] = {
+            weekStart: monday,
+            weekEnd: sunday.getTime(),
+            totalDriveMins: 0,
+            entries: [],
+            isCurrentWeek: monday === currentMonday
+          };
+        }
+
+        const drive = normalizeHours(segment.driveMins);
+        const work = normalizeHours(segment.workMins);
+        groups[monday].totalDriveMins += segment.driveMins;
+        groups[monday].entries.push({
+          key: `${shift.id}-${segment.date}`,
+          shift,
+          display: {
+            date: segment.date,
+            startTime: segment.startTime,
+            endTime: segment.endTime,
+            driveHours: drive.hours,
+            driveMinutes: drive.minutes,
+            workHours: work.hours,
+            workMinutes: work.minutes,
+            dutyMins: segment.dutyMins
+          },
+          showRest: index === 0
+        });
+      });
+    });
+
+    return Object.values(groups)
+      .map(group => ({
+        ...group,
+        entries: group.entries.sort((a, b) => {
+          if (a.display.date !== b.display.date) {
+            return b.display.date.localeCompare(a.display.date);
+          }
+          return b.display.startTime.localeCompare(a.display.startTime);
+        })
+      }))
+      .sort((a, b) => b.weekStart - a.weekStart);
+  }, [enrichedShifts]);
 
   const { totalDebt } = useMemo(() => calculateLogSummary(shifts), [shifts]);
   const stats = useMemo(() => getStats(shifts), [shifts]);
@@ -112,7 +176,7 @@ const App: React.FC = () => {
     }
     const lastShift = enrichedShifts[0];
     if (!lastShift) return { label: 'ОТДЫХ', time: '00:00', isRest: true, mins: 0 };
-    const lastEndTs = new Date(`${lastShift.date}T${lastShift.endTime}`).getTime();
+    const lastEndTs = getShiftEndTimestamp(lastShift);
     const restMins = (now - lastEndTs) / 60000;
     return { label: 'ОТДЫХ', time: formatMinsToHHMM(restMins > 0 ? restMins : 0), isRest: true, mins: restMins > 0 ? restMins : 0 };
   }, [appState, enrichedShifts, now]);
@@ -207,14 +271,15 @@ const App: React.FC = () => {
       const h = d.getHours().toString().padStart(2, '0');
       const m = d.getMinutes().toString().padStart(2, '0');
       return {
-        defaultDate: d.toISOString().split('T')[0],
+        defaultDate: formatDateInput(d),
+        defaultEndDate: formatDateInput(new Date()),
         defaultStartTime: `${h}:${m}`
       };
     }
     return {};
   };
 
-  const { defaultDate, defaultStartTime } = getModalDefaults();
+  const { defaultDate, defaultEndDate, defaultStartTime } = getModalDefaults();
 
   if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="w-10 h-10 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div></div>;
   if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-bold mb-6">DriverLog Cloud</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button><CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} /></div>;
@@ -364,12 +429,17 @@ const App: React.FC = () => {
         </div>
 
         {viewMode === 'list' ? (
-          groupedShifts.map(group => (
-            <WeekGroup key={group.weekStart} group={group}>
-              {group.shifts.map((s) => (
+          groupedDisplayShifts.map(group => (
+            <WeekGroup 
+              key={group.weekStart} 
+              group={{ weekStart: group.weekStart, weekEnd: group.weekEnd, totalDriveMins: group.totalDriveMins, shifts: group.entries.map(entry => entry.shift), isCurrentWeek: group.isCurrentWeek }}
+            >
+              {group.entries.map((entry) => (
                 <TimelineItem 
-                  key={s.id} 
-                  shift={s} 
+                  key={entry.key} 
+                  shift={entry.shift} 
+                  displayShift={entry.display}
+                  showRest={entry.showRest}
                   onEdit={setEditingShift} 
                   onDelete={deleteShift} 
                   onAddExpense={setActiveShiftForExpense} 
@@ -390,6 +460,7 @@ const App: React.FC = () => {
         onSave={handleSaveShift} 
         initialData={editingShift}
         defaultDate={defaultDate}
+        defaultEndDate={defaultEndDate}
         defaultStartTime={defaultStartTime}
       />
       {activeShiftForExpense && <ExpensesModal isOpen={!!activeShiftForExpense} onClose={() => setActiveShiftForExpense(null)} onSave={handleSaveExpense} shiftId={activeShiftForExpense} />}

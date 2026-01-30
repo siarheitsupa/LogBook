@@ -3,6 +3,10 @@ import { Shift, RestEvent, ShiftWithRest } from '../types';
 
 export const pad = (n: number) => n.toString().padStart(2, '0');
 
+export const formatDateInput = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
+export const formatTimeHHMM = (date: Date) => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+
 export const formatMinsToHHMM = (totalMinutes: number) => {
   if (isNaN(totalMinutes) || totalMinutes < 0) return "00:00";
   const roundedTotalMins = Math.round(totalMinutes);
@@ -20,6 +24,115 @@ export const getMonday = (date: Date) => {
   return d;
 };
 
+const toMinutes = (time: string) => {
+  const [h, m] = time.split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+
+export const getShiftStartTimestamp = (shift: Shift) => new Date(`${shift.date}T${shift.startTime}`).getTime();
+
+export const getShiftEndDate = (shift: Shift) => {
+  if (shift.endDate) return shift.endDate;
+  const startMinutes = toMinutes(shift.startTime);
+  const endMinutes = toMinutes(shift.endTime);
+  if (endMinutes < startMinutes) {
+    const nextDay = new Date(`${shift.date}T00:00:00`);
+    nextDay.setDate(nextDay.getDate() + 1);
+    return formatDateInput(nextDay);
+  }
+  return shift.date;
+};
+
+export const getShiftEndTimestamp = (shift: Shift) => {
+  const startTs = getShiftStartTimestamp(shift);
+  const endDate = getShiftEndDate(shift);
+  let endTs = new Date(`${endDate}T${shift.endTime}`).getTime();
+  if (endTs <= startTs) {
+    endTs += 24 * 60 * 60 * 1000;
+  }
+  return endTs;
+};
+
+export interface ShiftDailyAllocation {
+  date: string;
+  driveMins: number;
+  workMins: number;
+  dutyMins: number;
+}
+
+export const getShiftDailyAllocations = (shift: Shift): ShiftDailyAllocation[] => {
+  const startTs = getShiftStartTimestamp(shift);
+  const endTs = getShiftEndTimestamp(shift);
+  const totalDutyMins = Math.max(1, (endTs - startTs) / 60000);
+  const driveMins = (shift.driveHours || 0) * 60 + (shift.driveMinutes || 0);
+  const workMins = (shift.workHours || 0) * 60 + (shift.workMinutes || 0);
+  const allocations: ShiftDailyAllocation[] = [];
+
+  let current = startTs;
+  while (current < endTs) {
+    const nextMidnight = new Date(current);
+    nextMidnight.setHours(24, 0, 0, 0);
+    const segmentEnd = Math.min(endTs, nextMidnight.getTime());
+    const segmentMins = (segmentEnd - current) / 60000;
+    const ratio = segmentMins / totalDutyMins;
+    allocations.push({
+      date: formatDateInput(new Date(current)),
+      driveMins: driveMins * ratio,
+      workMins: workMins * ratio,
+      dutyMins: segmentMins
+    });
+    current = segmentEnd;
+  }
+
+  return allocations;
+};
+
+export interface ShiftDailySegment extends ShiftDailyAllocation {
+  startTime: string;
+  endTime: string;
+  isFirstDay: boolean;
+  isLastDay: boolean;
+}
+
+export const getShiftDailySegments = (shift: Shift): ShiftDailySegment[] => {
+  const startTs = getShiftStartTimestamp(shift);
+  const endTs = getShiftEndTimestamp(shift);
+  const totalDutyMins = Math.max(1, (endTs - startTs) / 60000);
+  const driveMins = (shift.driveHours || 0) * 60 + (shift.driveMinutes || 0);
+  const workMins = (shift.workHours || 0) * 60 + (shift.workMinutes || 0);
+  const segments: ShiftDailySegment[] = [];
+
+  let current = startTs;
+  let index = 0;
+  while (current < endTs) {
+    const nextMidnight = new Date(current);
+    nextMidnight.setHours(24, 0, 0, 0);
+    const segmentEnd = Math.min(endTs, nextMidnight.getTime());
+    const segmentMins = (segmentEnd - current) / 60000;
+    const ratio = segmentMins / totalDutyMins;
+    const segmentStartDate = new Date(current);
+    const segmentEndDate = new Date(segmentEnd);
+    const isEndOfDay = segmentEndDate.getHours() === 0 && segmentEndDate.getMinutes() === 0 && segmentEnd > current;
+    const isFirstDay = index === 0;
+    const isLastDay = segmentEnd === endTs;
+
+    segments.push({
+      date: formatDateInput(segmentStartDate),
+      startTime: formatTimeHHMM(segmentStartDate),
+      endTime: isEndOfDay ? '24:00' : formatTimeHHMM(segmentEndDate),
+      driveMins: driveMins * ratio,
+      workMins: workMins * ratio,
+      dutyMins: segmentMins,
+      isFirstDay,
+      isLastDay
+    });
+    current = segmentEnd;
+    index += 1;
+  }
+
+  return segments;
+};
+
 // Получение номера недели для группировки
 const getWeekNumber = (d: Date) => {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -29,14 +142,9 @@ const getWeekNumber = (d: Date) => {
 };
 
 export const calculateShiftDurationMins = (shift: Shift): number => {
-  const start = new Date(`${shift.date}T${shift.startTime}`).getTime();
-  const end = new Date(`${shift.date}T${shift.endTime}`).getTime();
-  
-  let diff = end - start;
-  if (diff < 0) {
-    diff += 24 * 60 * 60 * 1000;
-  }
-  return diff / (1000 * 60);
+  const start = getShiftStartTimestamp(shift);
+  const end = getShiftEndTimestamp(shift);
+  return Math.max(0, (end - start) / (1000 * 60));
 };
 
 export interface WeekGroupData {
@@ -52,25 +160,37 @@ export const groupShiftsByWeek = (shifts: ShiftWithRest[]): WeekGroupData[] => {
   const currentMonday = getMonday(new Date()).getTime();
 
   shifts.forEach(shift => {
-    const date = new Date(shift.date);
-    const monday = getMonday(date).getTime();
+    const allocations = getShiftDailyAllocations(shift);
+    const weeksForShift = new Set<number>();
 
-    if (!groups[monday]) {
-      const sunday = new Date(monday);
-      sunday.setDate(sunday.getDate() + 6);
-      sunday.setHours(23, 59, 59, 999);
+    allocations.forEach(allocation => {
+      const allocationDate = new Date(`${allocation.date}T00:00:00`);
+      const monday = getMonday(allocationDate).getTime();
+      weeksForShift.add(monday);
 
-      groups[monday] = {
-        weekStart: monday,
-        weekEnd: sunday.getTime(),
-        totalDriveMins: 0,
-        shifts: [],
-        isCurrentWeek: monday === currentMonday
-      };
-    }
+      if (!groups[monday]) {
+        const sunday = new Date(monday);
+        sunday.setDate(sunday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
 
-    groups[monday].shifts.push(shift);
-    groups[monday].totalDriveMins += (shift.driveHours * 60) + shift.driveMinutes;
+        groups[monday] = {
+          weekStart: monday,
+          weekEnd: sunday.getTime(),
+          totalDriveMins: 0,
+          shifts: [],
+          isCurrentWeek: monday === currentMonday
+        };
+      }
+
+      groups[monday].totalDriveMins += allocation.driveMins;
+    });
+
+    weeksForShift.forEach(monday => {
+      if (!groups[monday]) return;
+      if (!groups[monday].shifts.find(s => s.id === shift.id)) {
+        groups[monday].shifts.push(shift);
+      }
+    });
   });
 
   // Превращаем в массив и сортируем от новых к старым
@@ -90,11 +210,8 @@ export const calculateLogSummary = (shifts: Shift[]) => {
     const prev = sorted[i - 1];
     const curr = sorted[i];
     
-    const prevStartTs = new Date(`${prev.date}T${prev.startTime}`).getTime();
-    const prevEndTs = new Date(`${prev.date}T${prev.endTime}`).getTime();
-    let realPrevEndTs = prevEndTs <= prevStartTs ? prevEndTs + 86400000 : prevEndTs;
-    
-    const currStartTs = new Date(`${curr.date}T${curr.startTime}`).getTime();
+    const realPrevEndTs = getShiftEndTimestamp(prev);
+    const currStartTs = getShiftStartTimestamp(curr);
     const diffHours = (currStartTs - realPrevEndTs) / 3600000;
 
     if (diffHours >= 24) {
@@ -111,11 +228,8 @@ export const calculateLogSummary = (shifts: Shift[]) => {
 
     if (i > 0) {
       const prev = sorted[i - 1];
-      const prevStartTs = new Date(`${prev.date}T${prev.startTime}`).getTime();
-      const prevEndTs = new Date(`${prev.date}T${prev.endTime}`).getTime();
-      let realPrevEndTs = prevEndTs <= prevStartTs ? prevEndTs + 86400000 : prevEndTs;
-      
-      const currStartTs = new Date(`${curr.date}T${curr.startTime}`).getTime();
+      const realPrevEndTs = getShiftEndTimestamp(prev);
+      const currStartTs = getShiftStartTimestamp(curr);
       const diffMs = currStartTs - realPrevEndTs;
       const diffHours = diffMs / 3600000;
 
@@ -189,6 +303,7 @@ export const getStats = (shifts: Shift[]) => {
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const currentWeekStart = getMonday(now).getTime();
   const prevWeekStart = currentWeekStart - (7 * 24 * 60 * 60 * 1000);
+  const todayEnd = todayStart + (24 * 60 * 60 * 1000);
 
   let weekMins = 0;
   let workWeekMins = 0;
@@ -198,24 +313,29 @@ export const getStats = (shifts: Shift[]) => {
   let extDutyCount = 0;
 
   shifts.forEach(s => {
-    const shiftTimestamp = new Date(s.date).getTime();
     const driveMins = s.driveHours * 60 + s.driveMinutes;
     const workMins = (s.workHours || 0) * 60 + (s.workMinutes || 0);
     const dutyMins = calculateShiftDurationMins(s);
+    const allocations = getShiftDailyAllocations(s);
+    const inCurrentWeek = allocations.some(allocation => new Date(`${allocation.date}T00:00:00`).getTime() >= currentWeekStart);
 
-    if (shiftTimestamp >= currentWeekStart) {
-      weekMins += driveMins;
-      workWeekMins += workMins;
+    allocations.forEach(allocation => {
+      const allocationTs = new Date(`${allocation.date}T00:00:00`).getTime();
+      if (allocationTs >= currentWeekStart) {
+        weekMins += allocation.driveMins;
+        workWeekMins += allocation.workMins;
+      }
+      if (allocationTs >= prevWeekStart) {
+        biWeekMins += allocation.driveMins;
+      }
+      if (allocationTs >= todayStart && allocationTs < todayEnd) {
+        dailyDutyMins += allocation.dutyMins;
+      }
+    });
+
+    if (inCurrentWeek) {
       if (driveMins > 9 * 60) extDrivingCount++;
       if (dutyMins > 13 * 60) extDutyCount++;
-    }
-    
-    if (shiftTimestamp >= prevWeekStart) {
-      biWeekMins += driveMins;
-    }
-
-    if (shiftTimestamp >= todayStart) {
-      dailyDutyMins += dutyMins;
     }
   });
 

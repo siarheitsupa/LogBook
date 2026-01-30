@@ -26,6 +26,7 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
 CREATE TABLE IF NOT EXISTS shifts (
   id TEXT PRIMARY KEY,
   date TEXT,
+  end_date TEXT,
   start_time TEXT,
   end_time TEXT,
   drive_hours INT,
@@ -38,6 +39,9 @@ CREATE TABLE IF NOT EXISTS shifts (
   end_lat FLOAT8, end_lng FLOAT8,
   is_compensated BOOLEAN DEFAULT FALSE
 );
+
+-- Добавляем поле end_date, если таблица уже существует
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS end_date TEXT;
 
 -- 2. Таблица расходов
 CREATE TABLE IF NOT EXISTS expenses (

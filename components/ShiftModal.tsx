@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Shift } from '../types';
+import { formatDateInput, getShiftEndDate } from '../utils/timeUtils';
 
 interface ShiftModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface ShiftModalProps {
   initialData?: Shift | null;
   defaultStartTime?: string;
   defaultDate?: string;
+  defaultEndDate?: string;
 }
 
 const DrivingIcon = () => (
@@ -26,8 +28,9 @@ const WorkIcon = () => (
   </svg>
 );
 
-const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initialData, defaultStartTime, defaultDate }) => {
-  const [date, setDate] = useState('');
+const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initialData, defaultStartTime, defaultDate, defaultEndDate }) => {
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   
   // Раздельные состояния для времени начала и конца
   const [startH, setStartH] = useState('08');
@@ -43,7 +46,8 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        setDate(initialData.date);
+        setStartDate(initialData.date);
+        setEndDate(getShiftEndDate(initialData));
         const [sh, sm] = initialData.startTime.split(':');
         const [eh, em] = initialData.endTime.split(':');
         setStartH(sh);
@@ -59,9 +63,14 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         
         // Установка даты: либо переданная (дата начала смены), либо текущая
         if (defaultDate) {
-          setDate(defaultDate);
+          setStartDate(defaultDate);
         } else {
-          setDate(now.toISOString().split('T')[0]);
+          setStartDate(formatDateInput(now));
+        }
+        if (defaultEndDate) {
+          setEndDate(defaultEndDate);
+        } else {
+          setEndDate(defaultDate || formatDateInput(now));
         }
 
         // Установка времени начала
@@ -84,7 +93,13 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         setWorkM('0');
       }
     }
-  }, [initialData, isOpen, defaultStartTime, defaultDate]);
+  }, [initialData, isOpen, defaultStartTime, defaultDate, defaultEndDate]);
+
+  useEffect(() => {
+    if (startDate && endDate && endDate < startDate) {
+      setEndDate(startDate);
+    }
+  }, [startDate, endDate]);
 
   if (!isOpen) return null;
 
@@ -92,14 +107,15 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
     e.preventDefault();
     const shift: Shift = {
       id: initialData?.id || Date.now().toString(),
-      date,
+      date: startDate,
+      endDate,
       startTime: `${startH.padStart(2, '0')}:${startM.padStart(2, '0')}`,
       endTime: `${endH.padStart(2, '0')}:${endM.padStart(2, '0')}`,
       driveHours: parseInt(driveH) || 0,
       driveMinutes: parseInt(driveM) || 0,
       workHours: parseInt(workH) || 0,
       workMinutes: parseInt(workM) || 0,
-      timestamp: new Date(`${date}T${startH.padStart(2, '0')}:${startM.padStart(2, '0')}`).getTime()
+      timestamp: new Date(`${startDate}T${startH.padStart(2, '0')}:${startM.padStart(2, '0')}`).getTime()
     };
     onSave(shift);
   };
@@ -110,15 +126,28 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         <div className="p-5 sm:p-6 overflow-y-auto">
           <h3 className="text-xl font-bold text-center mb-6 text-slate-800">Запись смены</h3>
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Дата</label>
-              <input 
-                type="date" 
-                className="w-full p-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-center font-bold text-slate-700 focus:bg-white focus:ring-2 ring-blue-500/20 outline-none transition-all appearance-none" 
-                value={date} 
-                onChange={e => setDate(e.target.value)}
-                required 
-              />
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="min-w-0">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Дата начала</label>
+                <input 
+                  type="date" 
+                  className="w-full p-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-center font-bold text-slate-700 focus:bg-white focus:ring-2 ring-blue-500/20 outline-none transition-all appearance-none" 
+                  value={startDate} 
+                  onChange={e => setStartDate(e.target.value)}
+                  required 
+                />
+              </div>
+              <div className="min-w-0">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Дата конца</label>
+                <input 
+                  type="date" 
+                  className="w-full p-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-center font-bold text-slate-700 focus:bg-white focus:ring-2 ring-blue-500/20 outline-none transition-all appearance-none" 
+                  value={endDate} 
+                  onChange={e => setEndDate(e.target.value)}
+                  min={startDate}
+                  required 
+                />
+              </div>
             </div>
             
             <div className="grid grid-cols-2 gap-2.5">

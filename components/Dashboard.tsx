@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 import { ShiftWithRest } from '../types';
 import WeeklyActivityChart from './WeeklyActivityChart';
 import RestDebtChart from './RestDebtChart';
-import { getMonday } from '../utils/timeUtils';
+import { getMonday, getShiftDailyAllocations } from '../utils/timeUtils';
 
 interface DashboardProps {
   shifts: ShiftWithRest[];
@@ -16,15 +16,18 @@ const Dashboard: React.FC<DashboardProps> = ({ shifts }) => {
     const result = days.map(day => ({ day, driving: 0, work: 0 }));
 
     shifts.forEach(s => {
-      const shiftDate = new Date(s.date);
-      if (shiftDate >= monday) {
-        // JS getDay(): 0 (Вс) to 6 (Сб) -> преобразуем в Пн-Вс
-        let dayIdx = shiftDate.getDay() - 1;
-        if (dayIdx === -1) dayIdx = 6;
-        
-        result[dayIdx].driving += s.driveHours + (s.driveMinutes / 60);
-        result[dayIdx].work += (s.workHours || 0) + ((s.workMinutes || 0) / 60);
-      }
+      const allocations = getShiftDailyAllocations(s);
+      allocations.forEach(allocation => {
+        const shiftDate = new Date(`${allocation.date}T00:00:00`);
+        if (shiftDate >= monday) {
+          // JS getDay(): 0 (Вс) to 6 (Сб) -> преобразуем в Пн-Вс
+          let dayIdx = shiftDate.getDay() - 1;
+          if (dayIdx === -1) dayIdx = 6;
+          
+          result[dayIdx].driving += allocation.driveMins / 60;
+          result[dayIdx].work += allocation.workMins / 60;
+        }
+      });
     });
 
     return result.map(d => ({ 
