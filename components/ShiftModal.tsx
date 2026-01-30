@@ -27,9 +27,9 @@ const WorkIcon = () => (
 );
 
 const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initialData, defaultStartTime, defaultDate }) => {
-  const [date, setDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   
-  // Раздельные состояния для времени начала и конца
   const [startH, setStartH] = useState('08');
   const [startM, setStartM] = useState('00');
   const [endH, setEndH] = useState('18');
@@ -43,7 +43,8 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        setDate(initialData.date);
+        setStartDate(initialData.startDate);
+        setEndDate(initialData.endDate);
         const [sh, sm] = initialData.startTime.split(':');
         const [eh, em] = initialData.endTime.split(':');
         setStartH(sh);
@@ -56,15 +57,11 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         setWorkM((initialData.workMinutes || 0).toString());
       } else {
         const now = new Date();
+        const dateStr = defaultDate || now.toISOString().split('T')[0];
         
-        // Установка даты: либо переданная (дата начала смены), либо текущая
-        if (defaultDate) {
-          setDate(defaultDate);
-        } else {
-          setDate(now.toISOString().split('T')[0]);
-        }
+        setStartDate(dateStr);
+        setEndDate(dateStr); // По умолчанию в тот же день
 
-        // Установка времени начала
         if (defaultStartTime) {
           const [sh, sm] = defaultStartTime.split(':');
           setStartH(sh);
@@ -74,7 +71,6 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
           setStartM('00');
         }
 
-        // Время конца - всегда текущее время
         setEndH(now.getHours().toString().padStart(2, '0'));
         setEndM(now.getMinutes().toString().padStart(2, '0'));
         
@@ -86,20 +82,29 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
     }
   }, [initialData, isOpen, defaultStartTime, defaultDate]);
 
+  // При изменении даты начала предлагаем ту же дату конца
+  const handleStartDateChange = (val: string) => {
+    setStartDate(val);
+    if (!endDate || endDate < val) {
+        setEndDate(val);
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const shift: Shift = {
       id: initialData?.id || Date.now().toString(),
-      date,
+      startDate,
+      endDate,
       startTime: `${startH.padStart(2, '0')}:${startM.padStart(2, '0')}`,
       endTime: `${endH.padStart(2, '0')}:${endM.padStart(2, '0')}`,
       driveHours: parseInt(driveH) || 0,
       driveMinutes: parseInt(driveM) || 0,
       workHours: parseInt(workH) || 0,
       workMinutes: parseInt(workM) || 0,
-      timestamp: new Date(`${date}T${startH.padStart(2, '0')}:${startM.padStart(2, '0')}`).getTime()
+      timestamp: new Date(`${startDate}T${startH.padStart(2, '0')}:${startM.padStart(2, '0')}`).getTime()
     };
     onSave(shift);
   };
@@ -110,20 +115,34 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         <div className="p-5 sm:p-6 overflow-y-auto">
           <h3 className="text-xl font-bold text-center mb-6 text-slate-800">Запись смены</h3>
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Дата</label>
-              <input 
-                type="date" 
-                className="w-full p-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-center font-bold text-slate-700 focus:bg-white focus:ring-2 ring-blue-500/20 outline-none transition-all appearance-none" 
-                value={date} 
-                onChange={e => setDate(e.target.value)}
-                required 
-              />
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Дата Старта</label>
+                <input 
+                  type="date" 
+                  className="w-full p-3 bg-slate-50 border border-slate-100 rounded-2xl text-center font-bold text-slate-700 text-xs focus:ring-2 ring-blue-500/20 outline-none transition-all appearance-none" 
+                  value={startDate} 
+                  onChange={e => handleStartDateChange(e.target.value)}
+                  required 
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Дата Финиша</label>
+                <input 
+                  type="date" 
+                  className={`w-full p-3 bg-slate-50 border rounded-2xl text-center font-bold text-xs focus:ring-2 ring-blue-500/20 outline-none transition-all appearance-none ${endDate !== startDate ? 'border-amber-200 text-amber-700' : 'border-slate-100 text-slate-700'}`} 
+                  value={endDate} 
+                  min={startDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  required 
+                />
+              </div>
             </div>
             
             <div className="grid grid-cols-2 gap-2.5">
               <div className="min-w-0">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Начало</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Время начала</label>
                 <div className="flex items-center gap-1 p-1 bg-slate-50 border border-slate-100 rounded-2xl min-w-0">
                   <input 
                     type="number" 
@@ -149,7 +168,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
                 </div>
               </div>
               <div className="min-w-0">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Конец</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Время конца</label>
                 <div className="flex items-center gap-1 p-1 bg-slate-50 border border-slate-100 rounded-2xl min-w-0">
                   <input 
                     type="number" 

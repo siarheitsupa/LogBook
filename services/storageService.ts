@@ -13,58 +13,34 @@ const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 let supabaseInstance: SupabaseClient | null = null;
 
-// Получение текущей конфигурации с абсолютным приоритетом констант
 const getConfig = () => {
-  // 1. Если заданы константы в коде - используем их всегда
   if (DEFAULT_URL && DEFAULT_KEY && DEFAULT_URL.startsWith('http')) {
     return { url: DEFAULT_URL, key: DEFAULT_KEY };
   }
-  
-  // 2. Иначе смотрим localStorage (для разработки)
   const localUrl = localStorage.getItem(`${CLOUD_CONFIG_KEY}_url`);
   const localKey = localStorage.getItem(`${CLOUD_CONFIG_KEY}_key`);
-  
-  if (localUrl && localKey) {
-    return { url: localUrl, key: localKey };
-  }
-
+  if (localUrl && localKey) return { url: localUrl, key: localKey };
   return null;
 };
 
 export const storage = {
-  // Проверка: настроено ли приложение. Если ключи в коде есть - всегда true.
   isConfigured: () => {
     if (supabaseInstance) return true;
     return !!getConfig();
   },
 
-  // Инициализация подключения
   initCloud: (manualConfig?: CloudConfig): boolean => {
-    let config = manualConfig 
-      ? { url: manualConfig.url, key: manualConfig.key }
-      : getConfig();
-
+    let config = manualConfig ? { url: manualConfig.url, key: manualConfig.key } : getConfig();
     if (!config) return false;
-
-    // Если экземпляр уже есть и URL не изменился - не пересоздаем
     if (supabaseInstance) return true;
-
     try {
       supabaseInstance = createClient(config.url, config.key, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-          storage: window.localStorage
-        }
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage }
       });
-      
-      // Если это была ручная настройка (через модалку), сохраняем в LS
       if (manualConfig) {
         localStorage.setItem(`${CLOUD_CONFIG_KEY}_url`, config.url);
         localStorage.setItem(`${CLOUD_CONFIG_KEY}_key`, config.key);
       }
-      
       return true;
     } catch (e) {
       console.error('Supabase init critical error:', e);
@@ -84,17 +60,10 @@ export const storage = {
 
   signOut: async () => {
     if (supabaseInstance) {
-      try {
-        await supabaseInstance.auth.signOut();
-      } catch (e) {
-        console.warn("Sign out error", e);
-      }
+      try { await supabaseInstance.auth.signOut(); } catch (e) { console.warn("Sign out error", e); }
     }
-    // Очищаем только сессию, но не конфиг, если он хардкодный
     Object.keys(localStorage).forEach(key => {
-      if (key.includes('supabase.auth.token') || key.includes('sb-')) {
-        localStorage.removeItem(key);
-      }
+      if (key.includes('supabase.auth.token') || key.includes('sb-')) localStorage.removeItem(key);
     });
     window.location.reload();
   },
@@ -105,19 +74,12 @@ export const storage = {
       const { data, error } = await supabaseInstance!.auth.getSession();
       if (error) throw error;
       return data.session;
-    } catch (e) {
-      console.error("Session error:", e);
-      return null;
-    }
+    } catch (e) { return null; }
   },
 
   getUser: async () => {
     if (!storage.initCloud()) return { data: { user: null }, error: new Error('Offline') };
-    try {
-      return await supabaseInstance!.auth.getUser();
-    } catch (e) {
-      return { data: { user: null }, error: e };
-    }
+    try { return await supabaseInstance!.auth.getUser(); } catch (e) { return { data: { user: null }, error: e }; }
   },
 
   onAuthChange: (callback: (session: Session | null) => void) => {
@@ -141,7 +103,8 @@ export const storage = {
         if (!error && data) {
           const cloudData = data.map((item: any) => ({
             id: item.id,
-            date: item.date,
+            startDate: item.date,
+            endDate: item.end_date || item.date, // Обратная совместимость
             startTime: item.start_time,
             endTime: item.end_time,
             driveHours: Number(item.drive_hours || 0),
@@ -175,7 +138,8 @@ export const storage = {
       
       const payload: any = {
         id: shift.id,
-        date: shift.date,
+        date: shift.startDate,
+        end_date: shift.endDate,
         start_time: shift.startTime,
         end_time: shift.endTime,
         drive_hours: shift.driveHours,
@@ -197,9 +161,7 @@ export const storage = {
   deleteShift: async (id: string): Promise<void> => {
     const local = JSON.parse(localStorage.getItem(SHIFTS_KEY) || '[]');
     localStorage.setItem(SHIFTS_KEY, JSON.stringify(local.filter((s: any) => s.id !== id)));
-    if (storage.initCloud()) {
-      await supabaseInstance!.from('shifts').delete().eq('id', id);
-    }
+    if (storage.initCloud()) await supabaseInstance!.from('shifts').delete().eq('id', id);
   },
 
   getExpenses: async (): Promise<Expense[]> => {
@@ -251,9 +213,7 @@ export const storage = {
   deleteExpense: async (id: string): Promise<void> => {
     const local = JSON.parse(localStorage.getItem(EXPENSES_KEY) || '[]');
     localStorage.setItem(EXPENSES_KEY, JSON.stringify(local.filter((e: any) => e.id !== id)));
-    if (storage.initCloud()) {
-      await supabaseInstance!.from('expenses').delete().eq('id', id);
-    }
+    if (storage.initCloud()) await supabaseInstance!.from('expenses').delete().eq('id', id);
   },
 
   getState: (): AppState => {
@@ -262,15 +222,10 @@ export const storage = {
   },
   saveState: (s: AppState) => localStorage.setItem(STATE_KEY, JSON.stringify(s)),
   clearState: () => localStorage.removeItem(STATE_KEY),
-  
-  // Дополнительная утилита для проверки статуса
   getConnectionStatus: () => !!supabaseInstance,
-  
   resetCloud: () => {
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_url`);
     localStorage.removeItem(`${CLOUD_CONFIG_KEY}_key`);
     supabaseInstance = null;
-    // Если есть хардкод, он восстановится при следующем initCloud, 
-    // но это ожидаемое поведение (сброс просто переподключит defaults)
   }
 };

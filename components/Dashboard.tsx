@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { ShiftWithRest } from '../types';
 import WeeklyActivityChart from './WeeklyActivityChart';
@@ -16,7 +15,8 @@ const Dashboard: React.FC<DashboardProps> = ({ shifts }) => {
     const result = days.map(day => ({ day, driving: 0, work: 0 }));
 
     shifts.forEach(s => {
-      const shiftDate = new Date(s.date);
+      // Fix: Use startDate instead of date
+      const shiftDate = new Date(s.startDate);
       if (shiftDate >= monday) {
         // JS getDay(): 0 (Вс) to 6 (Сб) -> преобразуем в Пн-Вс
         let dayIdx = shiftDate.getDay() - 1;

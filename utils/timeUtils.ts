@@ -20,7 +20,6 @@ export const getMonday = (date: Date) => {
   return d;
 };
 
-// Получение номера недели для группировки
 const getWeekNumber = (d: Date) => {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -29,14 +28,11 @@ const getWeekNumber = (d: Date) => {
 };
 
 export const calculateShiftDurationMins = (shift: Shift): number => {
-  const start = new Date(`${shift.date}T${shift.startTime}`).getTime();
-  const end = new Date(`${shift.date}T${shift.endTime}`).getTime();
+  const start = new Date(`${shift.startDate}T${shift.startTime}`).getTime();
+  const end = new Date(`${shift.endDate}T${shift.endTime}`).getTime();
   
-  let diff = end - start;
-  if (diff < 0) {
-    diff += 24 * 60 * 60 * 1000;
-  }
-  return diff / (1000 * 60);
+  const diff = end - start;
+  return Math.max(0, diff / (1000 * 60));
 };
 
 export interface WeekGroupData {
@@ -52,7 +48,8 @@ export const groupShiftsByWeek = (shifts: ShiftWithRest[]): WeekGroupData[] => {
   const currentMonday = getMonday(new Date()).getTime();
 
   shifts.forEach(shift => {
-    const date = new Date(shift.date);
+    // Группируем по startDate (как по началу рабочего цикла)
+    const date = new Date(shift.startDate);
     const monday = getMonday(date).getTime();
 
     if (!groups[monday]) {
@@ -70,10 +67,11 @@ export const groupShiftsByWeek = (shifts: ShiftWithRest[]): WeekGroupData[] => {
     }
 
     groups[monday].shifts.push(shift);
+    // Для группировки в списке используем упрощенный подсчет, 
+    // детальный сплит будет в getStats для лимитов
     groups[monday].totalDriveMins += (shift.driveHours * 60) + shift.driveMinutes;
   });
 
-  // Превращаем в массив и сортируем от новых к старым
   return Object.values(groups).sort((a, b) => b.weekStart - a.weekStart);
 };
 
@@ -83,19 +81,15 @@ export const calculateLogSummary = (shifts: Shift[]) => {
   let totalDebt = 0;
   const now = Date.now();
 
-  // Группируем смены по неделям для анализа отдыха
   const weeklyRests: Record<string, number> = {};
 
   for (let i = 1; i < sorted.length; i++) {
     const prev = sorted[i - 1];
     const curr = sorted[i];
     
-    const prevStartTs = new Date(`${prev.date}T${prev.startTime}`).getTime();
-    const prevEndTs = new Date(`${prev.date}T${prev.endTime}`).getTime();
-    let realPrevEndTs = prevEndTs <= prevStartTs ? prevEndTs + 86400000 : prevEndTs;
-    
-    const currStartTs = new Date(`${curr.date}T${curr.startTime}`).getTime();
-    const diffHours = (currStartTs - realPrevEndTs) / 3600000;
+    const prevEndTs = new Date(`${prev.endDate}T${prev.endTime}`).getTime();
+    const currStartTs = new Date(`${curr.startDate}T${curr.startTime}`).getTime();
+    const diffHours = (currStartTs - prevEndTs) / 3600000;
 
     if (diffHours >= 24) {
       const weekKey = `${new Date(currStartTs).getFullYear()}-W${getWeekNumber(new Date(currStartTs))}`;
@@ -111,12 +105,9 @@ export const calculateLogSummary = (shifts: Shift[]) => {
 
     if (i > 0) {
       const prev = sorted[i - 1];
-      const prevStartTs = new Date(`${prev.date}T${prev.startTime}`).getTime();
-      const prevEndTs = new Date(`${prev.date}T${prev.endTime}`).getTime();
-      let realPrevEndTs = prevEndTs <= prevStartTs ? prevEndTs + 86400000 : prevEndTs;
-      
-      const currStartTs = new Date(`${curr.date}T${curr.startTime}`).getTime();
-      const diffMs = currStartTs - realPrevEndTs;
+      const prevEndTs = new Date(`${prev.endDate}T${prev.endTime}`).getTime();
+      const currStartTs = new Date(`${curr.startDate}T${curr.startTime}`).getTime();
+      const diffMs = currStartTs - prevEndTs;
       const diffHours = diffMs / 3600000;
 
       if (diffHours >= 9) {
@@ -135,14 +126,11 @@ export const calculateLogSummary = (shifts: Shift[]) => {
           if (weeklyRests[weekKey] === diffHours) {
             type = 'weekly_reduced';
             debt = 45 - diffHours;
-            
-            // Дедлайн: Конец текущей недели + 21 день (3 недели)
             const sunday = new Date(currStartTs);
             const day = sunday.getDay();
             const diffToSunday = day === 0 ? 0 : 7 - day;
             sunday.setDate(sunday.getDate() + diffToSunday);
             sunday.setHours(23, 59, 59, 999);
-            
             deadline = sunday.getTime() + (21 * 24 * 60 * 60 * 1000);
           } else {
             type = 'long_pause';
@@ -153,12 +141,10 @@ export const calculateLogSummary = (shifts: Shift[]) => {
           debt = 0;
         } else {
           type = 'reduced';
-          debt = 0; // Сокращенный ежедневный отдых не требует компенсации
+          debt = 0;
         }
 
         if (!curr.isCompensated && debt > 0) {
-           // Если дедлайн установлен и еще не прошел - считаем долг
-           // Если дедлайн прошел - это уже не "долг к возврату", а старое нарушение
            if (!deadline || deadline > now) {
              totalDebt += debt;
            }
@@ -180,7 +166,7 @@ export const calculateLogSummary = (shifts: Shift[]) => {
 
   return {
     shifts: enriched.reverse(),
-    totalDebt: Math.max(0, totalDebt) // Защита от отрицательных значений
+    totalDebt: Math.max(0, totalDebt)
   };
 };
 
@@ -198,24 +184,38 @@ export const getStats = (shifts: Shift[]) => {
   let extDutyCount = 0;
 
   shifts.forEach(s => {
-    const shiftTimestamp = new Date(s.date).getTime();
-    const driveMins = s.driveHours * 60 + s.driveMinutes;
-    const workMins = (s.workHours || 0) * 60 + (s.workMinutes || 0);
-    const dutyMins = calculateShiftDurationMins(s);
+    const startTs = new Date(`${s.startDate}T${s.startTime}`).getTime();
+    const endTs = new Date(`${s.endDate}T${s.endTime}`).getTime();
+    
+    const driveMinsTotal = s.driveHours * 60 + s.driveMinutes;
+    const workMinsTotal = (s.workHours || 0) * 60 + (s.workMinutes || 0);
+    const dutyMinsTotal = calculateShiftDurationMins(s);
 
-    if (shiftTimestamp >= currentWeekStart) {
-      weekMins += driveMins;
-      workWeekMins += workMins;
-      if (driveMins > 9 * 60) extDrivingCount++;
-      if (dutyMins > 13 * 60) extDutyCount++;
+    // Умное распределение времени вождения по неделям (Sunday/Monday split)
+    const calculatePortion = (threshold: number) => {
+        if (startTs >= threshold) return driveMinsTotal; // Смена целиком в этой неделе
+        if (endTs <= threshold) return 0; // Смена целиком в прошлой неделе
+        
+        // Смена пересекает границу. Распределяем вождение пропорционально времени смены.
+        const duration = endTs - startTs;
+        const portionAfter = endTs - threshold;
+        return (driveMinsTotal * portionAfter) / duration;
+    };
+
+    const driveInCurrentWeek = calculatePortion(currentWeekStart);
+    const driveInPrevWeek = calculatePortion(prevWeekStart) - driveInCurrentWeek;
+
+    weekMins += driveInCurrentWeek;
+    biWeekMins += calculatePortion(prevWeekStart);
+
+    if (startTs >= currentWeekStart) {
+        workWeekMins += workMinsTotal;
+        if (driveMinsTotal > 9 * 60) extDrivingCount++;
+        if (dutyMinsTotal > 13 * 60) extDutyCount++;
     }
     
-    if (shiftTimestamp >= prevWeekStart) {
-      biWeekMins += driveMins;
-    }
-
-    if (shiftTimestamp >= todayStart) {
-      dailyDutyMins += dutyMins;
+    if (startTs >= todayStart) {
+      dailyDutyMins += dutyMinsTotal;
     }
   });
 

@@ -71,6 +71,13 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
     return "border-blue-100 text-blue-700 bg-blue-50/50";
   };
 
+  const formattedDate = useMemo(() => {
+    const start = new Date(shift.startDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    if (shift.startDate === shift.endDate) return start;
+    const end = new Date(shift.endDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    return `${start} — ${end}`;
+  }, [shift.startDate, shift.endDate]);
+
   return (
     <div className="space-y-3 mb-6 last:mb-0 animate-in fade-in slide-in-from-bottom-2">
       {shift.restBefore && (
@@ -118,7 +125,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
         >
           <div className="flex flex-col">
             <span className="text-lg font-bold text-slate-900 tracking-tight">
-              {new Date(shift.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+              {formattedDate}
             </span>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest opacity-80 mt-0.5">
               {shift.startTime} — {shift.endTime}

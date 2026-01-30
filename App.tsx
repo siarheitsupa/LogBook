@@ -31,7 +31,6 @@ const App: React.FC = () => {
   const [configUpdateTrigger, setConfigUpdateTrigger] = useState(0);
   const [viewMode, setViewMode] = useState<'list' | 'stats'>('list');
   
-  // AI State
   const [aiResult, setAiResult] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
 
@@ -91,17 +90,15 @@ const App: React.FC = () => {
     }));
   }, [shifts, expenses]);
 
-  // Группировка смен по неделям
   const groupedShifts = useMemo(() => groupShiftsByWeek(enrichedShifts), [enrichedShifts]);
 
   const { totalDebt } = useMemo(() => calculateLogSummary(shifts), [shifts]);
   const stats = useMemo(() => getStats(shifts), [shifts]);
 
-  // Подсчет использованных сокращенных отдыхов (9ч) на текущей неделе
   const reducedRestsUsed = useMemo(() => {
     const monday = getMonday(new Date());
     return enrichedShifts.filter(s => 
-      new Date(s.date) >= monday && s.restBefore?.type === 'reduced'
+      new Date(s.startDate) >= monday && s.restBefore?.type === 'reduced'
     ).length;
   }, [enrichedShifts]);
 
@@ -112,7 +109,7 @@ const App: React.FC = () => {
     }
     const lastShift = enrichedShifts[0];
     if (!lastShift) return { label: 'ОТДЫХ', time: '00:00', isRest: true, mins: 0 };
-    const lastEndTs = new Date(`${lastShift.date}T${lastShift.endTime}`).getTime();
+    const lastEndTs = new Date(`${lastShift.endDate}T${lastShift.endTime}`).getTime();
     const restMins = (now - lastEndTs) / 60000;
     return { label: 'ОТДЫХ', time: formatMinsToHHMM(restMins > 0 ? restMins : 0), isRest: true, mins: restMins > 0 ? restMins : 0 };
   }, [appState, enrichedShifts, now]);
@@ -136,6 +133,21 @@ const App: React.FC = () => {
     if (editingShift) await finishSave(); else navigator.geolocation.getCurrentPosition((p) => finishSave(p.coords.latitude, p.coords.longitude), () => finishSave(), { timeout: 2000 });
   };
 
+  const handleStartShift = () => {
+    navigator.geolocation.getCurrentPosition(p => {
+        const dateStr = new Date().toISOString().split('T')[0];
+        const state = { 
+            isActive: true, 
+            startTime: Date.now(), 
+            startDate: dateStr,
+            startLat: p.coords.latitude, 
+            startLng: p.coords.longitude 
+        };
+        setAppState(state); 
+        storage.saveState(state);
+    });
+  };
+
   const handleSaveExpense = async (expense: Expense) => {
     setIsLoading(true);
     await storage.saveExpense(expense);
@@ -148,16 +160,11 @@ const App: React.FC = () => {
   const toggleCompensation = async (shift: Shift) => {
     setIsLoading(true);
     try {
-      // Инвертируем статус компенсации
       const updatedShift: Shift = { ...shift, isCompensated: !shift.isCompensated };
       await storage.saveShift(updatedShift);
       const shiftsData = await storage.getShifts();
       setShifts(shiftsData);
-    } catch (e: any) {
-      alert(`Ошибка обновления: ${e.message}`);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (e: any) { alert(`Ошибка обновления: ${e.message}`); } finally { setIsLoading(false); }
   };
 
   const deleteShift = async (id: string) => {
@@ -181,7 +188,6 @@ const App: React.FC = () => {
   const handleDownloadReport = () => {
     const element = document.getElementById('pdf-report');
     if (!element) return;
-    
     const opt = {
       margin: 0,
       filename: `DriverLog_${new Date().toLocaleDateString('ru-RU').replace(/\./g, '-')}.pdf`,
@@ -189,25 +195,22 @@ const App: React.FC = () => {
       html2canvas: { scale: 2, useCORS: true, logging: false },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
     };
-
     html2pdf().set(opt).from(element).save();
   };
 
   const handleCloudSave = (config: CloudConfig) => {
-    // Сохраняем и инициализируем с новыми настройками
     storage.initCloud(config);
     setConfigUpdateTrigger(t => t + 1);
     setIsCloudModalOpen(false);
   };
   
-  // Вычисляем дефолтные значения для модального окна на основе времени начала смены
   const getModalDefaults = () => {
     if (appState.isActive && appState.startTime) {
       const d = new Date(appState.startTime);
       const h = d.getHours().toString().padStart(2, '0');
       const m = d.getMinutes().toString().padStart(2, '0');
       return {
-        defaultDate: d.toISOString().split('T')[0],
+        defaultDate: appState.startDate || d.toISOString().split('T')[0],
         defaultStartTime: `${h}:${m}`
       };
     }
@@ -222,7 +225,6 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-xl mx-auto min-h-screen pb-24 px-4 pt-8">
-      {/* Шапка с мигающей точкой настроек и индикатором активности */}
       <header className="flex flex-col items-center mb-8 relative">
         <div className="flex items-center gap-3 ios-glass p-2.5 pr-4 pl-4 rounded-full shadow-lg">
           <div className="w-11 h-11 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-lg overflow-hidden relative">
@@ -248,14 +250,12 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Центральный таймер в стиле iOS Liquid Glass */}
       <div className="ios-glass rounded-[3.5rem] p-6 mb-8 text-center relative overflow-hidden backdrop-blur-3xl">
         <div className="flex items-center justify-center gap-2 mb-2">
           <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 opacity-80">{restInfo.label}</span>
         </div>
         <h1 className="text-8xl font-bold text-slate-800 mb-8 tabular-nums tracking-tighter drop-shadow-sm">{restInfo.time}</h1>
         
-        {/* Кнопки 9/11 часов в стиле Neon Jelly */}
         <div className="grid grid-cols-2 gap-4">
           <div className={`relative h-28 rounded-[2.5rem] flex flex-col items-center justify-center vibrant-btn overflow-hidden transition-all duration-500 ${restInfo.isRest && restInfo.mins >= 540 ? 'bg-[#ff4757] text-white shadow-[0_10px_25px_rgba(255,71,87,0.4)]' : 'bg-[#ff4757] text-white'}`}>
              <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent pointer-events-none"></div>
@@ -276,7 +276,7 @@ const App: React.FC = () => {
       </div>
 
       <button 
-        onClick={() => appState.isActive ? setIsModalOpen(true) : navigator.geolocation.getCurrentPosition(p => { setAppState({ isActive: true, startTime: Date.now(), startLat: p.coords.latitude, startLng: p.coords.longitude }); storage.saveState({ isActive: true, startTime: Date.now(), startLat: p.coords.latitude, startLng: p.coords.longitude }); })}
+        onClick={() => appState.isActive ? setIsModalOpen(true) : handleStartShift()}
         className={`w-full py-6 px-8 rounded-full flex items-center justify-between text-xl font-bold text-white shadow-2xl transition-all mb-10 overflow-hidden relative group vibrant-btn ${appState.isActive ? 'bg-gradient-to-r from-rose-500 to-rose-600 shadow-rose-200' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-200'}`}
       >
         <div className="shimmer-liquid opacity-30"></div>
@@ -299,7 +299,6 @@ const App: React.FC = () => {
         <StatCard label="Остаток вожд" value={formatMinsToHHMM(Math.max(0, 56*60 - stats.weekMins))} sublabel="До лимита" variant="emerald" />
       </div>
 
-      {/* AI Assistant Block */}
       <div className="mb-10 px-1">
         {!aiResult ? (
           <button
@@ -395,7 +394,6 @@ const App: React.FC = () => {
       {activeShiftForExpense && <ExpensesModal isOpen={!!activeShiftForExpense} onClose={() => setActiveShiftForExpense(null)} onSave={handleSaveExpense} shiftId={activeShiftForExpense} />}
       <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} />
       
-      {/* Скрытый компонент для генерации PDF */}
       <div className="absolute left-[-9999px] top-0">
         <PrintableReport shifts={enrichedShifts} stats={{...stats, totalDebt}} userEmail={session?.user?.email || 'Driver'} />
       </div>

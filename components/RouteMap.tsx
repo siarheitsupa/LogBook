@@ -75,7 +75,8 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
                 <Popup>
                   <div className="text-xs font-bold font-sans p-1">
                     <p className="text-slate-400 uppercase tracking-widest text-[8px] mb-1 text-center">Старт</p>
-                    <p className="text-slate-900 whitespace-nowrap">{s.date} {s.startTime}</p>
+                    {/* Fix: Use startDate instead of date */}
+                    <p className="text-slate-900 whitespace-nowrap">{s.startDate} {s.startTime}</p>
                   </div>
                 </Popup>
               </CircleMarker>
@@ -89,7 +90,8 @@ const RouteMap: React.FC<RouteMapProps> = ({ shifts }) => {
                 <Popup>
                   <div className="text-xs font-bold font-sans p-1">
                     <p className="text-slate-400 uppercase tracking-widest text-[8px] mb-1 text-center">Финиш</p>
-                    <p className="text-slate-900 whitespace-nowrap">{s.date} {s.endTime}</p>
+                    {/* Fix: Use endDate instead of date */}
+                    <p className="text-slate-900 whitespace-nowrap">{s.endDate} {s.endTime}</p>
                   </div>
                 </Popup>
               </CircleMarker>

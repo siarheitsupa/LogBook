@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React;
 import { Shift, ShiftWithRest } from '../types';
 import { calculateShiftDurationMins, formatMinsToHHMM } from '../utils/timeUtils';
 
@@ -14,8 +13,9 @@ interface PrintableReportProps {
 
 const PrintableReport: React.FC<PrintableReportProps> = ({ shifts, stats, userEmail }) => {
   const sortedShifts = [...shifts].sort((a, b) => a.timestamp - b.timestamp);
-  const periodStart = sortedShifts.length > 0 ? sortedShifts[0].date : '-';
-  const periodEnd = sortedShifts.length > 0 ? sortedShifts[sortedShifts.length - 1].date : '-';
+  // Fix: Use startDate and endDate instead of date
+  const periodStart = sortedShifts.length > 0 ? sortedShifts[0].startDate : '-';
+  const periodEnd = sortedShifts.length > 0 ? sortedShifts[sortedShifts.length - 1].endDate : '-';
 
   return (
     <div id="pdf-report" className="p-10 bg-white text-black font-serif" style={{ width: '210mm', minHeight: '297mm' }}>
@@ -67,7 +67,8 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ shifts, stats, userEm
           <tbody>
             {sortedShifts.map((s, idx) => (
               <tr key={s.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className="border border-black p-2 font-bold">{s.date}</td>
+                {/* Fix: Use startDate instead of date */}
+                <td className="border border-black p-2 font-bold">{s.startDate}</td>
                 <td className="border border-black p-2 text-center">{s.startTime}</td>
                 <td className="border border-black p-2 text-center">{s.endTime}</td>
                 <td className="border border-black p-2 text-right">{s.workHours || 0}ч {s.workMinutes || 0}м</td>

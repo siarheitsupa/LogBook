@@ -16,8 +16,8 @@ export const analyzeLogs = async (shifts: Shift[]): Promise<string> => {
       const h = Math.floor(duration / 60);
       const m = Math.round(duration % 60);
       
-      // Добавляем пометку "Начало" или "Продолжение", если AI нужно, но здесь просто дата и время
-      return `📅 ${s.date}: Вождение ${s.driveHours}ч ${s.driveMinutes}м. Смена: ${s.startTime} - ${s.endTime}.`;
+      // Fix: Use startDate instead of date
+      return `📅 ${s.startDate}: Вождение ${s.driveHours}ч ${s.driveMinutes}м. Смена: ${s.startTime} - ${s.endTime}.`;
     }).join('\n');
 
     const promptText = `

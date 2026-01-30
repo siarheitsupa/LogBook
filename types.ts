@@ -1,6 +1,8 @@
+
 export interface Shift {
   id: string;
-  date: string; // YYYY-MM-DD
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD
   startTime: string; // HH:mm
   endTime: string; // HH:mm
   driveHours: number;
@@ -33,6 +35,7 @@ export interface AppState {
   startTime: number | null;
   startLat?: number;
   startLng?: number;
+  startDate?: string;
 }
 
 export interface RestEvent {
