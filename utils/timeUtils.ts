@@ -5,6 +5,8 @@ export const pad = (n: number) => n.toString().padStart(2, '0');
 
 export const formatDateInput = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
+export const formatTimeHHMM = (date: Date) => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+
 export const formatMinsToHHMM = (totalMinutes: number) => {
   if (isNaN(totalMinutes) || totalMinutes < 0) return "00:00";
   const roundedTotalMins = Math.round(totalMinutes);
@@ -83,6 +85,52 @@ export const getShiftDailyAllocations = (shift: Shift): ShiftDailyAllocation[] =
   }
 
   return allocations;
+};
+
+export interface ShiftDailySegment extends ShiftDailyAllocation {
+  startTime: string;
+  endTime: string;
+  isFirstDay: boolean;
+  isLastDay: boolean;
+}
+
+export const getShiftDailySegments = (shift: Shift): ShiftDailySegment[] => {
+  const startTs = getShiftStartTimestamp(shift);
+  const endTs = getShiftEndTimestamp(shift);
+  const totalDutyMins = Math.max(1, (endTs - startTs) / 60000);
+  const driveMins = (shift.driveHours || 0) * 60 + (shift.driveMinutes || 0);
+  const workMins = (shift.workHours || 0) * 60 + (shift.workMinutes || 0);
+  const segments: ShiftDailySegment[] = [];
+
+  let current = startTs;
+  let index = 0;
+  while (current < endTs) {
+    const nextMidnight = new Date(current);
+    nextMidnight.setHours(24, 0, 0, 0);
+    const segmentEnd = Math.min(endTs, nextMidnight.getTime());
+    const segmentMins = (segmentEnd - current) / 60000;
+    const ratio = segmentMins / totalDutyMins;
+    const segmentStartDate = new Date(current);
+    const segmentEndDate = new Date(segmentEnd);
+    const isEndOfDay = segmentEndDate.getHours() === 0 && segmentEndDate.getMinutes() === 0 && segmentEnd > current;
+    const isFirstDay = index === 0;
+    const isLastDay = segmentEnd === endTs;
+
+    segments.push({
+      date: formatDateInput(segmentStartDate),
+      startTime: formatTimeHHMM(segmentStartDate),
+      endTime: isEndOfDay ? '24:00' : formatTimeHHMM(segmentEndDate),
+      driveMins: driveMins * ratio,
+      workMins: workMins * ratio,
+      dutyMins: segmentMins,
+      isFirstDay,
+      isLastDay
+    });
+    current = segmentEnd;
+    index += 1;
+  }
+
+  return segments;
 };
 
 // Получение номера недели для группировки

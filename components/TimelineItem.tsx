@@ -1,10 +1,21 @@
 
 import React, { useState, useMemo } from 'react';
 import { ShiftWithRest, Shift, Currency } from '../types';
-import { calculateShiftDurationMins, formatMinsToHHMM, getShiftEndDate } from '../utils/timeUtils';
+import { calculateShiftDurationMins, formatMinsToHHMM } from '../utils/timeUtils';
 
 interface TimelineItemProps {
   shift: ShiftWithRest;
+  displayShift?: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    driveHours: number;
+    driveMinutes: number;
+    workHours: number;
+    workMinutes: number;
+    dutyMins: number;
+  };
+  showRest?: boolean;
   onEdit: (shift: Shift) => void;
   onDelete: (id: string) => void;
   onToggleCompensation?: (shift: Shift) => void;
@@ -33,66 +44,73 @@ const WalletIcon = () => (
   </svg>
 );
 
-const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, onToggleCompensation, onAddExpense, isInitiallyExpanded = false }) => {
+const TimelineItem: React.FC<TimelineItemProps> = ({ shift, displayShift, showRest = true, onEdit, onDelete, onToggleCompensation, onAddExpense, isInitiallyExpanded = false }) => {
   const [isExpanded, setIsExpanded] = useState(isInitiallyExpanded);
 
-  const duration = calculateShiftDurationMins(shift);
-  const endDate = getShiftEndDate(shift);
-  const startDateLabel = new Date(shift.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-  const endDateLabel = new Date(endDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-  const isMultiDay = endDate !== shift.date;
-  const isOverdue = shift.restBefore?.compensationDeadline && 
-                    Date.now() > shift.restBefore.compensationDeadline && 
-                    !shift.restBefore.isCompensated;
+  const displayDate = displayShift?.date ?? shift.date;
+  const displayStartTime = displayShift?.startTime ?? shift.startTime;
+  const displayEndTime = displayShift?.endTime ?? shift.endTime;
+  const displayDriveHours = displayShift?.driveHours ?? shift.driveHours;
+  const displayDriveMinutes = displayShift?.driveMinutes ?? shift.driveMinutes;
+  const displayWorkHours = displayShift?.workHours ?? (shift.workHours || 0);
+  const displayWorkMinutes = displayShift?.workMinutes ?? (shift.workMinutes || 0);
+  const displayDurationMins = displayShift?.dutyMins ?? calculateShiftDurationMins(shift);
+  const restInfo = showRest ? shift.restBefore : undefined;
+  const duration = displayDurationMins;
+  const dateLabel = new Date(displayDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  const isOverdue = restInfo?.compensationDeadline && 
+                    Date.now() > restInfo.compensationDeadline && 
+                    !restInfo.isCompensated;
 
   const expensesSummary = useMemo(() => {
+    if (!showRest) return null;
     if (!shift.expenses || shift.expenses.length === 0) return null;
     const totals: Record<string, number> = {};
     shift.expenses.forEach(e => {
       totals[e.currency] = (totals[e.currency] || 0) + e.amount;
     });
     return Object.entries(totals).map(([cur, val]) => `${Math.round(val)} ${cur}`).join(', ');
-  }, [shift.expenses]);
+  }, [shift.expenses, showRest]);
 
   const getRestLabel = () => {
-    if (!shift.restBefore) return "";
-    const hours = shift.restBefore.durationHours + (shift.restBefore.durationMinutes / 60);
+    if (!restInfo) return "";
+    const hours = restInfo.durationHours + (restInfo.durationMinutes / 60);
     if (hours > 144) return "Длительный перерыв / Отпуск";
-    if (shift.restBefore.type === 'long_pause') return "Длительная пауза / Ожидание";
+    if (restInfo.type === 'long_pause') return "Длительная пауза / Ожидание";
     if (hours >= 45) return "Регулярный недельный отдых";
-    if (shift.restBefore.type === 'weekly_reduced') return "Сокращенный недельный отдых";
+    if (restInfo.type === 'weekly_reduced') return "Сокращенный недельный отдых";
     if (hours >= 11) return "Регулярный ежедневный отдых";
     return "Сокращенный ежедневный отдых";
   };
 
   const getRestColors = () => {
-    if (!shift.restBefore) return "";
-    if (shift.restBefore.isCompensated) return "border-emerald-200 text-emerald-700 bg-emerald-50/60";
+    if (!restInfo) return "";
+    if (restInfo.isCompensated) return "border-emerald-200 text-emerald-700 bg-emerald-50/60";
     if (isOverdue) return "border-rose-400 text-rose-700 bg-rose-50 border-2 shadow-lg shadow-rose-200/50";
-    const hours = shift.restBefore.durationHours;
+    const hours = restInfo.durationHours;
     if (hours >= 45) return "border-emerald-100 text-emerald-700 bg-emerald-50/50";
-    if (shift.restBefore.type === 'weekly_reduced') return "border-orange-200 text-orange-700 bg-orange-50/60";
+    if (restInfo.type === 'weekly_reduced') return "border-orange-200 text-orange-700 bg-orange-50/60";
     return "border-blue-100 text-blue-700 bg-blue-50/50";
   };
 
   return (
     <div className="space-y-3 mb-6 last:mb-0 animate-in fade-in slide-in-from-bottom-2">
-      {shift.restBefore && (
+      {restInfo && (
         <div className={`ios-glass mx-4 py-3 px-6 rounded-[2rem] text-center relative transition-all ${getRestColors()}`}>
           <div className="flex flex-col items-center">
             <span className="block text-[8px] font-bold uppercase tracking-[0.2em] mb-1 opacity-70">
-              {shift.restBefore.isCompensated && "✅ КОРРЕКТНО "}
+              {restInfo.isCompensated && "✅ КОРРЕКТНО "}
               {getRestLabel()}
             </span>
             <span className="text-xl font-bold tabular-nums tracking-tight">
-              {shift.restBefore.durationHours}ч {shift.restBefore.durationMinutes}мин
+              {restInfo.durationHours}ч {restInfo.durationMinutes}мин
             </span>
-            {shift.restBefore.type === 'weekly_reduced' && !shift.restBefore.isCompensated && (
+            {restInfo.type === 'weekly_reduced' && !restInfo.isCompensated && (
               <div className="mt-3 w-full pt-2 border-t border-orange-200/50 space-y-2">
                 <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-tight">
-                  <span className="text-rose-500">Долг: {Math.round(shift.restBefore.debtHours * 10) / 10}ч</span>
+                  <span className="text-rose-500">Долг: {Math.round(restInfo.debtHours * 10) / 10}ч</span>
                   <span className={isOverdue ? 'text-rose-600 underline' : 'text-slate-400'}>
-                    До: {new Date(shift.restBefore.compensationDeadline!).toLocaleDateString('ru-RU')}
+                    До: {new Date(restInfo.compensationDeadline!).toLocaleDateString('ru-RU')}
                   </span>
                 </div>
                 <button 
@@ -103,7 +121,7 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
                 </button>
               </div>
             )}
-            {shift.restBefore.isCompensated && (
+            {restInfo.isCompensated && (
                <button 
                 onClick={() => onToggleCompensation && onToggleCompensation(shift)}
                 className="mt-2 text-[8px] font-bold uppercase text-slate-400 underline hover:text-rose-500 transition-colors"
@@ -122,20 +140,20 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
         >
           <div className="flex flex-col">
             <span className="text-lg font-bold text-slate-900 tracking-tight">
-              {isMultiDay ? `${startDateLabel} — ${endDateLabel}` : startDateLabel}
+              {dateLabel}
             </span>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest opacity-80 mt-0.5">
-              {shift.startTime} — {shift.endTime}{isMultiDay ? ` (${endDateLabel})` : ''}
+              {displayStartTime} — {displayEndTime}
             </span>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-end">
               <div className="flex gap-2">
                 <span className="flex items-center text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-                  <DrivingIcon />{shift.driveHours}ч
+                  <DrivingIcon />{displayDriveHours}ч
                 </span>
                 <span className="flex items-center text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100">
-                  <WorkIcon />{shift.workHours}ч
+                  <WorkIcon />{displayWorkHours}ч
                 </span>
               </div>
               <span className="text-[9px] font-bold text-slate-400 uppercase mt-1.5">СМЕНА: {formatMinsToHHMM(duration)}</span>
