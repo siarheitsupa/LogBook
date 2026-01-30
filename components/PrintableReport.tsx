@@ -61,21 +61,34 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ shifts, stats, userEm
               <th className="border border-black p-2 text-center">Начало</th>
               <th className="border border-black p-2 text-center">Конец</th>
               <th className="border border-black p-2 text-right">Работа</th>
-              <th className="border border-black p-2 text-right">Вождение</th>
+              <th className="border border-black p-2 text-right">Вождение (Split)</th>
               <th className="border border-black p-2 text-right">Смена</th>
             </tr>
           </thead>
           <tbody>
-            {sortedShifts.map((s, idx) => (
-              <tr key={s.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className="border border-black p-2 font-bold">{s.startDate}</td>
-                <td className="border border-black p-2 text-center">{s.startTime}</td>
-                <td className="border border-black p-2 text-center">{s.endTime}</td>
-                <td className="border border-black p-2 text-right">{s.workHours || 0}ч {s.workMinutes || 0}м</td>
-                <td className="border border-black p-2 text-right font-bold">{s.driveHours}ч {s.driveMinutes}м</td>
-                <td className="border border-black p-2 text-right">{formatMinsToHHMM(calculateShiftDurationMins(s))}</td>
-              </tr>
-            ))}
+            {sortedShifts.map((s, idx) => {
+              const driveTotalMins = (s.driveHours * 60) + s.driveMinutes;
+              const driveDay2Mins = ((s.driveHoursDay2 || 0) * 60) + (s.driveMinutesDay2 || 0);
+              const driveDay1Mins = driveTotalMins - driveDay2Mins;
+              const isMulti = s.startDate !== s.endDate;
+
+              return (
+                <tr key={s.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td className="border border-black p-2 font-bold">{s.startDate}{isMulti ? ` / ${s.endDate}` : ''}</td>
+                  <td className="border border-black p-2 text-center">{s.startTime}</td>
+                  <td className="border border-black p-2 text-center">{s.endTime}</td>
+                  <td className="border border-black p-2 text-right">{s.workHours || 0}ч {s.workMinutes || 0}м</td>
+                  <td className="border border-black p-2 text-right font-bold">
+                    {isMulti ? (
+                      <span className="text-[10px]">{formatMinsToHHMM(driveDay1Mins)} + {formatMinsToHHMM(driveDay2Mins)}</span>
+                    ) : (
+                      formatMinsToHHMM(driveTotalMins)
+                    )}
+                  </td>
+                  <td className="border border-black p-2 text-right">{formatMinsToHHMM(calculateShiftDurationMins(s))}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

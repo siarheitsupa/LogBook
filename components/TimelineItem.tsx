@@ -5,7 +5,7 @@ import { calculateShiftDurationMins, formatMinsToHHMM } from '../utils/timeUtils
 
 interface TimelineItemProps {
   shift: ShiftWithRest;
-  onEdit: (shift: Shift) => void;
+  onEdit: (shift) => void;
   onDelete: (id: string) => void;
   onToggleCompensation?: (shift: Shift) => void;
   onAddExpense?: (shiftId: string) => void;
@@ -37,6 +37,12 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
   const [isExpanded, setIsExpanded] = useState(isInitiallyExpanded);
 
   const duration = calculateShiftDurationMins(shift);
+  const isMultiDay = shift.startDate !== shift.endDate;
+  
+  const driveTotalMins = (shift.driveHours * 60) + shift.driveMinutes;
+  const driveDay2Mins = ((shift.driveHoursDay2 || 0) * 60) + (shift.driveMinutesDay2 || 0);
+  const driveDay1Mins = driveTotalMins - driveDay2Mins;
+
   const isOverdue = shift.restBefore?.compensationDeadline && 
                     Date.now() > shift.restBefore.compensationDeadline && 
                     !shift.restBefore.isCompensated;
@@ -134,10 +140,15 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-end">
               <div className="flex gap-2">
-                <span className="flex items-center text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-                  <DrivingIcon />{shift.driveHours}ч
+                <span className={`flex items-center text-xs font-bold px-2 py-0.5 rounded-lg border transition-all ${isMultiDay ? 'bg-amber-50 text-amber-700 border-amber-200 shadow-sm' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                  <DrivingIcon />
+                  {isMultiDay ? (
+                    <span>{formatMinsToHHMM(driveDay1Mins)} <span className="opacity-40 mx-0.5">+</span> {formatMinsToHHMM(driveDay2Mins)}</span>
+                  ) : (
+                    <span>{shift.driveHours}ч {shift.driveMinutes}м</span>
+                  )}
                 </span>
-                <span className="flex items-center text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100">
+                <span className="flex items-center text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
                   <WorkIcon />{shift.workHours}ч
                 </span>
               </div>
@@ -153,6 +164,23 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
 
         <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100 pb-5 px-5' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
           <div className="overflow-hidden space-y-4 pt-1">
+            {isMultiDay && (
+              <div className="p-4 bg-amber-50/40 rounded-3xl border border-amber-100/50 space-y-2">
+                <p className="text-[9px] font-bold text-amber-700 uppercase tracking-widest mb-2 flex items-center gap-2">
+                   <span className="w-1 h-3 bg-amber-500 rounded-full"></span>
+                   Распределение вождения
+                </p>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-medium text-slate-500 italic">День 1 ({new Date(shift.startDate).toLocaleDateString('ru-RU', {day: 'numeric', month: 'short'})})</span>
+                  <span className="text-sm font-bold text-slate-700">{formatMinsToHHMM(driveDay1Mins)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-medium text-slate-500 italic">День 2 ({new Date(shift.endDate).toLocaleDateString('ru-RU', {day: 'numeric', month: 'short'})})</span>
+                  <span className="text-sm font-bold text-amber-700">{formatMinsToHHMM(driveDay2Mins)}</span>
+                </div>
+              </div>
+            )}
+
             {expensesSummary && (
               <div className="px-5 py-3 bg-emerald-50/60 rounded-2xl border border-emerald-100 flex items-center gap-3 shadow-sm">
                 <span className="text-emerald-500"><WalletIcon /></span>
