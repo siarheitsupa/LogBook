@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS shifts (
   is_compensated BOOLEAN DEFAULT FALSE
 );
 
+-- Добавляем поле end_date, если таблица уже существует
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS end_date TEXT;
+
 -- 2. Таблица расходов
 CREATE TABLE IF NOT EXISTS expenses (
   id TEXT PRIMARY KEY,
