@@ -61,6 +61,12 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, displayShift, showRe
   const isOverdue = restInfo?.compensationDeadline && 
                     Date.now() > restInfo.compensationDeadline && 
                     !restInfo.isCompensated;
+  const formatHoursMinutes = (hours: number, minutes: number) => {
+    if (minutes > 0) {
+      return `${hours}ч ${minutes}м`;
+    }
+    return `${hours}ч`;
+  };
 
   const expensesSummary = useMemo(() => {
     if (!showRest) return null;
@@ -150,10 +156,10 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, displayShift, showRe
             <div className="flex flex-col items-end">
               <div className="flex gap-2">
                 <span className="flex items-center text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-                  <DrivingIcon />{displayDriveHours}ч
+                  <DrivingIcon />{formatHoursMinutes(displayDriveHours, displayDriveMinutes)}
                 </span>
                 <span className="flex items-center text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100">
-                  <WorkIcon />{displayWorkHours}ч
+                  <WorkIcon />{formatHoursMinutes(displayWorkHours, displayWorkMinutes)}
                 </span>
               </div>
               <span className="text-[9px] font-bold text-slate-400 uppercase mt-1.5">СМЕНА: {formatMinsToHHMM(duration)}</span>
