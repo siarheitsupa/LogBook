@@ -22,7 +22,7 @@ const CloudSettingsModal: React.FC<CloudSettingsModalProps> = ({ isOpen, onClose
 
   if (!isOpen) return null;
 
-  const fullSql = `-- 1. Таблица смен (Обновленная)
+  const fullSql = `-- 1. Таблица смен (Создание или Обновление)
 CREATE TABLE IF NOT EXISTS shifts (
   id TEXT PRIMARY KEY,
   date TEXT,
@@ -42,10 +42,11 @@ CREATE TABLE IF NOT EXISTS shifts (
   is_compensated BOOLEAN DEFAULT FALSE
 );
 
--- Миграция если поля не существуют:
--- ALTER TABLE shifts ADD COLUMN IF NOT EXISTS end_date TEXT;
--- ALTER TABLE shifts ADD COLUMN IF NOT EXISTS drive_hours_day2 INT DEFAULT 0;
--- ALTER TABLE shifts ADD COLUMN IF NOT EXISTS drive_minutes_day2 INT DEFAULT 0;
+-- Миграция: Добавление новых полей в существующую таблицу
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS end_date TEXT;
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS drive_hours_day2 INT DEFAULT 0;
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS drive_minutes_day2 INT DEFAULT 0;
+UPDATE shifts SET end_date = date WHERE end_date IS NULL;
 
 -- 2. Таблица расходов
 CREATE TABLE IF NOT EXISTS expenses (
@@ -63,7 +64,7 @@ CREATE TABLE IF NOT EXISTS expenses (
 ALTER TABLE shifts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
 
--- 4. Политики доступа
+-- 4. Политики доступа (Безопасное пересоздание)
 DROP POLICY IF EXISTS "Users can manage their own shifts" ON shifts;
 CREATE POLICY "Users can manage their own shifts" ON shifts FOR ALL USING (auth.uid() = user_id);
 
