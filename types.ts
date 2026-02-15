@@ -7,7 +7,7 @@ export interface Shift {
   endTime: string; // HH:mm
   driveHours: number;
   driveMinutes: number;
-  driveHoursDay2?: number; // Вождение после 00:00 второго дня
+  driveHoursDay2?: number; 
   driveMinutesDay2?: number;
   workHours: number; 
   workMinutes: number; 
@@ -17,8 +17,10 @@ export interface Shift {
   endLat?: number;
   endLng?: number;
   isCompensated?: boolean;
-  startMileage?: number; // Пробег на старте
-  endMileage?: number;   // Пробег на финише
+  startMileage?: number; 
+  endMileage?: number;   
+  truckId?: string;    // Номер тягача
+  notes?: string;      // Заметки
 }
 
 export type ExpenseCategory = 'Parking' | 'Customs' | 'Fuel' | 'Wash' | 'Toll' | 'Food' | 'Other';
@@ -40,7 +42,8 @@ export interface AppState {
   startLat?: number;
   startLng?: number;
   startDate?: string;
-  startMileage?: number; // Храним пробег старта в состоянии
+  startMileage?: number;
+  truckId?: string; // Запоминаем машину для текущей смены
 }
 
 export interface RestEvent {
