@@ -69,16 +69,24 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         setNotes(initialData.notes || '');
       } else {
         const now = new Date();
-        setStartDate(defaultDate || now.toISOString().split('T')[0]);
-        setEndDate(defaultDate || now.toISOString().split('T')[0]);
+        const dateStr = defaultDate || now.toISOString().split('T')[0];
+        setStartDate(dateStr);
+        setEndDate(now.toISOString().split('T')[0]);
+        
         if (defaultStartTime) {
           const [sh, sm] = defaultStartTime.split(':');
           setStartH(sh); setStartM(sm);
+        } else {
+          setStartH('08'); setStartM('00');
         }
+        
         setEndH(now.getHours().toString().padStart(2, '0'));
         setEndM(now.getMinutes().toString().padStart(2, '0'));
+        
+        // Автозаполнение из пропсов (предыдущая смена)
         setStartMileage(defaultStartMileage?.toString() || '');
         setTruckId(defaultTruckId || localStorage.getItem('last_truck_id') || '');
+        
         setDriveH1('0'); setDriveM1('0'); setDriveH2('0'); setDriveM2('0');
         setWorkH('0'); setWorkM('0'); setEndMileage(''); setNotes('');
       }
@@ -141,14 +149,22 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
                   <input type="text" className="bg-transparent w-full outline-none uppercase text-xs" placeholder="ABC-123" value={truckId} onChange={e => setTruckId(e.target.value)} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-1">
+              <div className="grid grid-cols-2 gap-2">
                  <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Старт</label>
-                    <input type="text" className="w-full p-2.5 bg-slate-50 border rounded-xl text-center font-bold text-xs outline-none" value={startH + ':' + startM} readOnly />
+                    <div className="flex items-center gap-1 p-1.5 bg-slate-50 border rounded-xl">
+                      <input type="number" className="w-full bg-transparent text-center font-bold text-xs outline-none" value={startH} onChange={e => setStartH(e.target.value)} min="0" max="23" />
+                      <span className="text-slate-300">:</span>
+                      <input type="number" className="w-full bg-transparent text-center font-bold text-xs outline-none" value={startM} onChange={e => setStartM(e.target.value)} min="0" max="59" />
+                    </div>
                  </div>
                  <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Финиш</label>
-                    <input type="text" className="w-full p-2.5 bg-slate-50 border rounded-xl text-center font-bold text-xs outline-none" value={endH + ':' + endM} readOnly />
+                    <div className="flex items-center gap-1 p-1.5 bg-slate-50 border rounded-xl">
+                      <input type="number" className="w-full bg-transparent text-center font-bold text-xs outline-none" value={endH} onChange={e => setEndH(e.target.value)} min="0" max="23" />
+                      <span className="text-slate-300">:</span>
+                      <input type="number" className="w-full bg-transparent text-center font-bold text-xs outline-none" value={endM} onChange={e => setEndM(e.target.value)} min="0" max="59" />
+                    </div>
                  </div>
               </div>
             </div>
