@@ -5,7 +5,7 @@ import { calculateShiftDurationMins, formatMinsToHHMM } from '../utils/timeUtils
 
 interface TimelineItemProps {
   shift: ShiftWithRest;
-  onEdit: (shift) => void;
+  onEdit: (shift: Shift) => void;
   onDelete: (id: string) => void;
   onToggleCompensation?: (shift: Shift) => void;
   onAddExpense?: (shiftId: string) => void;
@@ -32,6 +32,12 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
   const driveTotalMins = (shift.driveHours * 60) + shift.driveMinutes;
   const distance = (shift.endMileage && shift.startMileage) ? (shift.endMileage - shift.startMileage) : 0;
 
+  const totalExpenses = useMemo(() => {
+    if (!shift.expenses) return 0;
+    // Для простоты считаем в EUR, можно расширить
+    return shift.expenses.reduce((acc, curr) => acc + (curr.currency === 'EUR' ? curr.amount : 0), 0);
+  }, [shift.expenses]);
+
   const formattedDate = useMemo(() => {
     const start = new Date(shift.startDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
     if (shift.startDate === shift.endDate) return start;
@@ -39,9 +45,11 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
     return `${start} — ${end}`;
   }, [shift.startDate, shift.endDate]);
 
+  const needsCompensation = shift.restBefore?.type === 'weekly_reduced' && !shift.isCompensated;
+
   return (
     <div className="space-y-3 mb-6 last:mb-0">
-      <div className="ios-glass rounded-[2.5rem] overflow-hidden border-white/80 shadow-sm transition-all active:scale-[0.99]">
+      <div className={`ios-glass rounded-[2.5rem] overflow-hidden border-white/80 shadow-sm transition-all active:scale-[0.99] ${needsCompensation ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}>
         <div onClick={() => setIsExpanded(!isExpanded)} className="p-5 flex justify-between items-center cursor-pointer">
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
@@ -52,9 +60,14 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
                 </span>
               )}
             </div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest opacity-80 mt-0.5">
-              {shift.startTime} — {shift.endTime}
-            </span>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest opacity-80">
+                {shift.startTime} — {shift.endTime}
+              </span>
+              {needsCompensation && (
+                <span className="animate-pulse flex h-2 w-2 rounded-full bg-amber-500"></span>
+              )}
+            </div>
           </div>
           
           <div className="flex items-center gap-3">
@@ -72,6 +85,34 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
 
         {isExpanded && (
           <div className="px-5 pb-6 pt-2 space-y-4 animate-in slide-in-from-top-2 duration-300">
+            {/* Предупреждение о компенсации */}
+            {shift.restBefore?.type === 'weekly_reduced' && (
+              <div className={`p-4 rounded-2xl flex items-center justify-between border ${shift.isCompensated ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-amber-50 border-amber-100 text-amber-700'}`}>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Еженедельный отдых</span>
+                  <span className="text-xs font-bold">
+                    {shift.isCompensated ? '✅ Компенсировано' : `🚨 Долг: ${shift.restBefore.debtHours.toFixed(1)}ч`}
+                  </span>
+                </div>
+                {onToggleCompensation && !shift.isCompensated && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onToggleCompensation(shift); }}
+                    className="px-4 py-2 bg-amber-600 text-white text-[9px] font-bold uppercase rounded-xl shadow-md active:scale-95 transition-all"
+                  >
+                    Вернуть долг
+                  </button>
+                )}
+                {onToggleCompensation && shift.isCompensated && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onToggleCompensation(shift); }}
+                    className="text-[9px] font-bold uppercase underline opacity-50"
+                  >
+                    Отменить
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 bg-slate-50 rounded-2xl text-center">
                 <span className="block text-[8px] font-bold text-slate-400 uppercase mb-1">Одометр</span>
@@ -81,6 +122,39 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
                 <span className="block text-[8px] font-bold text-slate-400 uppercase mb-1">Общая смена</span>
                 <span className="text-sm font-bold text-slate-700">{formatMinsToHHMM(duration)}</span>
               </div>
+            </div>
+
+            {/* Расходы */}
+            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Расходы за смену</span>
+                {onAddExpense && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onAddExpense(shift.id); }}
+                    className="text-[18px] font-bold text-slate-400 leading-none hover:text-slate-900"
+                  >
+                    +
+                  </button>
+                )}
+              </div>
+              {shift.expenses && shift.expenses.length > 0 ? (
+                <div className="space-y-1.5">
+                  {shift.expenses.map(exp => (
+                    <div key={exp.id} className="flex justify-between items-center text-[11px] font-medium">
+                      <span className="text-slate-500">{exp.category}</span>
+                      <span className="font-bold text-slate-700">{exp.amount} {exp.currency}</span>
+                    </div>
+                  ))}
+                  {totalExpenses > 0 && (
+                    <div className="pt-1.5 mt-1.5 border-t border-slate-200 flex justify-between items-center text-[11px] font-bold">
+                      <span className="text-slate-800 uppercase tracking-tighter">Итого (EUR)</span>
+                      <span className="text-blue-600">{totalExpenses.toFixed(2)} €</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-400 italic">Нет записанных расходов</p>
+              )}
             </div>
 
             {shift.notes && (

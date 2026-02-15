@@ -42,6 +42,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
   const [endMileage, setEndMileage] = useState('');
   const [truckId, setTruckId] = useState('');
   const [notes, setNotes] = useState('');
+  const [isCompensated, setIsCompensated] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -67,6 +68,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         setEndMileage(initialData.endMileage?.toString() || '');
         setTruckId(initialData.truckId || '');
         setNotes(initialData.notes || '');
+        setIsCompensated(initialData.isCompensated || false);
       } else {
         const now = new Date();
         const dateStr = defaultDate || now.toISOString().split('T')[0];
@@ -83,12 +85,12 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         setEndH(now.getHours().toString().padStart(2, '0'));
         setEndM(now.getMinutes().toString().padStart(2, '0'));
         
-        // Автозаполнение из пропсов (предыдущая смена)
         setStartMileage(defaultStartMileage?.toString() || '');
         setTruckId(defaultTruckId || localStorage.getItem('last_truck_id') || '');
         
         setDriveH1('0'); setDriveM1('0'); setDriveH2('0'); setDriveM2('0');
         setWorkH('0'); setWorkM('0'); setEndMileage(''); setNotes('');
+        setIsCompensated(false);
       }
     }
   }, [initialData, isOpen, defaultStartTime, defaultDate, defaultStartMileage, defaultTruckId]);
@@ -119,7 +121,8 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
       startMileage: parseInt(startMileage) || 0,
       endMileage: parseInt(endMileage) || 0,
       truckId,
-      notes
+      notes,
+      isCompensated
     });
   };
 
@@ -210,6 +213,17 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
                     </div>
                   </div>
                )}
+
+               <div className="flex items-center gap-3 pt-2">
+                 <input 
+                   type="checkbox" 
+                   id="compensated" 
+                   className="w-5 h-5 rounded-md text-slate-900 focus:ring-slate-500"
+                   checked={isCompensated} 
+                   onChange={e => setIsCompensated(e.target.checked)} 
+                 />
+                 <label htmlFor="compensated" className="text-xs font-bold text-slate-600 uppercase tracking-tight">Отдых компенсирован</label>
+               </div>
             </div>
 
             <textarea 
