@@ -17,6 +17,8 @@ export interface Shift {
   endLat?: number;
   endLng?: number;
   isCompensated?: boolean;
+  startMileage?: number; // Пробег на старте
+  endMileage?: number;   // Пробег на финише
 }
 
 export type ExpenseCategory = 'Parking' | 'Customs' | 'Fuel' | 'Wash' | 'Toll' | 'Food' | 'Other';
@@ -38,6 +40,7 @@ export interface AppState {
   startLat?: number;
   startLng?: number;
   startDate?: string;
+  startMileage?: number; // Храним пробег старта в состоянии
 }
 
 export interface RestEvent {

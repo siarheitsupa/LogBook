@@ -27,6 +27,12 @@ const WorkIcon = () => (
   </svg>
 );
 
+const SpeedIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+    <path d="M3 12a9 9 0 1 1 18 0" /><path d="M12 7v5l3 3" />
+  </svg>
+);
+
 const WalletIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 12V8H6a2 2 0 0 1 0-4h12v4" /><path d="M4 6v12a2 2 0 0 0 2 2h14v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
@@ -42,6 +48,8 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
   const driveTotalMins = (shift.driveHours * 60) + shift.driveMinutes;
   const driveDay2Mins = ((shift.driveHoursDay2 || 0) * 60) + (shift.driveMinutesDay2 || 0);
   const driveDay1Mins = driveTotalMins - driveDay2Mins;
+
+  const distance = (shift.endMileage && shift.startMileage) ? (shift.endMileage - shift.startMileage) : 0;
 
   const isOverdue = shift.restBefore?.compensationDeadline && 
                     Date.now() > shift.restBefore.compensationDeadline && 
@@ -152,7 +160,14 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
                   <WorkIcon />{shift.workHours}ч
                 </span>
               </div>
-              <span className="text-[9px] font-bold text-slate-400 uppercase mt-1.5">СМЕНА: {formatMinsToHHMM(duration)}</span>
+              <div className="flex items-center gap-2 mt-1.5">
+                 {distance > 0 && (
+                   <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md flex items-center">
+                     <SpeedIcon /> {distance} км
+                   </span>
+                 )}
+                 <span className="text-[9px] font-bold text-slate-400 uppercase">СМЕНА: {formatMinsToHHMM(duration)}</span>
+              </div>
             </div>
             <div className={`w-9 h-9 rounded-full flex items-center justify-center bg-white border border-white/50 shadow-sm transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`}>
               <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
@@ -164,6 +179,17 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ shift, onEdit, onDelete, on
 
         <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100 pb-5 px-5' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
           <div className="overflow-hidden space-y-4 pt-1">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-4 bg-slate-50/60 rounded-3xl border border-slate-100 flex flex-col items-center">
+                <span className="text-[8px] font-bold text-slate-400 uppercase mb-1">Одометр Старт</span>
+                <span className="text-sm font-bold text-slate-700">{shift.startMileage || '—'} км</span>
+              </div>
+              <div className="p-4 bg-slate-50/60 rounded-3xl border border-slate-100 flex flex-col items-center">
+                <span className="text-[8px] font-bold text-slate-400 uppercase mb-1">Одометр Финиш</span>
+                <span className="text-sm font-bold text-slate-700">{shift.endMileage || '—'} км</span>
+              </div>
+            </div>
+
             {isMultiDay && (
               <div className="p-4 bg-amber-50/40 rounded-3xl border border-amber-100/50 space-y-2">
                 <p className="text-[9px] font-bold text-amber-700 uppercase tracking-widest mb-2 flex items-center gap-2">

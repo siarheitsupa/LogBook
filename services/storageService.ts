@@ -69,7 +69,9 @@ export const storage = {
             timestamp: Number(item.timestamp),
             startLat: item.start_lat, startLng: item.start_lng,
             endLat: item.end_lat, endLng: item.end_lng,
-            isCompensated: item.is_compensated || false
+            isCompensated: item.is_compensated || false,
+            startMileage: Number(item.start_mileage || 0),
+            endMileage: Number(item.end_mileage || 0)
           }));
           localStorage.setItem(SHIFTS_KEY, JSON.stringify(cloudData));
           return cloudData;
@@ -102,9 +104,12 @@ export const storage = {
         work_minutes: shift.workMinutes,
         timestamp: shift.timestamp,
         user_id: session.user.id,
+        // Fix: Use camelCase property names from the Shift interface defined in types.ts
         start_lat: shift.startLat, start_lng: shift.startLng,
         end_lat: shift.endLat, end_lng: shift.endLng,
-        is_compensated: shift.isCompensated || false
+        is_compensated: shift.isCompensated || false,
+        start_mileage: shift.startMileage || 0,
+        end_mileage: shift.endMileage || 0
       };
       await supabaseInstance!.from('shifts').upsert(payload);
     }

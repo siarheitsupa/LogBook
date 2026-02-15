@@ -134,6 +134,10 @@ const App: React.FC = () => {
   };
 
   const handleStartShift = () => {
+    const mileageStr = window.prompt("Введите пробег одометра на СТАРТЕ:");
+    if (mileageStr === null) return; // Отмена
+    const mileage = parseInt(mileageStr) || 0;
+
     navigator.geolocation.getCurrentPosition(p => {
         const dateStr = new Date().toISOString().split('T')[0];
         const state = { 
@@ -141,7 +145,8 @@ const App: React.FC = () => {
             startTime: Date.now(), 
             startDate: dateStr,
             startLat: p.coords.latitude, 
-            startLng: p.coords.longitude 
+            startLng: p.coords.longitude,
+            startMileage: mileage
         };
         setAppState(state); 
         storage.saveState(state);
@@ -211,13 +216,14 @@ const App: React.FC = () => {
       const m = d.getMinutes().toString().padStart(2, '0');
       return {
         defaultDate: appState.startDate || d.toISOString().split('T')[0],
-        defaultStartTime: `${h}:${m}`
+        defaultStartTime: `${h}:${m}`,
+        defaultStartMileage: appState.startMileage
       };
     }
     return {};
   };
 
-  const { defaultDate, defaultStartTime } = getModalDefaults();
+  const { defaultDate, defaultStartTime, defaultStartMileage } = getModalDefaults();
 
   if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="w-10 h-10 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div></div>;
   if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-bold mb-6">DriverLog Cloud</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button><CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} /></div>;
@@ -390,6 +396,7 @@ const App: React.FC = () => {
         initialData={editingShift}
         defaultDate={defaultDate}
         defaultStartTime={defaultStartTime}
+        defaultStartMileage={defaultStartMileage}
       />
       {activeShiftForExpense && <ExpensesModal isOpen={!!activeShiftForExpense} onClose={() => setActiveShiftForExpense(null)} onSave={handleSaveExpense} shiftId={activeShiftForExpense} />}
       <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} />

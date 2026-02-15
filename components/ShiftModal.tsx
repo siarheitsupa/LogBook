@@ -9,6 +9,7 @@ interface ShiftModalProps {
   initialData?: Shift | null;
   defaultStartTime?: string;
   defaultDate?: string;
+  defaultStartMileage?: number; // Пробег, переданный из активной смены
 }
 
 const DrivingIcon = () => (
@@ -26,7 +27,13 @@ const WorkIcon = () => (
   </svg>
 );
 
-const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initialData, defaultStartTime, defaultDate }) => {
+const SpeedIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1 inline-block mb-0.5">
+    <path d="M3 12a9 9 0 1 1 18 0" /><path d="M12 7v5l3 3" />
+  </svg>
+);
+
+const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initialData, defaultStartTime, defaultDate, defaultStartMileage }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [startH, setStartH] = useState('08');
@@ -43,6 +50,10 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
   const [workH, setWorkH] = useState('0');
   const [workM, setWorkM] = useState('0');
 
+  // Поля пробега
+  const [startMileage, setStartMileage] = useState('');
+  const [endMileage, setEndMileage] = useState('');
+
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
@@ -53,7 +64,6 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         setStartH(sh); setStartM(sm);
         setEndH(eh); setEndM(em);
 
-        // Расчет для раздельного ввода (День 1 = Всего - День 2)
         const totalDriveMins = (initialData.driveHours * 60) + initialData.driveMinutes;
         const day2DriveMins = ((initialData.driveHoursDay2 || 0) * 60) + (initialData.driveMinutesDay2 || 0);
         const day1DriveMins = Math.max(0, totalDriveMins - day2DriveMins);
@@ -65,6 +75,9 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         
         setWorkH((initialData.workHours || 0).toString());
         setWorkM((initialData.workMinutes || 0).toString());
+        
+        setStartMileage(initialData.startMileage?.toString() || '');
+        setEndMileage(initialData.endMileage?.toString() || '');
       } else {
         const now = new Date();
         const dateStr = defaultDate || now.toISOString().split('T')[0];
@@ -80,9 +93,12 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
         setDriveH1('0'); setDriveM1('0');
         setDriveH2('0'); setDriveM2('0');
         setWorkH('0'); setWorkM('0');
+        
+        setStartMileage(defaultStartMileage?.toString() || '');
+        setEndMileage('');
       }
     }
-  }, [initialData, isOpen, defaultStartTime, defaultDate]);
+  }, [initialData, isOpen, defaultStartTime, defaultDate, defaultStartMileage]);
 
   const handleStartDateChange = (val: string) => {
     setStartDate(val);
@@ -96,7 +112,6 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Складываем части вождения для общего значения в БД
     const d1Mins = (parseInt(driveH1) || 0) * 60 + (parseInt(driveM1) || 0);
     const d2Mins = isMultiDay ? ((parseInt(driveH2) || 0) * 60 + (parseInt(driveM2) || 0)) : 0;
     const totalDriveMins = d1Mins + d2Mins;
@@ -112,7 +127,9 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
       driveMinutesDay2: d2Mins % 60,
       workHours: parseInt(workH) || 0,
       workMinutes: parseInt(workM) || 0,
-      timestamp: new Date(`${startDate}T${startH.padStart(2, '0')}:${startM.padStart(2, '0')}`).getTime()
+      timestamp: new Date(`${startDate}T${startH.padStart(2, '0')}:${startM.padStart(2, '0')}`).getTime(),
+      startMileage: parseInt(startMileage) || 0,
+      endMileage: parseInt(endMileage) || 0
     };
     onSave(shift);
   };
@@ -121,7 +138,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm safe-p-bottom">
       <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl animate-in fade-in zoom-in duration-200 flex flex-col max-h-[92dvh] overflow-hidden">
         <div className="p-5 sm:p-6 overflow-y-auto">
-          <h3 className="text-xl font-bold text-center mb-6 text-slate-800">Запись смены</h3>
+          <h3 className="text-xl font-bold text-center mb-6 text-slate-800 uppercase tracking-tight">Запись смены</h3>
           <form onSubmit={handleSubmit} className="space-y-5">
             
             <div className="grid grid-cols-2 gap-3">
@@ -155,6 +172,18 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
             </div>
 
             <div className="p-4 bg-slate-50 border border-slate-100 rounded-[2rem] space-y-4">
+               {/* Пробег */}
+               <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1"><SpeedIcon /> Пробег Старт</label>
+                    <input type="number" className="w-full p-3 bg-white border border-slate-100 rounded-2xl text-center font-bold text-slate-700 outline-none focus:ring-2 ring-blue-500/10" placeholder="км" value={startMileage} onChange={e => setStartMileage(e.target.value)} inputMode="numeric" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1"><SpeedIcon /> Пробег Финиш</label>
+                    <input type="number" className="w-full p-3 bg-white border border-slate-100 rounded-2xl text-center font-bold text-slate-700 outline-none focus:ring-2 ring-blue-500/10" placeholder="км" value={endMileage} onChange={e => setEndMileage(e.target.value)} inputMode="numeric" />
+                  </div>
+               </div>
+
                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1"><DrivingIcon /> Вождение День 1</label>
@@ -176,11 +205,9 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, initia
 
                {isMultiDay && (
                   <div className="pt-4 border-t border-slate-200/50 animate-in slide-in-from-top-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-[10px] font-bold text-amber-600 uppercase tracking-widest ml-1">
-                        Вождение День 2 (после 00:00)
-                      </label>
-                    </div>
+                    <label className="block text-[10px] font-bold text-amber-600 uppercase tracking-widest ml-1 mb-2">
+                      Вождение День 2 (после 00:00)
+                    </label>
                     <div className="flex items-center gap-1 p-1 bg-amber-50 border border-amber-100 rounded-2xl w-1/2">
                       <input type="number" className="w-full py-2 bg-transparent text-center font-bold text-amber-700 outline-none" value={driveH2} onChange={e => setDriveH2(e.target.value)} min="0" max="24" inputMode="numeric" />
                       <span className="font-bold text-amber-200">:</span>

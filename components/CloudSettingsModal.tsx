@@ -39,13 +39,17 @@ CREATE TABLE IF NOT EXISTS shifts (
   user_id UUID REFERENCES auth.users(id) DEFAULT auth.uid(),
   start_lat FLOAT8, start_lng FLOAT8,
   end_lat FLOAT8, end_lng FLOAT8,
-  is_compensated BOOLEAN DEFAULT FALSE
+  is_compensated BOOLEAN DEFAULT FALSE,
+  start_mileage INT DEFAULT 0,
+  end_mileage INT DEFAULT 0
 );
 
 -- Миграция: Добавление новых полей в существующую таблицу
 ALTER TABLE shifts ADD COLUMN IF NOT EXISTS end_date TEXT;
 ALTER TABLE shifts ADD COLUMN IF NOT EXISTS drive_hours_day2 INT DEFAULT 0;
 ALTER TABLE shifts ADD COLUMN IF NOT EXISTS drive_minutes_day2 INT DEFAULT 0;
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS start_mileage INT DEFAULT 0;
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS end_mileage INT DEFAULT 0;
 UPDATE shifts SET end_date = date WHERE end_date IS NULL;
 
 -- 2. Таблица расходов
