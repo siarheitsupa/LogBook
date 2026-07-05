@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shift, AppState, CloudConfig, Expense, ShiftWithRest } from './types';
+import { Shift, AppState, Expense, ShiftWithRest } from './types';
 import { storage } from './services/storageService';
 import { analyzeLogs } from './services/geminiService';
 import { formatMinsToHHMM, getStats, calculateLogSummary, pad, getMonday, groupShiftsByWeek } from './utils/timeUtils';
@@ -13,11 +13,10 @@ import CloudSettingsModal from './components/CloudSettingsModal';
 import AuthScreen from './components/AuthScreen';
 import WeekGroup from './components/WeekGroup';
 import PrintableReport from './components/PrintableReport';
-import { Session } from '@supabase/supabase-js';
 import html2pdf from 'html2pdf.js';
 
 const App: React.FC = () => {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<any | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [appState, setAppState] = useState<AppState>({ isActive: false, startTime: null });
@@ -45,7 +44,7 @@ const App: React.FC = () => {
       const isConfigured = storage.initCloud();
       if (isConfigured) {
         const currentSession = await storage.getSession();
-        if (currentSession) {
+        if (currentSession?.data?.session) {
           try {
             const { data: { user }, error } = await storage.getUser(); 
             if (error || !user) {
@@ -207,12 +206,6 @@ const App: React.FC = () => {
     html2pdf().set(opt).from(element).save();
   };
 
-  const handleCloudSave = (config: CloudConfig) => {
-    storage.initCloud(config);
-    setConfigUpdateTrigger(t => t + 1);
-    setIsCloudModalOpen(false);
-  };
-  
   const getModalDefaults = () => {
     const lastShift = enrichedShifts[0]; // Самая последняя завершенная смена
     const defaultMileage = lastShift?.endMileage || 0;
@@ -238,7 +231,7 @@ const App: React.FC = () => {
   const { defaultDate, defaultStartTime, defaultStartMileage, defaultTruckId } = getModalDefaults();
 
   if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="w-10 h-10 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div></div>;
-  if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-bold mb-6">DriverLog Cloud</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button><CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} /></div>;
+  if (!storage.isConfigured()) return <div className="flex flex-col items-center justify-center min-h-screen p-8"><h2 className="text-2xl font-bold mb-6">DriverLog Pro</h2><button onClick={() => setIsCloudModalOpen(true)} className="w-full max-w-xs py-4 bg-slate-900 text-white font-bold rounded-2xl">Настроить</button><CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} /></div>;
   if (!session) return <AuthScreen />;
 
   return (
@@ -412,7 +405,7 @@ const App: React.FC = () => {
         defaultTruckId={defaultTruckId}
       />
       {activeShiftForExpense && <ExpensesModal isOpen={!!activeShiftForExpense} onClose={() => setActiveShiftForExpense(null)} onSave={handleSaveExpense} shiftId={activeShiftForExpense} />}
-      <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onSave={handleCloudSave} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} />
+      <CloudSettingsModal isOpen={isCloudModalOpen} onClose={() => setIsCloudModalOpen(false)} onReset={() => { storage.resetCloud(); setSession(null); setConfigUpdateTrigger(t => t+1); }} />
       
       <div className="absolute left-[-9999px] top-0">
         <PrintableReport shifts={enrichedShifts} stats={{...stats, totalDebt}} userEmail={session?.user?.email || 'Driver'} />
