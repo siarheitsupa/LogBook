@@ -1,0 +1,65 @@
+name: Deploy LogBook to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Execute deploy on VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 159.195.47.108
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            echo "🚀 Deploying LogBook..."
+            
+            cd /opt/logbook/frontend
+            
+            # Stash any local changes
+            git stash || true
+            
+            # Pull latest code
+            git pull origin main
+            
+            # Re-apply deployment-specific patches
+            echo "📋 Applying patches..."
+            if [ -f /opt/logbook/patches/storage-service.patch ]; then
+              git apply /opt/logbook/patches/storage-service.patch 2>/dev/null || echo "  ⚠️ storage-service patch skipped"
+            fi
+            if [ -f /opt/logbook/patches/app.patch ]; then
+              git apply /opt/logbook/patches/app.patch 2>/dev/null || echo "  ⚠️ app patch skipped"
+            fi
+            if [ -f /opt/logbook/patches/index.patch ]; then
+              git apply /opt/logbook/patches/index.patch 2>/dev/null || echo "  ⚠️ index patch skipped"
+            fi
+            if [ -f /opt/logbook/patches/package.patch ]; then
+              git apply /opt/logbook/patches/package.patch 2>/dev/null || echo "  ⚠️ package patch skipped"
+            fi
+            if [ -f /opt/logbook/patches/vite-config.patch ]; then
+              git apply /opt/logbook/patches/vite-config.patch 2>/dev/null || echo "  ⚠️ vite-config patch skipped"
+            fi
+            if [ -f /opt/logbook/patches/cloud-settings.patch ]; then
+              git apply /opt/logbook/patches/cloud-settings.patch 2>/dev/null || echo "  ⚠️ cloud-settings patch skipped"
+            fi
+            
+            cd /opt/logbook
+            
+            # Rebuild and restart
+            echo "🔧 Building Docker images..."
+            docker compose build
+            
+            echo "🔄 Restarting services..."
+            docker compose up -d
+            
+            # Clean up
+            docker image prune -f
+            
+            echo ""
+            echo "✅ Deployment complete!"
+            curl -s http://localhost/api/health
